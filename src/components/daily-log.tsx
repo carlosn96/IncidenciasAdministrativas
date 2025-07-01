@@ -22,6 +22,7 @@ import {
 import type { LaborEvent, Location, ScheduleEntry } from "@/lib/types";
 import { Clock, Play, Square, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
 
 // This list would ideally be fetched or passed as a prop based on user settings
 const userLocations: Location[] = [
@@ -129,77 +130,95 @@ export function DailyLog() {
         <CardTitle>Registro Diario</CardTitle>
         <CardDescription>Registra tus eventos de entrada y salida del día.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Clock className="h-8 w-8 text-primary" />
-            <div>
+      <CardContent className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <div className="lg:col-span-1">
+            <Card className="flex flex-col justify-center items-center text-center p-6 h-full bg-muted/30">
               <p className="text-sm text-muted-foreground">Hora Actual</p>
-              <p className="text-2xl font-semibold font-mono">{currentTime}</p>
-            </div>
+              <p className="text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime || "00:00:00"}</p>
+              <Clock className="h-8 w-8 text-muted-foreground mt-2" />
+            </Card>
           </div>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-             <div className="w-full sm:w-[240px]">
-                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                    <SelectTrigger>
-                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Selecciona ubicación..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {userLocations.map(loc => (
-                            <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="flex gap-2 w-full">
-                <Button onClick={() => handleRegisterEvent('Entrada')} disabled={!selectedLocation || lastEventType === 'Entrada'} className="flex-1 sm:w-40">
-                  <Play className="mr-2" />
-                  Registrar Entrada
-                </Button>
-                <Button onClick={() => handleRegisterEvent('Salida')} disabled={!selectedLocation || lastEventType === 'Salida'} variant="destructive" className="flex-1 sm:w-40">
-                  <Square className="mr-2" />
-                  Registrar Salida
-                </Button>
-            </div>
+
+          <div className="lg:col-span-2">
+            <Card className="p-6 h-full flex flex-col justify-center">
+                <div className="space-y-4">
+                    <div>
+                        <Label htmlFor="location-select" className="mb-2 block">Ubicación de registro</Label>
+                        <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                            <SelectTrigger id="location-select">
+                                <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                                <SelectValue placeholder="Selecciona una ubicación..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {userLocations.map(loc => (
+                                    <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <Button
+                            size="lg"
+                            onClick={() => handleRegisterEvent('Entrada')}
+                            disabled={!selectedLocation || lastEventType === 'Entrada'}
+                            className="h-12 text-base"
+                        >
+                            <Play className="mr-2 h-5 w-5" />
+                            Registrar Entrada
+                        </Button>
+                        <Button
+                            size="lg"
+                            variant="destructive"
+                            onClick={() => handleRegisterEvent('Salida')}
+                            disabled={!selectedLocation || lastEventType === 'Salida'}
+                            className="h-12 text-base"
+                        >
+                            <Square className="mr-2 h-5 w-5" />
+                            Registrar Salida
+                        </Button>
+                    </div>
+                </div>
+            </Card>
           </div>
         </div>
         
         <div>
           <h3 className="text-lg font-medium mb-2">Eventos de Hoy</h3>
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Hora</TableHead>
-                  <TableHead>Ubicación</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.length === 0 ? (
-                    <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                            No hay eventos registrados hoy.
-                        </TableCell>
-                    </TableRow>
-                ) : (
-                    [...events].reverse().map((event) => (
-                      <TableRow key={event.id}>
-                        <TableCell>
-                          <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>
-                            {event.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{event.time}</TableCell>
-                        <TableCell>{event.location}</TableCell>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Hora</TableHead>
+                    <TableHead>Ubicación</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {events.length === 0 ? (
+                      <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                              No hay eventos registrados hoy.
+                          </TableCell>
                       </TableRow>
-                    ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                      [...events].reverse().map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell>
+                            <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>
+                              {event.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{event.time}</TableCell>
+                          <TableCell>{event.location}</TableCell>
+                        </TableRow>
+                      ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       </CardContent>
     </Card>
