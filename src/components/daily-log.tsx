@@ -19,21 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Period, Incident, ScheduleEntry } from "@/lib/types";
+import type { Incident, ScheduleEntry } from "@/lib/types";
 import { Clock, Play, Square, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { format, isWithinInterval } from "date-fns";
 import { useSettings } from "@/context/settings-context";
 
-interface DailyLogProps {
-  periods: Period[];
-  setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
-}
-
-
-export function DailyLog({ periods, setPeriods }: DailyLogProps) {
-  const { userLocations, schedule } = useSettings();
+export function DailyLog() {
+  const { periods, setPeriods, userLocations, schedule } = useSettings();
   const [currentTime, setCurrentTime] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const { toast } = useToast();

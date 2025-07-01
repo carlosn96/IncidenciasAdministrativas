@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/tabs";
 import { LocationsSettings } from "@/components/locations-settings";
 import { SchedulesSettings } from "@/components/schedules-settings";
-import { Clock, MapPin } from "lucide-react";
+import { PeriodsList } from "@/components/periods-list";
+import { Clock, MapPin, CalendarDays } from "lucide-react";
 import { useSettings } from "@/context/settings-context";
 
 
@@ -18,7 +19,9 @@ export default function SettingsPage() {
     setUserLocations, 
     allLocations, 
     schedule, 
-    setSchedule 
+    setSchedule,
+    periods,
+    setPeriods
   } = useSettings();
 
   return (
@@ -40,6 +43,10 @@ export default function SettingsPage() {
             <Clock className="mr-2 h-4 w-4" />
             Horarios por Defecto
           </TabsTrigger>
+          <TabsTrigger value="periods">
+            <CalendarDays className="mr-2 h-4 w-4" />
+            Periodos
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="locations">
             <LocationsSettings
@@ -53,6 +60,12 @@ export default function SettingsPage() {
               userLocations={userLocations}
               schedule={schedule}
               setSchedule={setSchedule}
+            />
+        </TabsContent>
+        <TabsContent value="periods">
+            <PeriodsList
+              periods={periods}
+              setPeriods={setPeriods}
             />
         </TabsContent>
       </Tabs>

@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode } from 'react';
-import type { Location, ScheduleEntry } from '@/lib/types';
+import type { Location, ScheduleEntry, Period } from '@/lib/types';
 
 // Master list of all possible locations
 const ALL_UNE_LOCATIONS: Location[] = [
@@ -40,6 +40,8 @@ interface SettingsContextType {
   setUserLocations: React.Dispatch<React.SetStateAction<Location[]>>;
   schedule: ScheduleEntry[];
   setSchedule: React.Dispatch<React.SetStateAction<ScheduleEntry[]>>;
+  periods: Period[];
+  setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -47,13 +49,16 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [userLocations, setUserLocations] = useState<Location[]>(initialUserLocations);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>(initialScheduleData);
+  const [periods, setPeriods] = useState<Period[]>([]);
 
   const value = {
     allLocations: ALL_UNE_LOCATIONS,
     userLocations,
     setUserLocations,
     schedule,
-    setSchedule
+    setSchedule,
+    periods,
+    setPeriods
   };
 
   return (

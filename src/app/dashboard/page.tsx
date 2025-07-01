@@ -1,13 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { DailyLog } from "@/components/daily-log";
-import { PeriodsList } from "@/components/periods-list";
-import type { Period } from "@/lib/types";
 
 export default function DashboardPage() {
-  const [periods, setPeriods] = useState<Period[]>([]);
-
   return (
     <div className="space-y-8">
       <div>
@@ -17,8 +12,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <DailyLog periods={periods} setPeriods={setPeriods} />
-      <PeriodsList periods={periods} setPeriods={setPeriods} />
+      <DailyLog />
     </div>
   );
 }
