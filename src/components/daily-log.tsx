@@ -40,35 +40,17 @@ const scheduleData: ScheduleEntry[] = [
   { day: "Sábado", startTime: "", endTime: "", startLocation: "", endLocation: "" },
 ];
 
-const initialEvents: LaborEvent[] = [
-  {
-    id: "evt1",
-    date: "2023-10-27",
-    time: "09:02 AM",
-    location: "PLANTEL CENTRO",
-    type: "Entrada",
-  },
-  {
-    id: "evt2",
-    date: "2023-10-27",
-    time: "01:15 PM",
-    location: "PLANTEL CENTRO",
-    type: "Salida",
-  },
-  {
-    id: "evt3",
-    date: "2023-10-27",
-    time: "02:30 PM",
-    location: "PLANTEL TORRE UNE",
-    type: "Entrada",
-  },
-];
+// Start with no events for the day
+const initialEvents: LaborEvent[] = [];
 
 export function DailyLog() {
   const [currentTime, setCurrentTime] = useState("");
   const [events, setEvents] = useState<LaborEvent[]>(initialEvents);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const { toast } = useToast();
+
+  const hasEntrada = events.some(event => event.type === 'Entrada');
+  const hasSalida = events.some(event => event.type === 'Salida');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -83,8 +65,9 @@ export function DailyLog() {
     const todaySpanish = daysOfWeek[dayIndex] as ScheduleEntry['day'];
 
     const todaySchedule = scheduleData.find(s => s.day === todaySpanish);
-    const lastEventType = events.length > 0 ? events[events.length - 1].type : 'Salida';
-    const nextEventType = lastEventType === 'Salida' ? 'Entrada' : 'Salida';
+    
+    // If we haven't checked in, the next action is 'Entrada'. Otherwise, it's 'Salida'.
+    const nextEventType = hasEntrada ? 'Salida' : 'Entrada';
 
     if (todaySchedule) {
       if (nextEventType === 'Entrada') {
@@ -95,7 +78,7 @@ export function DailyLog() {
     } else {
       setSelectedLocation("");
     }
-  }, [events]);
+  }, [events, hasEntrada]); // Rerun when events change
 
   const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {
     if (!selectedLocation) {
@@ -122,8 +105,6 @@ export function DailyLog() {
     });
   };
 
-  const lastEventType = events.length > 0 ? events[events.length - 1].type : 'Salida';
-
   return (
     <Card>
       <CardHeader>
@@ -145,7 +126,7 @@ export function DailyLog() {
                 <div className="space-y-4">
                     <div>
                         <Label htmlFor="location-select" className="mb-2 block">Ubicación de registro</Label>
-                        <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                        <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={hasEntrada && hasSalida}>
                             <SelectTrigger id="location-select">
                                 <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
                                 <SelectValue placeholder="Selecciona una ubicación..." />
@@ -161,7 +142,7 @@ export function DailyLog() {
                         <Button
                             size="lg"
                             onClick={() => handleRegisterEvent('Entrada')}
-                            disabled={!selectedLocation || lastEventType === 'Entrada'}
+                            disabled={!selectedLocation || hasEntrada}
                             className="h-12 text-base"
                         >
                             <Play className="mr-2 h-5 w-5" />
@@ -171,7 +152,7 @@ export function DailyLog() {
                             size="lg"
                             variant="destructive"
                             onClick={() => handleRegisterEvent('Salida')}
-                            disabled={!selectedLocation || lastEventType === 'Salida'}
+                            disabled={!selectedLocation || !hasEntrada || hasSalida}
                             className="h-12 text-base"
                         >
                             <Square className="mr-2 h-5 w-5" />
