@@ -38,7 +38,6 @@ const initialScheduleData: ScheduleEntry[] = [
   { day: "Jueves", startTime: "09:00", endTime: "17:00", location: "Campus Principal" },
   { day: "Viernes", startTime: "09:00", endTime: "15:00", location: "Remoto" },
   { day: "Sábado", startTime: "", endTime: "", location: "" },
-  { day: "Domingo", startTime: "", endTime: "", location: "" },
 ];
 
 export function SchedulesSettings() {

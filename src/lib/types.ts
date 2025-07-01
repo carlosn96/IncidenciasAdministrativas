@@ -7,7 +7,7 @@ export type User = {
 };
 
 export type ScheduleEntry = {
-  day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
+  day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
   startTime: string;
   endTime: string;
   location: string;
