@@ -73,7 +73,7 @@ export default function LoginPage() {
             onClick={() => router.push("/dashboard")}
           >
             <GoogleIcon className="mr-2 h-4 w-4" />
-            Iniciar sesión con Google
+            Continuar con Google
           </Button>
         </CardFooter>
       </Card>
