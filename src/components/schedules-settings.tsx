@@ -32,13 +32,13 @@ import { useToast } from "@/hooks/use-toast";
 import type { ScheduleEntry } from "@/lib/types";
 
 const initialScheduleData: ScheduleEntry[] = [
-  { day: "Monday", startTime: "09:00", endTime: "17:00", location: "Main Campus" },
-  { day: "Tuesday", startTime: "09:00", endTime: "17:00", location: "Main Campus" },
-  { day: "Wednesday", startTime: "09:00", endTime: "13:00", location: "North Campus" },
-  { day: "Thursday", startTime: "09:00", endTime: "17:00", location: "Main Campus" },
-  { day: "Friday", startTime: "09:00", endTime: "15:00", location: "Remote" },
-  { day: "Saturday", startTime: "", endTime: "", location: "" },
-  { day: "Sunday", startTime: "", endTime: "", location: "" },
+  { day: "Lunes", startTime: "09:00", endTime: "17:00", location: "Campus Principal" },
+  { day: "Martes", startTime: "09:00", endTime: "17:00", location: "Campus Principal" },
+  { day: "Miércoles", startTime: "09:00", endTime: "13:00", location: "Campus Norte" },
+  { day: "Jueves", startTime: "09:00", endTime: "17:00", location: "Campus Principal" },
+  { day: "Viernes", startTime: "09:00", endTime: "15:00", location: "Remoto" },
+  { day: "Sábado", startTime: "", endTime: "", location: "" },
+  { day: "Domingo", startTime: "", endTime: "", location: "" },
 ];
 
 export function SchedulesSettings() {

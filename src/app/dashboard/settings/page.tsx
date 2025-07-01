@@ -11,15 +11,15 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline">Settings</h1>
+        <h1 className="text-3xl font-bold font-headline">Configuración</h1>
         <p className="text-muted-foreground">
-          Manage application configurations and parameters.
+          Gestiona las configuraciones y parámetros de la aplicación.
         </p>
       </div>
 
       <Tabs defaultValue="locations" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="locations">Locations</TabsTrigger>
+          <TabsTrigger value="locations">Ubicaciones</TabsTrigger>
           <TabsTrigger value="schedules">Horarios por Defecto</TabsTrigger>
         </TabsList>
         <TabsContent value="locations">

@@ -4,9 +4,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
+        <h1 className="text-3xl font-bold font-headline">Panel de Control</h1>
         <p className="text-muted-foreground">
-          Welcome back, Coordinator! Here's your overview for today.
+          ¡Bienvenido de nuevo, Coordinador! Aquí está tu resumen de hoy.
         </p>
       </div>
 

@@ -20,25 +20,25 @@ export default function ProfilePage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         toast({
-            title: "Profile Updated",
-            description: "Your information has been saved successfully.",
+            title: "Perfil Actualizado",
+            description: "Tu información ha sido guardada exitosamente.",
         });
     }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline">Profile Management</h1>
+        <h1 className="text-3xl font-bold font-headline">Gestión de Perfil</h1>
         <p className="text-muted-foreground">
-          View and update your personal information.
+          Ve y actualiza tu información personal.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Personal Details</CardTitle>
+          <CardTitle>Detalles Personales</CardTitle>
           <CardDescription>
-            Keep your profile information up to date.
+            Mantén tu información de perfil actualizada.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -48,15 +48,15 @@ export default function ProfilePage() {
                 <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="user avatar" />
                 <AvatarFallback>UC</AvatarFallback>
               </Avatar>
-              <Button type="button" variant="outline">Change Photo</Button>
+              <Button type="button" variant="outline">Cambiar Foto</Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Nombre Completo</Label>
                 <Input id="name" defaultValue="Usuario Coordinador" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Correo Electrónico</Label>
                 <Input
                   id="email"
                   type="email"
@@ -67,23 +67,23 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="background">Academic Background</Label>
+              <Label htmlFor="background">Formación Académica</Label>
               <Textarea
                 id="background"
-                placeholder="e.g., PhD in Computer Science"
-                defaultValue="PhD in Education, Master in Educational Technology"
+                placeholder="Ej: Doctorado en Ciencias de la Computación"
+                defaultValue="Doctorado en Educación, Maestría en Tecnología Educativa"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="courses">Coordinated Courses</Label>
+              <Label htmlFor="courses">Cursos Coordinados</Label>
               <Textarea
                 id="courses"
-                placeholder="e.g., Introduction to Programming, Advanced Algorithms"
-                defaultValue="Calculus I, Linear Algebra, Modern Physics"
+                placeholder="Ej: Introducción a la Programación, Algoritmos Avanzados"
+                defaultValue="Cálculo I, Álgebra Lineal, Física Moderna"
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit">Guardar Cambios</Button>
             </div>
           </form>
         </CardContent>

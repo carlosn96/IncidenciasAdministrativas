@@ -21,9 +21,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/profile", label: "Profile", icon: User },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
+  { href: "/dashboard/profile", label: "Perfil", icon: User },
+  { href: "/dashboard/settings", label: "Ajustes", icon: Settings },
 ];
 
 export function Nav() {
@@ -72,7 +72,7 @@ export function Nav() {
               coordinador@institucion.edu
             </p>
           </div>
-          <SidebarMenuButton asChild tooltip="Log Out" className="!w-8 !h-8">
+          <SidebarMenuButton asChild tooltip="Cerrar Sesión" className="!w-8 !h-8">
             <Link href="/">
               <LogOut />
             </Link>

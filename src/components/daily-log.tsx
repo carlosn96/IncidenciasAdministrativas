@@ -22,16 +22,16 @@ const initialEvents: LaborEvent[] = [
     date: "2023-10-27",
     clockInTime: "09:02 AM",
     clockOutTime: "01:15 PM",
-    location: "Main Campus",
-    status: "Completed",
+    location: "Campus Principal",
+    status: "Completado",
   },
   {
     id: "evt2",
     date: "2023-10-27",
     clockInTime: "02:30 PM",
     clockOutTime: null,
-    location: "Main Campus",
-    status: "In Progress",
+    location: "Campus Principal",
+    status: "En Progreso",
   },
 ];
 
@@ -55,57 +55,57 @@ export function DailyLog() {
         date: new Date().toISOString().split('T')[0],
         clockInTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         clockOutTime: null,
-        location: 'Main Campus',
-        status: 'In Progress'
+        location: 'Campus Principal',
+        status: 'En Progreso'
     };
-    setEvents(prev => [...prev.filter(e => e.status !== 'In Progress'), newEvent]);
-    toast({ title: "Clocked In", description: `You have successfully clocked in at ${newEvent.clockInTime}.` });
+    setEvents(prev => [...prev.filter(e => e.status !== 'En Progreso'), newEvent]);
+    toast({ title: "Entrada Registrada", description: `Has registrado tu entrada exitosamente a las ${newEvent.clockInTime}.` });
   };
 
   const handleClockOut = () => {
     setIsClockedIn(false);
     const clockOutTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    setEvents(prev => prev.map(e => e.status === 'In Progress' ? { ...e, status: 'Completed', clockOutTime } : e));
-    toast({ title: "Clocked Out", description: `You have successfully clocked out at ${clockOutTime}.` });
+    setEvents(prev => prev.map(e => e.status === 'En Progreso' ? { ...e, status: 'Completado', clockOutTime } : e));
+    toast({ title: "Salida Registrada", description: `Has registrado tu salida exitosamente a las ${clockOutTime}.` });
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Daily Log</CardTitle>
-        <CardDescription>Capture your clock-in and clock-out events for the day.</CardDescription>
+        <CardTitle>Registro Diario</CardTitle>
+        <CardDescription>Registra tus eventos de entrada y salida del día.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
           <div className="flex items-center gap-3">
             <Clock className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-sm text-muted-foreground">Current Time</p>
+              <p className="text-sm text-muted-foreground">Hora Actual</p>
               <p className="text-2xl font-semibold font-mono">{currentTime}</p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleClockIn} disabled={isClockedIn} className="w-32">
+            <Button onClick={handleClockIn} disabled={isClockedIn} className="w-40">
               <Play className="mr-2" />
-              Clock In
+              Registrar Entrada
             </Button>
-            <Button onClick={handleClockOut} disabled={!isClockedIn} variant="destructive" className="w-32">
+            <Button onClick={handleClockOut} disabled={!isClockedIn} variant="destructive" className="w-40">
               <Square className="mr-2" />
-              Clock Out
+              Registrar Salida
             </Button>
           </div>
         </div>
         
         <div>
-          <h3 className="text-lg font-medium mb-2">Today's Events</h3>
+          <h3 className="text-lg font-medium mb-2">Eventos de Hoy</h3>
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Clock In</TableHead>
-                  <TableHead>Clock Out</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Entrada</TableHead>
+                  <TableHead>Salida</TableHead>
+                  <TableHead>Ubicación</TableHead>
+                  <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -115,7 +115,7 @@ export function DailyLog() {
                     <TableCell>{event.clockOutTime ?? "---"}</TableCell>
                     <TableCell>{event.location}</TableCell>
                     <TableCell>
-                      <Badge variant={event.status === 'Completed' ? 'secondary' : 'default'}>
+                      <Badge variant={event.status === 'Completado' ? 'secondary' : 'default'}>
                         {event.status}
                       </Badge>
                     </TableCell>

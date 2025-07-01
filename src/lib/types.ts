@@ -7,7 +7,7 @@ export type User = {
 };
 
 export type ScheduleEntry = {
-  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
   startTime: string;
   endTime: string;
   location: string;
@@ -26,5 +26,5 @@ export type LaborEvent = {
   clockInTime: string;
   clockOutTime: string | null;
   location: string;
-  status: 'In Progress' | 'Completed';
+  status: 'En Progreso' | 'Completado';
 };

@@ -32,10 +32,10 @@ import type { Location } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 const initialLocationsData: Location[] = [
-  { id: "loc1", name: "Building A", campus: "Main Campus", address: "123 University Ave" },
-  { id: "loc2", name: "Library", campus: "Main Campus", address: "125 University Ave" },
-  { id: "loc3", name: "Science Hub", campus: "North Campus", address: "456 College Rd" },
-  { id: "loc4", name: "Home Office", campus: "Remote", address: "N/A" },
+  { id: "loc1", name: "Edificio A", campus: "Campus Principal", address: "Av. Universidad 123" },
+  { id: "loc2", name: "Biblioteca", campus: "Campus Principal", address: "Av. Universidad 125" },
+  { id: "loc3", name: "Centro de Ciencias", campus: "Campus Norte", address: "Calle Colegio 456" },
+  { id: "loc4", name: "Oficina en Casa", campus: "Remoto", address: "N/A" },
 ];
 
 export function LocationsSettings() {
@@ -49,8 +49,8 @@ export function LocationsSettings() {
     if (!newLocation.name.trim() || !newLocation.campus.trim()) {
         toast({
             variant: "destructive",
-            title: "Validation Error",
-            description: "Location Name and Campus are required.",
+            title: "Error de Validación",
+            description: "El nombre de la ubicación y el campus son requeridos.",
         });
         return;
     }
@@ -62,8 +62,8 @@ export function LocationsSettings() {
 
     setLocations(prev => [newLoc, ...prev]);
     toast({
-        title: "Location Added",
-        description: `Successfully added '${newLocation.name}'.`,
+        title: "Ubicación Añadida",
+        description: `Se ha añadido '${newLocation.name}' exitosamente.`,
     });
 
     setNewLocation({ name: "", campus: "", address: "" });
@@ -75,40 +75,40 @@ export function LocationsSettings() {
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>
-                <CardTitle>Location Configuration</CardTitle>
+                <CardTitle>Configuración de Ubicaciones</CardTitle>
                 <CardDescription>
-                    Define work locations and campuses for clock-in systems.
+                    Define ubicaciones de trabajo y campus para los sistemas de registro.
                 </CardDescription>
             </div>
              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>Add Location</Button>
+                <Button>Añadir Ubicación</Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <form onSubmit={handleSaveLocation}>
                   <DialogHeader>
-                    <DialogTitle>Add New Location</DialogTitle>
+                    <DialogTitle>Añadir Nueva Ubicación</DialogTitle>
                     <DialogDescription>
-                      Fill in the details for the new work location.
+                      Completa los detalles de la nueva ubicación de trabajo.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="name" className="text-right">Name</Label>
-                      <Input id="name" placeholder="e.g., Building B" className="col-span-3" value={newLocation.name} onChange={(e) => setNewLocation({...newLocation, name: e.target.value})} />
+                      <Label htmlFor="name" className="text-right">Nombre</Label>
+                      <Input id="name" placeholder="Ej: Edificio B" className="col-span-3" value={newLocation.name} onChange={(e) => setNewLocation({...newLocation, name: e.target.value})} />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="campus" className="text-right">Campus</Label>
-                      <Input id="campus" placeholder="e.g., Main Campus" className="col-span-3" value={newLocation.campus} onChange={(e) => setNewLocation({...newLocation, campus: e.target.value})} />
+                      <Input id="campus" placeholder="Ej: Campus Principal" className="col-span-3" value={newLocation.campus} onChange={(e) => setNewLocation({...newLocation, campus: e.target.value})} />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="address" className="text-right">Address</Label>
-                      <Input id="address" placeholder="e.g., 127 University Ave" className="col-span-3" value={newLocation.address} onChange={(e) => setNewLocation({...newLocation, address: e.target.value})} />
+                      <Label htmlFor="address" className="text-right">Dirección</Label>
+                      <Input id="address" placeholder="Ej: Av. Universidad 127" className="col-span-3" value={newLocation.address} onChange={(e) => setNewLocation({...newLocation, address: e.target.value})} />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit">Save Location</Button>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                    <Button type="submit">Guardar Ubicación</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -120,10 +120,10 @@ export function LocationsSettings() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Nombre</TableHead>
                 <TableHead>Campus</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Dirección</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -133,7 +133,7 @@ export function LocationsSettings() {
                   <TableCell>{loc.campus}</TableCell>
                   <TableCell>{loc.address}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">Edit</Button>
+                    <Button variant="ghost" size="sm">Editar</Button>
                   </TableCell>
                 </TableRow>
               ))}

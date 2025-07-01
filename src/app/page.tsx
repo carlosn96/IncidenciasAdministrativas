@@ -33,13 +33,13 @@ export default function LoginPage() {
             Incidencias Administrativas
           </CardTitle>
           <CardDescription>
-            Access your coordinator dashboard
+            Accede a tu panel de coordinador
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Correo Electrónico</Label>
               <Input
                 id="email"
                 type="email"
@@ -48,11 +48,11 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input id="password" type="password" required />
             </div>
             <Button type="submit" className="w-full">
-              Sign In
+              Iniciar Sesión
             </Button>
           </form>
         </CardContent>
@@ -63,7 +63,7 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
+                O continuar con
               </span>
             </div>
           </div>
@@ -73,7 +73,7 @@ export default function LoginPage() {
             onClick={() => router.push("/dashboard")}
           >
             <GoogleIcon className="mr-2 h-4 w-4" />
-            Sign in with Google
+            Iniciar sesión con Google
           </Button>
         </CardFooter>
       </Card>
