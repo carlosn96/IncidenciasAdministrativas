@@ -1,23 +1,13 @@
 import { cn } from "@/lib/utils";
-import type { SVGProps } from "react";
+import type { SVGProps, ImgHTMLAttributes } from "react";
 
-export function AppLogo(props: SVGProps<SVGSVGElement>) {
+export function AppLogo(props: ImgHTMLAttributes<HTMLImageElement>) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+    <img
+      src="/assets/images/une-color.png"
+      alt="Centro Universitario UNE Logo"
       {...props}
-    >
-      <path d="M7 21h10" />
-      <path d="M12 21V3" />
-      <path d="M12 3H8.5a3.5 3.5 0 0 0-3.13 5.1L8 13" />
-      <path d="M12 3h3.5a3.5 3.5 0 0 1 3.13 5.1L16 13" />
-    </svg>
+    />
   );
 }
 

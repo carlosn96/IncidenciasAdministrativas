@@ -33,7 +33,7 @@ export function Nav() {
     <>
       <SidebarHeader>
         <div className="flex items-center gap-2">
-          <AppLogo className="h-8 w-8 text-sidebar-primary" />
+          <AppLogo className="h-8 w-8" />
           <span className="text-lg font-semibold text-sidebar-primary">
             Incidencias
           </span>
