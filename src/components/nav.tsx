@@ -45,16 +45,16 @@ export function Nav() {
         <SidebarMenu>
           {links.map((link) => (
             <SidebarMenuItem key={link.href}>
-              <Link href={link.href} legacyBehavior passHref>
-                <SidebarMenuButton
-                  as="a"
-                  isActive={pathname === link.href}
-                  tooltip={link.label}
-                >
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === link.href}
+                tooltip={link.label}
+              >
+                <Link href={link.href}>
                   <link.icon />
                   <span>{link.label}</span>
-                </SidebarMenuButton>
-              </Link>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -74,11 +74,11 @@ export function Nav() {
               coordinador@institucion.edu
             </p>
           </div>
-          <Link href="/" legacyBehavior passHref>
-            <SidebarMenuButton as="a" tooltip="Log Out" className="!w-8 !h-8">
+          <SidebarMenuButton asChild tooltip="Log Out" className="!w-8 !h-8">
+            <Link href="/">
               <LogOut />
-            </SidebarMenuButton>
-          </Link>
+            </Link>
+          </SidebarMenuButton>
         </div>
       </SidebarFooter>
     </>
