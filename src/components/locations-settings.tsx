@@ -32,10 +32,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Pencil, PlusCircle } from "lucide-react";
 
 const initialLocationsData: Location[] = [
-  { id: "loc1", name: "Edificio A", campus: "Campus Principal", address: "Av. Universidad 123" },
-  { id: "loc2", name: "Biblioteca", campus: "Campus Principal", address: "Av. Universidad 125" },
-  { id: "loc3", name: "Centro de Ciencias", campus: "Campus Norte", address: "Calle Colegio 456" },
-  { id: "loc4", name: "Oficina en Casa", campus: "Remoto", address: "N/A" },
+  { id: "loc1", name: "PLANTEL CENTRO", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc2", name: "PLANTEL CENTRO MÉDICO", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc3", name: "PLANTEL MILENIO", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc4", name: "PLANTEL TESISTÁN", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc5", name: "PLANTEL TLAJOMULCO", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc6", name: "PLANTEL TLAQUEPAQUE", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc7", name: "PLANTEL TONALÁ", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc8", name: "PLANTEL TORRE QUETZAL", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc9", name: "PLANTEL TORRE UNE", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc10", name: "PLANTEL VALLARTA", campus: "Centro Universitario UNE", address: "N/A" },
+  { id: "loc11", name: "PLANTEL ZAPOPAN", campus: "Centro Universitario UNE", address: "N/A" },
 ];
 
 export function LocationsSettings() {
