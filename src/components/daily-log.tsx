@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { LaborEvent, Location } from "@/lib/types";
+import type { LaborEvent, Location, ScheduleEntry } from "@/lib/types";
 import { Clock, Play, Square, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,7 +28,15 @@ const userLocations: Location[] = [
     { id: "loc1", name: "PLANTEL CENTRO", campus: "Centro Universitario UNE", address: "N/A" },
     { id: "loc9", name: "PLANTEL TORRE UNE", campus: "Centro Universitario UNE", address: "N/A" },
     { id: "loc11", name: "PLANTEL ZAPOPAN", campus: "Centro Universitario UNE", address: "N/A" },
-    { id: "remoto", name: "Remoto", campus: "", address: "N/A" }
+];
+
+const scheduleData: ScheduleEntry[] = [
+  { day: "Lunes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
+  { day: "Martes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
+  { day: "Miércoles", startTime: "09:00", endTime: "13:00", location: "PLANTEL TORRE UNE" },
+  { day: "Jueves", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
+  { day: "Viernes", startTime: "09:00", endTime: "15:00", location: "PLANTEL ZAPOPAN" },
+  { day: "Sábado", startTime: "", endTime: "", location: "" },
 ];
 
 const initialEvents: LaborEvent[] = [
@@ -66,6 +74,18 @@ export function DailyLog() {
       setCurrentTime(new Date().toLocaleTimeString('en-US'));
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const daysOfWeek = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const dayIndex = new Date().getDay();
+    const todaySpanish = daysOfWeek[dayIndex] as ScheduleEntry['day'];
+
+    const todaySchedule = scheduleData.find(s => s.day === todaySpanish);
+
+    if (todaySchedule && todaySchedule.location) {
+        setSelectedLocation(todaySchedule.location);
+    }
   }, []);
 
   const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {

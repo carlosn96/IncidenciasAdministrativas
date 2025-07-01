@@ -48,7 +48,7 @@ const initialScheduleData: ScheduleEntry[] = [
   { day: "Martes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
   { day: "Miércoles", startTime: "09:00", endTime: "13:00", location: "PLANTEL TORRE UNE" },
   { day: "Jueves", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
-  { day: "Viernes", startTime: "09:00", endTime: "15:00", location: "Remoto" },
+  { day: "Viernes", startTime: "09:00", endTime: "15:00", location: "PLANTEL ZAPOPAN" },
   { day: "Sábado", startTime: "", endTime: "", location: "" },
 ];
 
@@ -66,10 +66,6 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
     const handleScheduleChange = (index: number, field: keyof Omit<ScheduleEntry, 'day'>, value: string) => {
         const updatedSchedule = [...editableSchedule];
         updatedSchedule[index] = { ...updatedSchedule[index], [field]: value };
-        if (field === 'location' && value === 'day-off') {
-            updatedSchedule[index].startTime = "";
-            updatedSchedule[index].endTime = "";
-        }
         setEditableSchedule(updatedSchedule);
     };
 
@@ -129,15 +125,13 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
                         {editableSchedule.map((entry, index) => (
                             <div key={entry.day} className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor={`${entry.day}-day`} className="font-medium">{entry.day}</Label>
-                                <Input id={`${entry.day}-start`} type="time" value={entry.startTime} onChange={e => handleScheduleChange(index, 'startTime', e.target.value)} disabled={entry.location === 'day-off'} />
-                                <Input id={`${entry.day}-end`} type="time" value={entry.endTime} onChange={e => handleScheduleChange(index, 'endTime', e.target.value)} disabled={entry.location === 'day-off'} />
+                                <Input id={`${entry.day}-start`} type="time" value={entry.startTime} onChange={e => handleScheduleChange(index, 'startTime', e.target.value)} />
+                                <Input id={`${entry.day}-end`} type="time" value={entry.endTime} onChange={e => handleScheduleChange(index, 'endTime', e.target.value)} />
                                 <Select value={entry.location} onValueChange={value => handleScheduleChange(index, 'location', value)}>
                                     <SelectTrigger id={`${entry.day}-location`}>
                                         <SelectValue placeholder="Selecciona lugar..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="day-off">Día Libre</SelectItem>
-                                        <SelectItem value="Remoto">Remoto</SelectItem>
                                         {userLocations.map(loc => (
                                             <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
                                         ))}
@@ -173,7 +167,7 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
                   <TableCell className="font-medium">{entry.day}</TableCell>
                   <TableCell>{formatTime12h(entry.startTime)}</TableCell>
                   <TableCell>{formatTime12h(entry.endTime)}</TableCell>
-                  <TableCell>{(entry.location && entry.location !== 'day-off') ? entry.location : "---"}</TableCell>
+                  <TableCell>{entry.location || "---"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
