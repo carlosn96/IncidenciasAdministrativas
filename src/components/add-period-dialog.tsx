@@ -113,15 +113,6 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="period-name">Nombre del Periodo</Label>
-                        <Input
-                            id="period-name"
-                            value={periodName}
-                            onChange={(e) => setPeriodName(e.target.value)}
-                            placeholder="Ej: Segunda Quincena de Julio"
-                        />
-                    </div>
-                    <div className="grid gap-2">
                          <Label>Rango de Fechas del Periodo</Label>
                          <Popover>
                             <PopoverTrigger asChild>
@@ -159,6 +150,16 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                               />
                             </PopoverContent>
                           </Popover>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="period-name">Nombre del Periodo</Label>
+                        <Input
+                            id="period-name"
+                            value={periodName}
+                            onChange={(e) => setPeriodName(e.target.value)}
+                            placeholder="Ej: Segunda Quincena de Julio"
+                            disabled={!dateRange}
+                        />
                     </div>
                 </div>
                 <DialogFooter>
