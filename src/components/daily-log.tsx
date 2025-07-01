@@ -77,8 +77,9 @@ export function DailyLog() {
   const { toast } = useToast();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingIncident, setEditingIncident] = useState<{ type: 'Entrada' | 'Salida'; time: string } | null>(null);
+  const [editingIncident, setEditingIncident] = useState<({ type: 'Entrada' | 'Salida' } & Incident) | null>(null);
   const [newTime, setNewTime] = useState("");
+  const [newLocation, setNewLocation] = useState("");
 
   const { activePeriod, todayLaborDay } = useMemo(() => {
     const today = new Date();
@@ -177,14 +178,22 @@ export function DailyLog() {
     });
   };
 
-  const handleOpenEditDialog = (type: 'Entrada' | 'Salida', time: string) => {
-    setEditingIncident({ type, time });
-    setNewTime(time);
+  const handleOpenEditDialog = (incident: { type: 'Entrada' | 'Salida' } & Incident) => {
+    setEditingIncident(incident);
+    setNewTime(incident.time);
+    setNewLocation(incident.location);
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveTime = () => {
-    if (!editingIncident || !activePeriod || !todayLaborDay) return;
+  const handleSaveChanges = () => {
+    if (!editingIncident || !activePeriod || !todayLaborDay || !newLocation) {
+        toast({
+            variant: "destructive",
+            title: "Ubicación requerida",
+            description: "Por favor, selecciona una ubicación.",
+        });
+        return;
+    }
   
     // Validation
     if (editingIncident.type === 'Salida' && todayLaborDay.entry?.time) {
@@ -216,7 +225,7 @@ export function DailyLog() {
           if (ld.date === todayLaborDay.date) {
             const updatedDay = { ...ld };
             if (updatedDay[keyToUpdate]) {
-              updatedDay[keyToUpdate] = { ...updatedDay[keyToUpdate]!, time: newTime };
+              updatedDay[keyToUpdate] = { ...updatedDay[keyToUpdate]!, time: newTime, location: newLocation };
             }
             return updatedDay;
           }
@@ -229,8 +238,8 @@ export function DailyLog() {
   
     setPeriods(updatedPeriods);
     toast({
-      title: "Hora Actualizada",
-      description: `La hora de ${editingIncident.type.toLowerCase()} se ha actualizado.`,
+      title: "Registro Actualizado",
+      description: `El registro de ${editingIncident.type.toLowerCase()} se ha actualizado.`,
     });
     setIsEditDialogOpen(false);
     setEditingIncident(null);
@@ -374,7 +383,7 @@ export function DailyLog() {
                                       <p className="text-muted-foreground">{event.location}</p>
                                   </div>
                                   <div className="flex items-center -mr-3">
-                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event.type, event.time)}>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event)}>
                                           <Pencil className="h-4 w-4" />
                                           <span className="sr-only">Editar</span>
                                       </Button>
@@ -437,7 +446,7 @@ export function DailyLog() {
                                 <TableCell>{event.location}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event.type, event.time)}>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event)}>
                                             <Pencil className="h-4 w-4" />
                                             <span className="sr-only">Editar</span>
                                         </Button>
@@ -479,23 +488,38 @@ export function DailyLog() {
         </Card>
         
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-xs">
+        <DialogContent className="sm:max-w-md">
             <DialogHeader>
-                <DialogTitle>Editar Hora de {editingIncident?.type}</DialogTitle>
+                <DialogTitle>Editar Registro de {editingIncident?.type}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-                <Label htmlFor="edit-time">Nueva Hora</Label>
-                <Input 
-                    id="edit-time" 
-                    type="time" 
-                    value={newTime} 
-                    onChange={e => setNewTime(e.target.value)}
-                    className="text-lg"
-                />
+                <div className="space-y-2">
+                    <Label htmlFor="edit-time">Hora</Label>
+                    <Input 
+                        id="edit-time" 
+                        type="time" 
+                        value={newTime} 
+                        onChange={e => setNewTime(e.target.value)}
+                        className="text-base"
+                    />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="edit-location">Ubicación</Label>
+                    <Select value={newLocation} onValueChange={setNewLocation}>
+                        <SelectTrigger id="edit-location">
+                            <SelectValue placeholder="Selecciona una ubicación..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {userLocations.map(loc => (
+                                <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handleSaveTime}>Guardar</Button>
+                <Button onClick={handleSaveChanges}>Guardar Cambios</Button>
             </DialogFooter>
         </DialogContent>
         </Dialog>
