@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -47,6 +48,7 @@ import { Label } from "@/components/ui/label";
 import type { Location } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LocationsSettingsProps {
     userLocations: Location[];
@@ -114,7 +116,64 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-x-auto">
+          {/* Mobile View */}
+          <div className="md:hidden">
+            {userLocations.length > 0 ? (
+              <div className="border rounded-lg">
+                {userLocations.map((loc, index) => (
+                  <div
+                    key={loc.id}
+                    className={cn(
+                      "p-4",
+                      index < userLocations.length - 1 && "border-b"
+                    )}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{loc.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {loc.campus}
+                        </p>
+                      </div>
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 -mr-2 -mt-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Esto eliminará permanentemente
+                                la ubicación de tu lista personalizada.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteLocation(loc.id)}>
+                                Continuar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-16 text-center text-muted-foreground border rounded-lg">
+                <p>No has añadido ninguna ubicación.</p>
+              </div>
+            )}
+          </div>
+          
+          {/* Desktop View */}
+          <div className="hidden md:block border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

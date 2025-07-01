@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -37,6 +38,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { ScheduleEntry, Location } from "@/lib/types";
 import { Pencil } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SchedulesSettingsProps {
     userLocations: Location[];
@@ -96,37 +98,73 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Día</TableHead>
-                  <TableHead>Hora de Entrada</TableHead>
-                  <TableHead>Lugar de Entrada</TableHead>
-                  <TableHead>Hora de Salida</TableHead>
-                  <TableHead>Lugar de Salida</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {schedule.map((entry) => (
-                  <TableRow key={entry.day}>
-                    <TableCell className="font-medium whitespace-nowrap">{entry.day}</TableCell>
-                    <TableCell>{entry.startTime ? formatTime12h(entry.startTime) : "---"}</TableCell>
-                    <TableCell>{entry.startLocation || "---"}</TableCell>
-                    <TableCell>{entry.endTime ? formatTime12h(entry.endTime) : "---"}</TableCell>
-                    <TableCell>{entry.endLocation || "---"}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(entry)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Editar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+            {/* Mobile View */}
+            <div className="md:hidden">
+              {schedule.length > 0 ? (
+                  <div className="border rounded-lg">
+                      {schedule.map((entry, index) => (
+                          <div key={entry.day} className={cn("p-4", index < schedule.length - 1 && "border-b")}>
+                              <div className="flex justify-between items-center mb-4">
+                                  <p className="font-medium text-lg">{entry.day}</p>
+                                  <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(entry)}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Editar
+                                  </Button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div className="space-y-1">
+                                      <p className="text-muted-foreground">Entrada</p>
+                                      <p className="font-semibold">{entry.startTime ? formatTime12h(entry.startTime) : "---"}</p>
+                                      <p className="text-muted-foreground truncate">{entry.startLocation || "Día Libre"}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                      <p className="text-muted-foreground">Salida</p>
+                                      <p className="font-semibold">{entry.endTime ? formatTime12h(entry.endTime) : "---"}</p>
+                                      <p className="text-muted-foreground truncate">{entry.endLocation || "Día Libre"}</p>
+                                  </div>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              ) : (
+                  <div className="py-16 text-center text-muted-foreground border rounded-lg">
+                      <p>No hay horario configurado.</p>
+                  </div>
+              )}
+            </div>
+
+            {/* Desktop View */}
+            <div className="hidden md:block border rounded-lg overflow-x-auto">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Día</TableHead>
+                    <TableHead>Hora de Entrada</TableHead>
+                    <TableHead>Lugar de Entrada</TableHead>
+                    <TableHead>Hora de Salida</TableHead>
+                    <TableHead>Lugar de Salida</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {schedule.map((entry) => (
+                    <TableRow key={entry.day}>
+                        <TableCell className="font-medium whitespace-nowrap">{entry.day}</TableCell>
+                        <TableCell>{entry.startTime ? formatTime12h(entry.startTime) : "---"}</TableCell>
+                        <TableCell>{entry.startLocation || "---"}</TableCell>
+                        <TableCell>{entry.endTime ? formatTime12h(entry.endTime) : "---"}</TableCell>
+                        <TableCell>{entry.endLocation || "---"}</TableCell>
+                        <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(entry)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                        </Button>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </div>
         </CardContent>
       </Card>
 

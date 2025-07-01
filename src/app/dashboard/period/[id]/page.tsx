@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { differenceInMinutes, format, parse, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { LaborDay, Incident } from "@/lib/types";
 import { useSettings } from "@/context/settings-context";
+import { cn } from "@/lib/utils";
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -139,7 +141,44 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-x-auto">
+          {/* Mobile View */}
+          <div className="md:hidden">
+            {laborDays.length > 0 ? (
+                <div className="border rounded-lg">
+                    {laborDays.map((day, index) => (
+                        <div key={day.date} className={cn("p-4", index < laborDays.length - 1 && "border-b")}>
+                            <div className="flex justify-between items-baseline mb-2">
+                                <p className="font-medium capitalize">
+                                    {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                                </p>
+                                <p className="font-mono font-semibold text-right">
+                                    {calculateWorkedHours(day.entry, day.exit)}
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-sm mt-2">
+                                <div>
+                                    <p className="font-semibold text-muted-foreground">Entrada</p>
+                                    <p>{formatTime12h(day.entry?.time)}</p>
+                                    <p className="text-muted-foreground">{day.entry?.location || '---'}</p>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-muted-foreground">Salida</p>
+                                    <p>{formatTime12h(day.exit?.time)}</p>
+                                    <p className="text-muted-foreground">{day.exit?.location || '---'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground py-16 border rounded-lg">
+                    <p>No hay días laborables configurados para este periodo.</p>
+                </div>
+            )}
+          </div>
+
+          {/* Desktop View */}
+          <div className="hidden md:block border rounded-lg overflow-x-auto">
             <Table>
                 <TableHeader>
                     <TableRow>

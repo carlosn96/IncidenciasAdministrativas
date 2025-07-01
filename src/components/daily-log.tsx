@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -45,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { format, isWithinInterval, parse, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSettings } from "@/context/settings-context";
+import { cn } from "@/lib/utils";
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -355,70 +357,121 @@ export function DailyLog() {
               </div>
             <Card>
                 <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Hora</TableHead>
-                        <TableHead>Ubicación</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {eventsForTable.length === 0 ? (
+                  {/* Mobile View */}
+                  <div className="md:hidden border-t">
+                      {eventsForTable.length === 0 ? (
+                          <div className="text-center text-muted-foreground py-8">
+                              No hay eventos registrados hoy.
+                          </div>
+                      ) : (
+                          [...eventsForTable].reverse().map((event, index) => (
+                              <div key={event.id} className={cn("p-4 flex justify-between items-start", index < eventsForTable.length - 1 && "border-b")}>
+                                  <div>
+                                      <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>
+                                          {event.type}
+                                      </Badge>
+                                      <p className="font-semibold text-lg mt-1">{formatTime12h(event.time)}</p>
+                                      <p className="text-muted-foreground">{event.location}</p>
+                                  </div>
+                                  <div className="flex items-center -mr-3">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event.type, event.time)}>
+                                          <Pencil className="h-4 w-4" />
+                                          <span className="sr-only">Editar</span>
+                                      </Button>
+                                      <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                                              <Trash2 className="h-4 w-4" />
+                                              <span className="sr-only">Eliminar</span>
+                                          </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                              {event.type === 'Entrada'
+                                                  ? "Esta acción no se puede deshacer. Esto eliminará permanentemente los registros de entrada y salida de hoy."
+                                                  : "Esta acción no se puede deshacer. Esto eliminará permanentemente el registro de salida."
+                                              }
+                                              </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => handleDeleteEvent(event.type)}>Continuar</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                      </AlertDialog>
+                                  </div>
+                              </div>
+                          ))
+                      )}
+                  </div>
+
+                  {/* Desktop View */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
+                        <TableHeader>
                         <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                No hay eventos registrados hoy.
-                            </TableCell>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Hora</TableHead>
+                            <TableHead>Ubicación</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
-                    ) : (
-                        [...eventsForTable].reverse().map((event) => (
-                            <TableRow key={event.id}>
-                            <TableCell>
-                                <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>
-                                {event.type}
-                                </Badge>
-                            </TableCell>
-                            <TableCell>{formatTime12h(event.time)}</TableCell>
-                            <TableCell>{event.location}</TableCell>
-                            <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event.type, event.time)}>
-                                        <Pencil className="h-4 w-4" />
-                                        <span className="sr-only">Editar</span>
-                                    </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground">
-                                            <Trash2 className="h-4 w-4" />
-                                            <span className="sr-only">Eliminar</span>
-                                        </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                            {event.type === 'Entrada'
-                                                ? "Esta acción no se puede deshacer. Esto eliminará permanentemente los registros de entrada y salida de hoy."
-                                                : "Esta acción no se puede deshacer. Esto eliminará permanentemente el registro de salida."
-                                            }
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteEvent(event.type)}>Continuar</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            </TableCell>
+                        </TableHeader>
+                        <TableBody>
+                        {eventsForTable.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                    No hay eventos registrados hoy.
+                                </TableCell>
                             </TableRow>
-                        ))
-                    )}
-                    </TableBody>
-                </Table>
-                </div>
+                        ) : (
+                            [...eventsForTable].reverse().map((event) => (
+                                <TableRow key={event.id}>
+                                <TableCell>
+                                    <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>
+                                    {event.type}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>{formatTime12h(event.time)}</TableCell>
+                                <TableCell>{event.location}</TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event.type, event.time)}>
+                                            <Pencil className="h-4 w-4" />
+                                            <span className="sr-only">Editar</span>
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="sr-only">Eliminar</span>
+                                            </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                {event.type === 'Entrada'
+                                                    ? "Esta acción no se puede deshacer. Esto eliminará permanentemente los registros de entrada y salida de hoy."
+                                                    : "Esta acción no se puede deshacer. Esto eliminará permanentemente el registro de salida."
+                                                }
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteEvent(event.type)}>Continuar</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                        </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
             </Card>
             </div>
