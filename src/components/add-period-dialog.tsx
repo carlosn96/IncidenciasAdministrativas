@@ -44,14 +44,9 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
         if (range?.from && !range.to) {
             const endDate = addDays(range.from, 15);
             setDateRange({ from: range.from, to: endDate });
-            setIsCalendarOpen(false); // Close the popover automatically
         } else {
             // This handles clearing the selection or other edge cases.
             setDateRange(range);
-            // If the user somehow manages to select a full range manually, close it too.
-            if (range?.from && range?.to) {
-                setIsCalendarOpen(false);
-            }
         }
     };
 
@@ -157,6 +152,11 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                                 numberOfMonths={1}
                                 locale={es}
                               />
+                              <div className="p-3 border-t">
+                                <Button onClick={() => setIsCalendarOpen(false)} className="w-full">
+                                    Aceptar
+                                </Button>
+                              </div>
                             </PopoverContent>
                           </Popover>
                     </div>
