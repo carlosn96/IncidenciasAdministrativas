@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { v4 as uuidv4 } from 'uuid';
@@ -26,25 +26,10 @@ const initialPeriods: Period[] = [];
 export function PeriodsList() {
     const [periods, setPeriods] = useState<Period[]>(initialPeriods);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [startDate, setStartDate] = useState<Date | undefined>();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
     const [periodName, setPeriodName] = useState("");
     const { toast } = useToast();
-
-    // A period is always 16 calendar days inclusive (start date + 15 days).
-    const calculateEndDate = (start: Date): Date => {
-        return addDays(start, 15);
-    };
-
-    useEffect(() => {
-        if (startDate) {
-            const endDate = calculateEndDate(startDate);
-            setDateRange({ from: startDate, to: endDate });
-        } else {
-            setDateRange(undefined);
-        }
-    }, [startDate]);
 
     useEffect(() => {
         if (dateRange?.from && dateRange?.to) {
@@ -65,8 +50,8 @@ export function PeriodsList() {
         if (!dateRange || !dateRange.from || !dateRange.to) {
             toast({
                 variant: "destructive",
-                title: "Fechas requeridas",
-                description: "Por favor, selecciona una fecha de inicio para el periodo."
+                title: "Rango de fechas requerido",
+                description: "Por favor, selecciona una fecha de inicio y fin para el periodo."
             });
             return;
         }
@@ -96,7 +81,6 @@ export function PeriodsList() {
 
         // Reset form
         setIsAddDialogOpen(false);
-        setStartDate(undefined);
         setDateRange(undefined);
         setIncludeSaturdays(false);
         setPeriodName("");
@@ -179,7 +163,7 @@ export function PeriodsList() {
                             />
                         </div>
                         <div className="grid gap-2">
-                             <Label>Fecha de Inicio (el final se calcula automáticamente)</Label>
+                             <Label>Rango de Fechas del Periodo</Label>
                              <Popover>
                                 <PopoverTrigger asChild>
                                   <Button
@@ -201,16 +185,16 @@ export function PeriodsList() {
                                         format(dateRange.from, "d 'de' LLL, yyyy", { locale: es })
                                       )
                                     ) : (
-                                      <span>Selecciona una fecha de inicio</span>
+                                      <span>Selecciona un rango de fechas</span>
                                     )}
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
                                   <Calendar
                                     initialFocus
-                                    mode="single"
-                                    selected={startDate}
-                                    onSelect={setStartDate}
+                                    mode="range"
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
                                     numberOfMonths={1}
                                     locale={es}
                                   />
