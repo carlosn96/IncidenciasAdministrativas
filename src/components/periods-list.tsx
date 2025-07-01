@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { addDays, format, getDay } from "date-fns";
+import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { v4 as uuidv4 } from 'uuid';
@@ -29,43 +29,25 @@ export function PeriodsList() {
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
     const { toast } = useToast();
 
-    const calculateEndDate = (startDate: Date, SaturdaysIncluded: boolean): Date => {
-        let currentDate = startDate;
-        let businessDaysCount = 1; // Start counting from the start date
-        // We need 15 days total, so we iterate until we find 14 more.
-        while (businessDaysCount < 15) {
-            currentDate = addDays(currentDate, 1);
-            const dayOfWeek = getDay(currentDate);
-
-            const isSunday = dayOfWeek === 0;
-            const isSaturday = dayOfWeek === 6;
-
-            if (isSunday || (isSaturday && !SaturdaysIncluded)) {
-                continue;
-            }
-            
-            businessDaysCount++;
-        }
-        return currentDate;
+    // A period is always 15 calendar days (start date + 14 days).
+    const calculateEndDate = (startDate: Date): Date => {
+        return addDays(startDate, 14);
     };
 
     const handleDateSelect = (range: DateRange | undefined) => {
         if (range?.from && !range.to) {
-            const endDate = calculateEndDate(range.from, includeSaturdays);
+            // If only a start date is selected, calculate the end date automatically.
+            const endDate = calculateEndDate(range.from);
             setDateRange({ from: range.from, to: endDate });
         } else {
+            // Otherwise, allow the user to select a custom range.
             setDateRange(range);
         }
     };
     
+    // This handler only needs to update the state for the checkbox.
     const handleSaturdaysCheckedChange = (checked: boolean | string) => {
-        const isChecked = Boolean(checked);
-        setIncludeSaturdays(isChecked);
-
-        if (dateRange?.from) {
-            const newEndDate = calculateEndDate(dateRange.from, isChecked);
-            setDateRange(currentRange => ({ ...currentRange, from: currentRange?.from, to: newEndDate }));
-        }
+        setIncludeSaturdays(Boolean(checked));
     };
 
 
@@ -186,7 +168,7 @@ export function PeriodsList() {
                                         format(dateRange.from, "d 'de' LLL, yyyy", { locale: es })
                                       )
                                     ) : (
-                                      <span>Selecciona un rango de fechas</span>
+                                      <span>Selecciona una fecha de inicio</span>
                                     )}
                                   </Button>
                                 </PopoverTrigger>
