@@ -9,7 +9,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +26,6 @@ interface AddPeriodDialogProps {
 export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
     const { setPeriods } = useSettings();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
-    const [includeSaturdays, setIncludeSaturdays] = useState(false);
     const [periodName, setPeriodName] = useState("");
     const { toast } = useToast();
 
@@ -35,7 +33,6 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
         if (!open) {
             // Reset form when dialog is closed
             setDateRange(undefined);
-            setIncludeSaturdays(false);
             setPeriodName("");
         }
     }, [open]);
@@ -57,12 +54,6 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
             setPeriodName("");
         }
     }, [dateRange]);
-
-    
-    const handleSaturdaysCheckedChange = (checked: boolean | string) => {
-        setIncludeSaturdays(Boolean(checked));
-    };
-
 
     const handleAddPeriod = () => {
         if (!dateRange || !dateRange.from || !dateRange.to) {
@@ -87,9 +78,8 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
         const newLaborDays: LaborDay[] = allDays
             .filter(day => {
                 const dayOfWeek = getDay(day);
-                if (dayOfWeek === 0) return false;
-                if (dayOfWeek === 6 && !includeSaturdays) return false;
-                return true;
+                // Exclude only Sundays
+                return dayOfWeek !== 0;
             })
             .map(day => ({
                 date: format(day, "yyyy-MM-dd"),
@@ -100,7 +90,6 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
             name: periodName.trim(),
             startDate: dateRange.from,
             endDate: dateRange.to,
-            includeSaturdays: includeSaturdays,
             laborDays: newLaborDays
         };
 
@@ -170,16 +159,6 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                               />
                             </PopoverContent>
                           </Popover>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox 
-                            id="includeSaturdays"
-                            checked={includeSaturdays}
-                            onCheckedChange={handleSaturdaysCheckedChange}
-                        />
-                        <Label htmlFor="includeSaturdays" className="font-normal">
-                            Considerar los sábados en este periodo
-                        </Label>
                     </div>
                 </div>
                 <DialogFooter>

@@ -37,6 +37,5 @@ export type Period = {
   name: string;
   startDate: Date;
   endDate: Date;
-  includeSaturdays: boolean;
   laborDays: LaborDay[];
 };

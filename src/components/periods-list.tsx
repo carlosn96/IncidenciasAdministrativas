@@ -47,9 +47,6 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                         <p className="text-sm text-muted-foreground whitespace-nowrap">
                                             {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            Sábados Incluidos: {period.includeSaturdays ? "Sí" : "No"}
-                                        </p>
                                         <div className="mt-4 flex justify-end">
                                             <Button asChild variant="outline" size="sm">
                                                 <Link href={`/dashboard/period/${period.id}`}>
@@ -75,14 +72,13 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                 <TableRow>
                                     <TableHead>Nombre del Periodo</TableHead>
                                     <TableHead>Rango del Periodo</TableHead>
-                                    <TableHead>Sábados Incluidos</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {periods.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
                                             No hay periodos agregados.
                                         </TableCell>
                                     </TableRow>
@@ -93,7 +89,6 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                             <TableCell className="whitespace-nowrap">
                                                 {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
                                             </TableCell>
-                                            <TableCell>{period.includeSaturdays ? "Sí" : "No"}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button asChild variant="outline" size="sm">
                                                     <Link href={`/dashboard/period/${period.id}`}>

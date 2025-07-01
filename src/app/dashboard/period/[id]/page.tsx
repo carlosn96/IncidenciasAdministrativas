@@ -117,7 +117,7 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
         <CardHeader>
           <CardTitle>{period.name}</CardTitle>
           <CardDescription>
-            {formattedDateRange} (Sábados {period.includeSaturdays ? "incluidos" : "excluidos"})
+            {formattedDateRange}
           </CardDescription>
         </CardHeader>
         <CardContent>
