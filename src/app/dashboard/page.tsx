@@ -1,4 +1,3 @@
-import { QuoteCard } from "@/components/quote-card";
 import { DailyLog } from "@/components/daily-log";
 
 export default function DashboardPage() {
@@ -9,10 +8,6 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">
           Welcome back, Coordinator! Here's your overview for today.
         </p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <QuoteCard />
       </div>
 
       <DailyLog />
