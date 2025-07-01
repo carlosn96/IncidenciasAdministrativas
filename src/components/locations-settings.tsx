@@ -25,78 +25,76 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import type { Location } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 
-const initialLocationsData: Location[] = [
-  { id: "loc1", name: "PLANTEL CENTRO", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc2", name: "PLANTEL CENTRO MÉDICO", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc3", name: "PLANTEL MILENIO", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc4", name: "PLANTEL TESISTÁN", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc5", name: "PLANTEL TLAJOMULCO", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc6", name: "PLANTEL TLAQUEPAQUE", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc7", name: "PLANTEL TONALÁ", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc8", name: "PLANTEL TORRE QUETZAL", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc9", name: "PLANTEL TORRE UNE", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc10", name: "PLANTEL VALLARTA", campus: "Centro Universitario UNE", address: "N/A" },
-  { id: "loc11", name: "PLANTEL ZAPOPAN", campus: "Centro Universitario UNE", address: "N/A" },
-];
+interface LocationsSettingsProps {
+    userLocations: Location[];
+    setUserLocations: React.Dispatch<React.SetStateAction<Location[]>>;
+    allLocations: Location[];
+}
 
-export function LocationsSettings() {
-  const [locations, setLocations] = useState<Location[]>(initialLocationsData);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-  const [locationData, setLocationData] = useState({ name: "", campus: "", address: "" });
+export function LocationsSettings({ userLocations, setUserLocations, allLocations }: LocationsSettingsProps) {
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const { toast } = useToast();
 
-  const handleAddClick = () => {
-    setEditingLocation(null);
-    setLocationData({ name: "", campus: "", address: "" });
-    setIsDialogOpen(true);
-  };
+  const availableLocationsToAdd = allLocations.filter(
+    (allLoc) => !userLocations.some((userLoc) => userLoc.id === allLoc.id)
+  );
 
-  const handleEditClick = (location: Location) => {
-    setEditingLocation(location);
-    setLocationData({ name: location.name, campus: location.campus, address: location.address });
-    setIsDialogOpen(true);
-  };
-
-  const handleSaveLocation = (e: React.FormEvent) => {
+  const handleAddLocation = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!locationData.name.trim() || !locationData.campus.trim()) {
-        toast({
-            variant: "destructive",
-            title: "Error de Validación",
-            description: "El nombre de la ubicación y el campus son requeridos.",
-        });
-        return;
-    }
+    const locationToAdd = allLocations.find(loc => loc.id === selectedLocationId);
 
-    if (editingLocation) {
-        setLocations(locations.map(loc => 
-            loc.id === editingLocation.id ? { ...editingLocation, ...locationData } : loc
-        ));
-        toast({
-            title: "Ubicación Actualizada",
-            description: `Se ha actualizado '${locationData.name}' exitosamente.`,
-        });
-    } else {
-        const newLoc: Location = {
-            id: `loc${Date.now()}`,
-            ...locationData,
-        };
-        setLocations(prev => [newLoc, ...prev]);
+    if (locationToAdd) {
+        setUserLocations(prev => [...prev, locationToAdd].sort((a, b) => a.name.localeCompare(b.name)));
         toast({
             title: "Ubicación Añadida",
-            description: `Se ha añadido '${locationData.name}' exitosamente.`,
+            description: `Se ha añadido '${locationToAdd.name}' a tu lista personal.`,
+        });
+        setIsAddDialogOpen(false);
+        setSelectedLocationId("");
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Por favor, selecciona una ubicación válida.",
         });
     }
+  };
 
-    setIsDialogOpen(false);
-  }
+  const handleDeleteLocation = (locationId: string) => {
+    const locationToRemove = userLocations.find(loc => loc.id === locationId);
+    setUserLocations(prev => prev.filter(loc => loc.id !== locationId));
+    if (locationToRemove) {
+      toast({
+          title: "Ubicación Eliminada",
+          description: `Se ha eliminado '${locationToRemove.name}' de tu lista personal.`,
+      });
+    }
+  };
+
 
   return (
     <>
@@ -104,14 +102,14 @@ export function LocationsSettings() {
         <CardHeader>
           <div className="flex justify-between items-start">
               <div>
-                  <CardTitle>Configuración de Ubicaciones</CardTitle>
+                  <CardTitle>Mis Ubicaciones de Trabajo</CardTitle>
                   <CardDescription>
-                      Define ubicaciones de trabajo y campus para los sistemas de registro.
+                      Gestiona la lista de planteles donde asistes. Esta lista se usará para configurar tus horarios.
                   </CardDescription>
               </div>
-              <Button onClick={handleAddClick}>
+              <Button onClick={() => setIsAddDialogOpen(true)} disabled={availableLocationsToAdd.length === 0}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Añadir Ubicación
+                Añadir Plantel
               </Button>
           </div>
         </CardHeader>
@@ -120,60 +118,82 @@ export function LocationsSettings() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
+                  <TableHead>Nombre del Plantel</TableHead>
                   <TableHead>Campus</TableHead>
-                  <TableHead>Dirección</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {locations.map((loc) => (
+                {userLocations.length > 0 ? userLocations.map((loc) => (
                   <TableRow key={loc.id}>
                     <TableCell className="font-medium">{loc.name}</TableCell>
                     <TableCell>{loc.campus}</TableCell>
-                    <TableCell>{loc.address}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditClick(loc)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Editar
-                      </Button>
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Borrar
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Esto eliminará permanentemente
+                                la ubicación de tu lista personalizada.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteLocation(loc.id)}>
+                                Continuar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      No has añadido ninguna ubicación.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
-          <form onSubmit={handleSaveLocation}>
+          <form onSubmit={handleAddLocation}>
             <DialogHeader>
-              <DialogTitle>{editingLocation ? 'Editar Ubicación' : 'Añadir Nueva Ubicación'}</DialogTitle>
+              <DialogTitle>Añadir Plantel a tu Lista</DialogTitle>
               <DialogDescription>
-                {editingLocation 
-                  ? "Realiza cambios a los detalles de la ubicación."
-                  : "Completa los detalles de la nueva ubicación de trabajo."}
+                Selecciona un plantel de la lista de la universidad para añadirlo a tus ubicaciones frecuentes.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Nombre</Label>
-                <Input id="name" placeholder="Ej: Edificio B" className="col-span-3" value={locationData.name} onChange={(e) => setLocationData({...locationData, name: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="campus" className="text-right">Campus</Label>
-                <Input id="campus" placeholder="Ej: Campus Principal" className="col-span-3" value={locationData.campus} onChange={(e) => setLocationData({...locationData, campus: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="address" className="text-right">Dirección</Label>
-                <Input id="address" placeholder="Ej: Av. Universidad 127" className="col-span-3" value={locationData.address} onChange={(e) => setLocationData({...locationData, address: e.target.value})} />
+                <Label htmlFor="location-select" className="text-right">Plantel</Label>
+                 <Select value={selectedLocationId} onValueChange={setSelectedLocationId}>
+                    <SelectTrigger className="col-span-3" id="location-select">
+                        <SelectValue placeholder="Selecciona un plantel..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableLocationsToAdd.map(loc => (
+                            <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit">{editingLocation ? 'Guardar Cambios' : 'Guardar Ubicación'}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit">Añadir a mi Lista</Button>
             </DialogFooter>
           </form>
         </DialogContent>

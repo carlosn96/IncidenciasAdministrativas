@@ -28,27 +28,38 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { ScheduleEntry } from "@/lib/types";
+import type { ScheduleEntry, Location } from "@/lib/types";
 import { Pencil } from "lucide-react";
 
+interface SchedulesSettingsProps {
+    userLocations: Location[];
+}
+
 const initialScheduleData: ScheduleEntry[] = [
-  { day: "Lunes", startTime: "09:00", endTime: "17:00", location: "Campus Principal" },
-  { day: "Martes", startTime: "09:00", endTime: "17:00", location: "Campus Principal" },
-  { day: "Miércoles", startTime: "09:00", endTime: "13:00", location: "Campus Norte" },
-  { day: "Jueves", startTime: "09:00", endTime: "17:00", location: "Campus Principal" },
+  { day: "Lunes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
+  { day: "Martes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
+  { day: "Miércoles", startTime: "09:00", endTime: "13:00", location: "PLANTEL TORRE UNE" },
+  { day: "Jueves", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
   { day: "Viernes", startTime: "09:00", endTime: "15:00", location: "Remoto" },
   { day: "Sábado", startTime: "", endTime: "", location: "" },
 ];
 
-export function SchedulesSettings() {
+export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
     const { toast } = useToast();
     const [schedule, setSchedule] = useState<ScheduleEntry[]>(initialScheduleData);
     const [editableSchedule, setEditableSchedule] = useState<ScheduleEntry[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const handleOpenDialog = () => {
-        setEditableSchedule(JSON.parse(JSON.stringify(schedule))); 
+        setEditableSchedule(JSON.parse(JSON.stringify(schedule)));
         setIsDialogOpen(true);
     };
 
@@ -116,7 +127,18 @@ export function SchedulesSettings() {
                                 <Label htmlFor={`${entry.day}-day`} className="font-medium">{entry.day}</Label>
                                 <Input id={`${entry.day}-start`} type="time" value={entry.startTime} onChange={e => handleScheduleChange(index, 'startTime', e.target.value)} />
                                 <Input id={`${entry.day}-end`} type="time" value={entry.endTime} onChange={e => handleScheduleChange(index, 'endTime', e.target.value)} />
-                                <Input id={`${entry.day}-location`} value={entry.location} onChange={e => handleScheduleChange(index, 'location', e.target.value)} />
+                                <Select value={entry.location} onValueChange={value => handleScheduleChange(index, 'location', value)}>
+                                    <SelectTrigger id={`${entry.day}-location`}>
+                                        <SelectValue placeholder="Selecciona lugar..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Día Libre</SelectItem>
+                                        <SelectItem value="Remoto">Remoto</SelectItem>
+                                        {userLocations.map(loc => (
+                                            <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         ))}
                         </div>
@@ -147,7 +169,7 @@ export function SchedulesSettings() {
                   <TableCell className="font-medium">{entry.day}</TableCell>
                   <TableCell>{formatTime12h(entry.startTime)}</TableCell>
                   <TableCell>{formatTime12h(entry.endTime)}</TableCell>
-                  <TableCell>{entry.location}</TableCell>
+                  <TableCell>{entry.location || "---"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
