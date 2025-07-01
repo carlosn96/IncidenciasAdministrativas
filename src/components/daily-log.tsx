@@ -98,11 +98,13 @@ export function DailyLog() {
       location: selectedLocation,
     };
     
+    const keyToUpdate = type === 'Entrada' ? 'entry' : 'exit';
+
     const updatedPeriods = periods.map(p => {
       if (p.id === activePeriod.id) {
         const updatedLaborDays = p.laborDays.map(ld => {
           if (ld.date === todayLaborDay.date) {
-            return { ...ld, [type.toLowerCase()]: newIncident };
+            return { ...ld, [keyToUpdate]: newIncident };
           }
           return ld;
         });
