@@ -10,7 +10,8 @@ export type ScheduleEntry = {
   day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
   startTime: string;
   endTime: string;
-  location: string;
+  startLocation: string;
+  endLocation: string;
 };
 
 export type Location = {

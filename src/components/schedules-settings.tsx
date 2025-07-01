@@ -44,12 +44,12 @@ interface SchedulesSettingsProps {
 }
 
 const initialScheduleData: ScheduleEntry[] = [
-  { day: "Lunes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
-  { day: "Martes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
-  { day: "Miércoles", startTime: "09:00", endTime: "13:00", location: "PLANTEL TORRE UNE" },
-  { day: "Jueves", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
-  { day: "Viernes", startTime: "09:00", endTime: "15:00", location: "PLANTEL ZAPOPAN" },
-  { day: "Sábado", startTime: "", endTime: "", location: "" },
+  { day: "Lunes", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
+  { day: "Martes", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
+  { day: "Miércoles", startTime: "09:00", endTime: "13:00", startLocation: "PLANTEL TORRE UNE", endLocation: "PLANTEL TORRE UNE" },
+  { day: "Jueves", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
+  { day: "Viernes", startTime: "09:00", endTime: "15:00", startLocation: "PLANTEL ZAPOPAN", endLocation: "PLANTEL ZAPOPAN" },
+  { day: "Sábado", startTime: "", endTime: "", startLocation: "", endLocation: "" },
 ];
 
 export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
@@ -106,7 +106,7 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
                   Editar Horario
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-3xl">
+              <DialogContent className="sm:max-w-4xl">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                     <DialogTitle>Editar Horario por Defecto</DialogTitle>
@@ -114,32 +114,55 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
                         Realice cambios en su horario semanal aquí. Haga clic en guardar cuando haya terminado.
                     </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4 space-y-4">
-                        <div className="grid grid-cols-4 items-center gap-4 px-1 text-sm font-medium">
-                            <Label>Día</Label>
-                            <Label>Hora de Entrada</Label>
-                            <Label>Hora de Salida</Label>
-                            <Label>Lugar</Label>
-                        </div>
-                        <div className="space-y-2">
-                        {editableSchedule.map((entry, index) => (
-                            <div key={entry.day} className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor={`${entry.day}-day`} className="font-medium">{entry.day}</Label>
-                                <Input id={`${entry.day}-start`} type="time" value={entry.startTime} onChange={e => handleScheduleChange(index, 'startTime', e.target.value)} />
-                                <Input id={`${entry.day}-end`} type="time" value={entry.endTime} onChange={e => handleScheduleChange(index, 'endTime', e.target.value)} />
-                                <Select value={entry.location} onValueChange={value => handleScheduleChange(index, 'location', value)}>
-                                    <SelectTrigger id={`${entry.day}-location`}>
-                                        <SelectValue placeholder="Selecciona lugar..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {userLocations.map(loc => (
-                                            <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        ))}
-                        </div>
+                    <div className="py-4">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Día</TableHead>
+                                    <TableHead>Hora Entrada</TableHead>
+                                    <TableHead>Lugar Entrada</TableHead>
+                                    <TableHead>Hora Salida</TableHead>
+                                    <TableHead>Lugar Salida</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {editableSchedule.map((entry, index) => (
+                                <TableRow key={entry.day}>
+                                    <TableCell className="font-medium">{entry.day}</TableCell>
+                                    <TableCell>
+                                        <Input type="time" value={entry.startTime} onChange={e => handleScheduleChange(index, 'startTime', e.target.value)} />
+                                    </TableCell>
+                                     <TableCell>
+                                        <Select value={entry.startLocation} onValueChange={value => handleScheduleChange(index, 'startLocation', value || "")}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecciona..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {userLocations.map(loc => (
+                                                    <SelectItem key={`${loc.id}-start`} value={loc.name}>{loc.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Input type="time" value={entry.endTime} onChange={e => handleScheduleChange(index, 'endTime', e.target.value)} />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Select value={entry.endLocation} onValueChange={value => handleScheduleChange(index, 'endLocation', value || "")}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecciona..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {userLocations.map(loc => (
+                                                    <SelectItem key={`${loc.id}-end`} value={loc.name}>{loc.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
@@ -157,8 +180,9 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
               <TableRow>
                 <TableHead>Día</TableHead>
                 <TableHead>Hora de Entrada</TableHead>
+                <TableHead>Lugar de Entrada</TableHead>
                 <TableHead>Hora de Salida</TableHead>
-                <TableHead>Lugar</TableHead>
+                <TableHead>Lugar de Salida</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -166,8 +190,9 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
                 <TableRow key={entry.day}>
                   <TableCell className="font-medium">{entry.day}</TableCell>
                   <TableCell>{formatTime12h(entry.startTime)}</TableCell>
+                  <TableCell>{entry.startLocation || "---"}</TableCell>
                   <TableCell>{formatTime12h(entry.endTime)}</TableCell>
-                  <TableCell>{entry.location || "---"}</TableCell>
+                  <TableCell>{entry.endLocation || "---"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

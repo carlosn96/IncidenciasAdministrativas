@@ -31,12 +31,12 @@ const userLocations: Location[] = [
 ];
 
 const scheduleData: ScheduleEntry[] = [
-  { day: "Lunes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
-  { day: "Martes", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
-  { day: "Miércoles", startTime: "09:00", endTime: "13:00", location: "PLANTEL TORRE UNE" },
-  { day: "Jueves", startTime: "09:00", endTime: "17:00", location: "PLANTEL CENTRO" },
-  { day: "Viernes", startTime: "09:00", endTime: "15:00", location: "PLANTEL ZAPOPAN" },
-  { day: "Sábado", startTime: "", endTime: "", location: "" },
+  { day: "Lunes", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
+  { day: "Martes", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
+  { day: "Miércoles", startTime: "09:00", endTime: "13:00", startLocation: "PLANTEL TORRE UNE", endLocation: "PLANTEL TORRE UNE" },
+  { day: "Jueves", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
+  { day: "Viernes", startTime: "09:00", endTime: "15:00", startLocation: "PLANTEL ZAPOPAN", endLocation: "PLANTEL ZAPOPAN" },
+  { day: "Sábado", startTime: "", endTime: "", startLocation: "", endLocation: "" },
 ];
 
 const initialEvents: LaborEvent[] = [
@@ -82,11 +82,19 @@ export function DailyLog() {
     const todaySpanish = daysOfWeek[dayIndex] as ScheduleEntry['day'];
 
     const todaySchedule = scheduleData.find(s => s.day === todaySpanish);
+    const lastEventType = events.length > 0 ? events[events.length - 1].type : 'Salida';
+    const nextEventType = lastEventType === 'Salida' ? 'Entrada' : 'Salida';
 
-    if (todaySchedule && todaySchedule.location) {
-        setSelectedLocation(todaySchedule.location);
+    if (todaySchedule) {
+      if (nextEventType === 'Entrada') {
+        setSelectedLocation(todaySchedule.startLocation || "");
+      } else { // nextEventType is 'Salida'
+        setSelectedLocation(todaySchedule.endLocation || "");
+      }
+    } else {
+      setSelectedLocation("");
     }
-  }, []);
+  }, [events]);
 
   const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {
     if (!selectedLocation) {
