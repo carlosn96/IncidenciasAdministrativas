@@ -40,7 +40,9 @@ export function Nav() {
     <>
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <AppLogo className="h-8 w-8 shrink-0" />
+          <div className="bg-white p-1 rounded-md">
+            <AppLogo className="h-6 w-6 shrink-0" />
+          </div>
           <span className="text-lg font-semibold text-sidebar-primary duration-200 group-data-[collapsible=icon]:opacity-0">
             Incidencias
           </span>
