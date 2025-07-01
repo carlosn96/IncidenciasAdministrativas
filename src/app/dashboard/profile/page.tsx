@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { Camera, Save } from "lucide-react";
 
 export default function ProfilePage() {
     const { toast } = useToast();
@@ -48,7 +49,10 @@ export default function ProfilePage() {
                 <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="user avatar" />
                 <AvatarFallback>UC</AvatarFallback>
               </Avatar>
-              <Button type="button" variant="outline">Cambiar Foto</Button>
+              <Button type="button" variant="outline">
+                <Camera className="mr-2 h-4 w-4" />
+                Cambiar Foto
+              </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -83,7 +87,10 @@ export default function ProfilePage() {
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit">Guardar Cambios</Button>
+              <Button type="submit">
+                <Save className="mr-2 h-4 w-4" />
+                Guardar Cambios
+              </Button>
             </div>
           </form>
         </CardContent>

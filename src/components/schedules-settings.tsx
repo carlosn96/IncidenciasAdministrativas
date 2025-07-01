@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import type { ScheduleEntry } from "@/lib/types";
+import { Pencil } from "lucide-react";
 
 const initialScheduleData: ScheduleEntry[] = [
   { day: "Lunes", startTime: "09:00", endTime: "17:00", location: "Campus Principal" },
@@ -89,7 +90,10 @@ export function SchedulesSettings() {
             </div>
              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleOpenDialog}>Editar Horario</Button>
+                <Button onClick={handleOpenDialog}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar Horario
+                </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-3xl">
                 <form onSubmit={handleSubmit}>

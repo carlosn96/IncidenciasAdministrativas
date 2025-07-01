@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Location } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { Pencil, PlusCircle } from "lucide-react";
 
 const initialLocationsData: Location[] = [
   { id: "loc1", name: "Edificio A", campus: "Campus Principal", address: "Av. Universidad 123" },
@@ -101,7 +102,10 @@ export function LocationsSettings() {
                       Define ubicaciones de trabajo y campus para los sistemas de registro.
                   </CardDescription>
               </div>
-              <Button onClick={handleAddClick}>Añadir Ubicación</Button>
+              <Button onClick={handleAddClick}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Añadir Ubicación
+              </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -122,7 +126,10 @@ export function LocationsSettings() {
                     <TableCell>{loc.campus}</TableCell>
                     <TableCell>{loc.address}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditClick(loc)}>Editar</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEditClick(loc)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

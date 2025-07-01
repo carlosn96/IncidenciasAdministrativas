@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/tabs";
 import { LocationsSettings } from "@/components/locations-settings";
 import { SchedulesSettings } from "@/components/schedules-settings";
+import { Clock, MapPin } from "lucide-react";
 
 export default function SettingsPage() {
   return (
@@ -19,8 +20,14 @@ export default function SettingsPage() {
 
       <Tabs defaultValue="locations" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="locations">Ubicaciones</TabsTrigger>
-          <TabsTrigger value="schedules">Horarios por Defecto</TabsTrigger>
+          <TabsTrigger value="locations">
+            <MapPin className="mr-2 h-4 w-4" />
+            Ubicaciones
+          </TabsTrigger>
+          <TabsTrigger value="schedules">
+            <Clock className="mr-2 h-4 w-4" />
+            Horarios por Defecto
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="locations">
             <LocationsSettings />
