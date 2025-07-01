@@ -266,15 +266,15 @@ export function DailyLog() {
         <CardContent className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             <div className="lg:col-span-1">
-                <Card className="flex flex-col justify-center items-center text-center p-6 h-full bg-muted/30">
+                <Card className="flex flex-col justify-center items-center text-center p-4 md:p-6 h-full bg-muted/30">
                 <p className="text-sm text-muted-foreground">Hora Actual</p>
-                <p className="text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime || "00:00:00"}</p>
+                <p className="text-4xl md:text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime || "00:00:00"}</p>
                 <Clock className="h-8 w-8 text-muted-foreground mt-2" />
                 </Card>
             </div>
 
             <div className="lg:col-span-2">
-                <Card className="p-6 h-full flex flex-col justify-center">
+                <Card className="p-4 md:p-6 h-full flex flex-col justify-center">
                     <div className="space-y-4">
                         <div>
                             <Label htmlFor="location-select" className="mb-2 block">Ubicación de registro</Label>
@@ -320,6 +320,7 @@ export function DailyLog() {
             <h3 className="text-lg font-medium mb-2">Eventos de Hoy</h3>
             <Card>
                 <CardContent className="p-0">
+                <div className="overflow-x-auto">
                 <Table>
                     <TableHeader>
                     <TableRow>
@@ -354,7 +355,7 @@ export function DailyLog() {
                                     </Button>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground">
                                             <Trash2 className="h-4 w-4" />
                                             <span className="sr-only">Eliminar</span>
                                         </Button>
@@ -382,6 +383,7 @@ export function DailyLog() {
                     )}
                     </TableBody>
                 </Table>
+                </div>
                 </CardContent>
             </Card>
             </div>

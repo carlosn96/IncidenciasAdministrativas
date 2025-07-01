@@ -26,7 +26,7 @@ export default function DashboardPage() {
       <div className="space-y-8">
         <div className="flex justify-between items-start gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold font-headline">Resumen Diario</h1>
+            <h1 className="text-2xl md:text-3xl font-bold font-headline">Resumen Diario</h1>
             <p className="text-muted-foreground">
               ¡Bienvenido de nuevo, Coordinador! Aquí está tu resumen de hoy.
             </p>
@@ -61,7 +61,7 @@ export default function DashboardPage() {
             </Link>
         ) : (
             <Card className="border-dashed">
-                <CardHeader className="text-center p-6">
+                <CardHeader className="text-center p-4 md:p-6">
                     <div className="mx-auto bg-muted rounded-full p-3 w-fit">
                       <CalendarDays className="h-8 w-8 text-muted-foreground" />
                     </div>

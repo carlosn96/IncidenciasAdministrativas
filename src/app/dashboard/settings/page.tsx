@@ -26,21 +26,21 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline">Configuración</h1>
+        <h1 className="text-2xl md:text-3xl font-bold font-headline">Configuración</h1>
         <p className="text-muted-foreground">
           Gestiona las configuraciones y parámetros de la aplicación.
         </p>
       </div>
 
       <Tabs defaultValue="locations" className="space-y-4">
-        <TabsList>
+        <TabsList className="overflow-x-auto h-auto justify-start">
           <TabsTrigger value="locations">
             <MapPin className="mr-2 h-4 w-4" />
             Mis Ubicaciones
           </TabsTrigger>
           <TabsTrigger value="schedules">
             <Clock className="mr-2 h-4 w-4" />
-            Horarios por Defecto
+            Horarios
           </TabsTrigger>
           <TabsTrigger value="periods">
             <CalendarDays className="mr-2 h-4 w-4" />

@@ -84,7 +84,7 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start gap-4 flex-wrap">
             <div>
                 <CardTitle>Horario Semanal por Defecto</CardTitle>
                 <CardDescription>
@@ -106,7 +106,7 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
                         Realice cambios en su horario semanal aquí. Haga clic en guardar cuando haya terminado.
                     </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
+                    <div className="py-4 overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -168,7 +168,7 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

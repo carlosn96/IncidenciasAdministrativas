@@ -23,7 +23,7 @@ export function PeriodsList({ periods }: PeriodsListProps) {
         <>
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-4 flex-wrap">
                         <div>
                             <CardTitle>Periodos de Incidencias</CardTitle>
                             <CardDescription>Gestiona tus periodos quincenales de registro.</CardDescription>
@@ -35,7 +35,7 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="border rounded-lg">
+                    <div className="border rounded-lg overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -56,7 +56,7 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                     periods.map((period) => (
                                         <TableRow key={period.id}>
                                             <TableCell className="font-medium">{period.name}</TableCell>
-                                            <TableCell>
+                                            <TableCell className="whitespace-nowrap">
                                                 {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
                                             </TableCell>
                                             <TableCell>{period.includeSaturdays ? "Sí" : "No"}</TableCell>

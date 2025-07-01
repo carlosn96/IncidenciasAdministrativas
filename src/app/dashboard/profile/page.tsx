@@ -29,7 +29,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline">Gestión de Perfil</h1>
+        <h1 className="text-2xl md:text-3xl font-bold font-headline">Gestión de Perfil</h1>
         <p className="text-muted-foreground">
           Ve y actualiza tu información personal.
         </p>

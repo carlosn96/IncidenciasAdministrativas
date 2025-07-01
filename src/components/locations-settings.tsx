@@ -100,7 +100,7 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
     <>
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start gap-4 flex-wrap">
               <div>
                   <CardTitle>Mis Ubicaciones de Trabajo</CardTitle>
                   <CardDescription>
@@ -114,7 +114,7 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -131,7 +131,7 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
                     <TableCell className="text-right">
                        <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive">
+                            <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive hover:text-destructive-foreground">
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Borrar
                             </Button>

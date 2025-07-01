@@ -104,7 +104,7 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
           </Link>
         </Button>
         <div>
-            <h1 className="text-3xl font-bold font-headline">Detalle del Periodo</h1>
+            <h1 className="text-2xl md:text-3xl font-bold font-headline">Detalle del Periodo</h1>
             <p className="text-muted-foreground">
                 Visualiza las incidencias registradas y el total de horas laboradas.
             </p>
@@ -119,7 +119,7 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <div className="flex items-center p-6 rounded-lg bg-muted/50">
+            <div className="flex items-center p-4 md:p-6 rounded-lg bg-muted/50">
                 <div className="flex items-center justify-center bg-primary/10 text-primary rounded-full h-12 w-12 mr-4">
                     <Clock className="h-6 w-6" />
                 </div>
@@ -139,7 +139,7 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -155,7 +155,7 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
                     {laborDays.length > 0 ? (
                         laborDays.map((day) => (
                             <TableRow key={day.date}>
-                                <TableCell className="font-medium capitalize">
+                                <TableCell className="font-medium capitalize whitespace-nowrap">
                                     {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
                                 </TableCell>
                                 <TableCell>{day.entry?.location || '---'}</TableCell>
