@@ -144,7 +144,7 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
                                         <Select value={entry.endLocation} onValueChange={value => handleScheduleChange(index, 'endLocation', value || "")}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Selecciona..." />
-                                            </Trigger>
+                                            </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="">Día Libre</SelectItem>
                                                 {userLocations.map(loc => (
