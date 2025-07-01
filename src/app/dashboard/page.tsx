@@ -24,17 +24,11 @@ export default function DashboardPage() {
   return (
     <>
       <div className="space-y-8">
-        <div className="flex justify-between items-start gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold font-headline">Resumen Diario</h1>
-            <p className="text-muted-foreground">
-              ¡Bienvenido de nuevo, Coordinador! Aquí está tu resumen de hoy.
-            </p>
-          </div>
-          <Button onClick={() => setIsAddPeriodDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Agregar Periodo
-          </Button>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold font-headline">Resumen Diario</h1>
+          <p className="text-muted-foreground">
+            ¡Bienvenido de nuevo, Coordinador! Aquí está tu resumen de hoy.
+          </p>
         </div>
 
         {activePeriod ? (
@@ -72,6 +66,13 @@ export default function DashboardPage() {
                 </CardHeader>
             </Card>
         )}
+        
+        <div className="flex justify-end -mt-4">
+             <Button variant="outline" onClick={() => setIsAddPeriodDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Agregar Periodo
+            </Button>
+        </div>
 
         <DailyLog />
       </div>

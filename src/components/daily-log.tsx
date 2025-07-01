@@ -42,9 +42,31 @@ import type { Incident, ScheduleEntry } from "@/lib/types";
 import { Clock, Play, Square, MapPin, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { format, isWithinInterval, parse } from "date-fns";
+import { format, isWithinInterval, parse, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSettings } from "@/context/settings-context";
+
+// Helper function to calculate worked hours
+const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
+    if (!entry?.time || !exit?.time) return "N/A";
+  
+    const [startHour, startMinute] = entry.time.split(":").map(Number);
+    const [endHour, endMinute] = exit.time.split(":").map(Number);
+  
+    const startDate = new Date(0);
+    startDate.setHours(startHour, startMinute, 0, 0);
+  
+    const endDate = new Date(0);
+    endDate.setHours(endHour, endMinute, 0, 0);
+  
+    const diffMinutes = differenceInMinutes(endDate, startDate);
+    if (diffMinutes < 0) return "N/A";
+  
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+  
+    return `${hours}h ${minutes}m`;
+  };
 
 export function DailyLog() {
   const { periods, setPeriods, userLocations, schedule } = useSettings();
@@ -65,6 +87,11 @@ export function DailyLog() {
     
     return { activePeriod, todayLaborDay };
   }, [periods]);
+
+  const workedHoursToday = useMemo(() => {
+    if (!todayLaborDay) return "N/A";
+    return calculateWorkedHours(todayLaborDay.entry, todayLaborDay.exit);
+  }, [todayLaborDay]);
 
   const hasEntrada = !!todayLaborDay?.entry;
   const hasSalida = !!todayLaborDay?.exit;
@@ -317,7 +344,15 @@ export function DailyLog() {
             </div>
             
             <div>
-            <h3 className="text-lg font-medium mb-2">Eventos de Hoy</h3>
+            <div className="flex justify-between items-baseline mb-2">
+                <h3 className="text-lg font-medium">Eventos de Hoy</h3>
+                {workedHoursToday !== "N/A" && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Total Hoy: </span>
+                    <span className="font-bold font-mono text-base">{workedHoursToday}</span>
+                  </div>
+                )}
+              </div>
             <Card>
                 <CardContent className="p-0">
                 <div className="overflow-x-auto">
