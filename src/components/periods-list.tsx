@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Period } from "@/lib/types";
-import { PlusCircle, ArrowRight } from "lucide-react";
+import { PlusCircle, ArrowRight, Pencil } from "lucide-react";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
+import { EditPeriodDialog } from "@/components/edit-period-dialog";
 import { cn } from "@/lib/utils";
 
 interface PeriodsListProps {
@@ -20,6 +21,13 @@ interface PeriodsListProps {
 
 export function PeriodsList({ periods }: PeriodsListProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [selectedPeriod, setSelectedPeriod] = useState<Period | null>(null);
+
+    const handleEditClick = (period: Period) => {
+        setSelectedPeriod(period);
+        setIsEditDialogOpen(true);
+    };
 
     return (
         <>
@@ -47,7 +55,11 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                         <p className="text-sm text-muted-foreground whitespace-nowrap">
                                             {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
                                         </p>
-                                        <div className="mt-4 flex justify-end">
+                                        <div className="mt-4 flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => handleEditClick(period)}>
+                                                <Pencil className="mr-2 h-4 w-4" />
+                                                Editar
+                                            </Button>
                                             <Button asChild variant="outline" size="sm">
                                                 <Link href={`/dashboard/period/${period.id}`}>
                                                     Ver Incidencias
@@ -89,7 +101,11 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                             <TableCell className="whitespace-nowrap">
                                                 {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right space-x-2">
+                                                <Button variant="ghost" size="sm" onClick={() => handleEditClick(period)}>
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    Editar
+                                                </Button>
                                                 <Button asChild variant="outline" size="sm">
                                                     <Link href={`/dashboard/period/${period.id}`}>
                                                         Ver Incidencias
@@ -107,6 +123,7 @@ export function PeriodsList({ periods }: PeriodsListProps) {
             </Card>
 
             <AddPeriodDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+            <EditPeriodDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} period={selectedPeriod} />
         </>
     );
 }
