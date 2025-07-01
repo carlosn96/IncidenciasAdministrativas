@@ -5,24 +5,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { addDays, differenceInMinutes, format, eachDayOfInterval, getDay } from "date-fns";
+import { addDays, differenceInMinutes, format, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import type { LaborDay, Incident } from "@/lib/types";
 
-// Placeholder data - In a real app, this would be fetched
-type Incident = {
-  date: Date;
-  entryLocation: string;
-  entryTime: string;
-  exitLocation: string;
-  exitTime: string;
-};
 
 // Helper function to calculate worked hours
-const calculateWorkedHours = (startTime: string, endTime: string): string => {
-  if (!startTime || !endTime) return "N/A";
+const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
+  if (!entry?.time || !exit?.time) return "N/A";
 
-  const [startHour, startMinute] = startTime.split(":").map(Number);
-  const [endHour, endMinute] = endTime.split(":").map(Number);
+  const [startHour, startMinute] = entry.time.split(":").map(Number);
+  const [endHour, endMinute] = exit.time.split(":").map(Number);
 
   const startDate = new Date(0);
   startDate.setHours(startHour, startMinute, 0, 0);
@@ -39,12 +32,12 @@ const calculateWorkedHours = (startTime: string, endTime: string): string => {
   return `${hours}h ${minutes}m`;
 };
 
-const calculateTotalMinutes = (incidents: Incident[]): number => {
-  return incidents.reduce((total, incident) => {
-    if (!incident.entryTime || !incident.exitTime) return total;
+const calculateTotalMinutes = (days: LaborDay[]): number => {
+  return days.reduce((total, day) => {
+    if (!day.entry?.time || !day.exit?.time) return total;
 
-    const [startHour, startMinute] = incident.entryTime.split(":").map(Number);
-    const [endHour, endMinute] = incident.exitTime.split(":").map(Number);
+    const [startHour, startMinute] = day.entry.time.split(":").map(Number);
+    const [endHour, endMinute] = day.exit.time.split(":").map(Number);
 
     const startDate = new Date(0);
     startDate.setHours(startHour, startMinute, 0, 0);
@@ -74,9 +67,9 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
     includeSaturdays: true,
   };
 
-  // Generate mock incidents for the period
+  // Generate mock laborDays for the period
   const allDays = eachDayOfInterval({ start: period.startDate, end: period.endDate });
-  const incidents: Incident[] = allDays
+  const laborDays: LaborDay[] = allDays
     .map(date => {
       const dayOfWeek = getDay(date); // 0 = Sunday, 6 = Saturday
       if (dayOfWeek === 0) return null; // Skip Sundays
@@ -86,17 +79,24 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
       const entryHour = 9 + Math.floor(Math.random() * 15) / 60; // 9:00 - 9:14
       const exitHour = 17 + Math.floor(Math.random() * 15) / 60; // 17:00 - 17:14
       
+      const entry: Incident = {
+          location: "PLANTEL CENTRO",
+          time: `${String(Math.floor(entryHour)).padStart(2, '0')}:${String(Math.floor((entryHour % 1) * 60)).padStart(2, '0')}`,
+      };
+      const exit: Incident = {
+          location: "PLANTEL CENTRO",
+          time: `${String(Math.floor(exitHour)).padStart(2, '0')}:${String(Math.floor((exitHour % 1) * 60)).padStart(2, '0')}`,
+      };
+
       return {
-        date,
-        entryLocation: "PLANTEL CENTRO",
-        entryTime: `${String(Math.floor(entryHour)).padStart(2, '0')}:${String(Math.floor((entryHour % 1) * 60)).padStart(2, '0')}`,
-        exitLocation: "PLANTEL CENTRO",
-        exitTime: `${String(Math.floor(exitHour)).padStart(2, '0')}:${String(Math.floor((exitHour % 1) * 60)).padStart(2, '0')}`,
+        date: format(date, "yyyy-MM-dd"),
+        entry,
+        exit,
       };
     })
-    .filter((incident): incident is Incident => incident !== null);
+    .filter((day): day is LaborDay => day !== null);
 
-  const totalMinutesWorked = calculateTotalMinutes(incidents);
+  const totalMinutesWorked = calculateTotalMinutes(laborDays);
   const formattedTotalHours = formatTotalHours(totalMinutesWorked);
 
   const formattedDateRange = `${format(period.startDate, "d 'de' LLLL", { locale: es })} al ${format(period.endDate, "d 'de' LLLL, yyyy", { locale: es })}`;
@@ -159,18 +159,18 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {incidents.length > 0 ? (
-                        incidents.map((incident) => (
-                            <TableRow key={incident.date.toISOString()}>
+                    {laborDays.length > 0 ? (
+                        laborDays.map((day) => (
+                            <TableRow key={day.date}>
                                 <TableCell className="font-medium capitalize">
-                                    {format(incident.date, "EEEE, d 'de' LLLL", { locale: es })}
+                                    {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
                                 </TableCell>
-                                <TableCell>{incident.entryLocation}</TableCell>
-                                <TableCell>{incident.entryTime}</TableCell>
-                                <TableCell>{incident.exitLocation}</TableCell>
-                                <TableCell>{incident.exitTime}</TableCell>
+                                <TableCell>{day.entry?.location || '---'}</TableCell>
+                                <TableCell>{day.entry?.time || '---'}</TableCell>
+                                <TableCell>{day.exit?.location || '---'}</TableCell>
+                                <TableCell>{day.exit?.time || '---'}</TableCell>
                                 <TableCell className="text-right font-mono">
-                                    {calculateWorkedHours(incident.entryTime, incident.exitTime)}
+                                    {calculateWorkedHours(day.entry, day.exit)}
                                 </TableCell>
                             </TableRow>
                         ))

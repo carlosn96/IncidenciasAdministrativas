@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { format, addDays } from "date-fns";
+import { format, addDays, eachDayOfInterval, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { v4 as uuidv4 } from 'uuid';
@@ -16,15 +16,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import type { Period } from "@/lib/types";
+import type { Period, LaborDay } from "@/lib/types";
 import { Calendar as CalendarIcon, PlusCircle, ArrowRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-const initialPeriods: Period[] = [];
+interface PeriodsListProps {
+    periods: Period[];
+    setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
+}
 
-export function PeriodsList() {
-    const [periods, setPeriods] = useState<Period[]>(initialPeriods);
+export function PeriodsList({ periods, setPeriods }: PeriodsListProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
@@ -33,11 +35,9 @@ export function PeriodsList() {
 
     const handleDateSelect = (range: DateRange | undefined) => {
         if (range?.from && !range.to) {
-            // A 'from' date was just selected, automatically set the 'to' date
             const endDate = addDays(range.from, 15);
             setDateRange({ from: range.from, to: endDate });
         } else {
-            // User is manually selecting a range, has selected a range, or is clearing it
             setDateRange(range);
         }
     };
@@ -76,12 +76,25 @@ export function PeriodsList() {
             return;
         }
 
+        const allDays = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
+        const newLaborDays: LaborDay[] = allDays
+            .filter(day => {
+                const dayOfWeek = getDay(day);
+                if (dayOfWeek === 0) return false;
+                if (dayOfWeek === 6 && !includeSaturdays) return false;
+                return true;
+            })
+            .map(day => ({
+                date: format(day, "yyyy-MM-dd"),
+            }));
+
         const newPeriod: Period = {
             id: uuidv4(),
-            name: periodName,
+            name: periodName.trim(),
             startDate: dateRange.from,
             endDate: dateRange.to,
-            includeSaturdays: includeSaturdays
+            includeSaturdays: includeSaturdays,
+            laborDays: newLaborDays
         };
 
         setPeriods(prev => [newPeriod, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));

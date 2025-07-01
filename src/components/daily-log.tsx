@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,10 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { LaborEvent, Location, ScheduleEntry } from "@/lib/types";
+import type { Location, ScheduleEntry, Period, Incident } from "@/lib/types";
 import { Clock, Play, Square, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
+import { format, isWithinInterval } from "date-fns";
 
 // This list would ideally be fetched or passed as a prop based on user settings
 const userLocations: Location[] = [
@@ -40,17 +41,29 @@ const scheduleData: ScheduleEntry[] = [
   { day: "Sábado", startTime: "", endTime: "", startLocation: "", endLocation: "" },
 ];
 
-// Start with no events for the day
-const initialEvents: LaborEvent[] = [];
+interface DailyLogProps {
+  periods: Period[];
+  setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
+}
 
-export function DailyLog() {
+
+export function DailyLog({ periods, setPeriods }: DailyLogProps) {
   const [currentTime, setCurrentTime] = useState("");
-  const [events, setEvents] = useState<LaborEvent[]>(initialEvents);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const { toast } = useToast();
 
-  const hasEntrada = events.some(event => event.type === 'Entrada');
-  const hasSalida = events.some(event => event.type === 'Salida');
+  const { activePeriod, todayLaborDay } = useMemo(() => {
+    const today = new Date();
+    const todayStr = format(today, "yyyy-MM-dd");
+
+    const activePeriod = periods.find(p => isWithinInterval(today, { start: p.startDate, end: p.endDate }));
+    const todayLaborDay = activePeriod?.laborDays.find(ld => ld.date === todayStr);
+    
+    return { activePeriod, todayLaborDay };
+  }, [periods]);
+
+  const hasEntrada = !!todayLaborDay?.entry;
+  const hasSalida = !!todayLaborDay?.exit;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -78,7 +91,7 @@ export function DailyLog() {
     } else {
       setSelectedLocation("");
     }
-  }, [events, hasEntrada]); // Rerun when events change
+  }, [hasEntrada, todayLaborDay]);
 
   const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {
     if (!selectedLocation) {
@@ -90,20 +103,49 @@ export function DailyLog() {
       return;
     }
 
-    const newEvent: LaborEvent = {
-      id: `evt${events.length + 1}`,
-      date: new Date().toISOString().split('T')[0],
+     if (!activePeriod || !todayLaborDay) {
+      toast({
+        variant: "destructive",
+        title: "Periodo no encontrado",
+        description: "No hay un periodo activo o día laboral configurado para hoy.",
+      });
+      return;
+    }
+
+    const newIncident: Incident = {
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       location: selectedLocation,
-      type: type,
     };
+    
+    const updatedPeriods = periods.map(p => {
+      if (p.id === activePeriod.id) {
+        const updatedLaborDays = p.laborDays.map(ld => {
+          if (ld.date === todayLaborDay.date) {
+            return { ...ld, [type.toLowerCase()]: newIncident };
+          }
+          return ld;
+        });
+        return { ...p, laborDays: updatedLaborDays };
+      }
+      return p;
+    });
 
-    setEvents(prev => [...prev, newEvent]);
+    setPeriods(updatedPeriods);
+
     toast({
       title: `${type} Registrada`,
-      description: `Has registrado tu ${type.toLowerCase()} en ${selectedLocation} a las ${newEvent.time}.`,
+      description: `Has registrado tu ${type.toLowerCase()} en ${selectedLocation} a las ${newIncident.time}.`,
     });
   };
+
+  const eventsForTable: ({id: string, type: 'Entrada' | 'Salida'} & Incident)[] = [];
+  if (todayLaborDay?.entry) {
+    eventsForTable.push({ id: 'entrada-today', type: 'Entrada', ...todayLaborDay.entry });
+  }
+  if (todayLaborDay?.exit) {
+    eventsForTable.push({ id: 'salida-today', type: 'Salida', ...todayLaborDay.exit });
+  }
+
 
   return (
     <Card>
@@ -177,14 +219,14 @@ export function DailyLog() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {events.length === 0 ? (
+                  {eventsForTable.length === 0 ? (
                       <TableRow>
                           <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
                               No hay eventos registrados hoy.
                           </TableCell>
                       </TableRow>
                   ) : (
-                      [...events].reverse().map((event) => (
+                      [...eventsForTable].reverse().map((event) => (
                         <TableRow key={event.id}>
                           <TableCell>
                             <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>

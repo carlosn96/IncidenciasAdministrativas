@@ -21,12 +21,15 @@ export type Location = {
   address: string;
 };
 
-export type LaborEvent = {
-  id: string;
-  date: string;
+export type Incident = {
   time: string;
   location: string;
-  type: 'Entrada' | 'Salida';
+};
+
+export type LaborDay = {
+  date: string; // "YYYY-MM-DD"
+  entry?: Incident;
+  exit?: Incident;
 };
 
 export type Period = {
@@ -35,4 +38,5 @@ export type Period = {
   startDate: Date;
   endDate: Date;
   includeSaturdays: boolean;
+  laborDays: LaborDay[];
 };
