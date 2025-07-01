@@ -19,8 +19,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import type { Incident, ScheduleEntry } from "@/lib/types";
-import { Clock, Play, Square, MapPin } from "lucide-react";
+import { Clock, Play, Square, MapPin, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { format, isWithinInterval, parse } from "date-fns";
@@ -32,6 +51,10 @@ export function DailyLog() {
   const [currentTime, setCurrentTime] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const { toast } = useToast();
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingIncident, setEditingIncident] = useState<{ type: 'Entrada' | 'Salida'; time: string } | null>(null);
+  const [newTime, setNewTime] = useState("");
 
   const { activePeriod, todayLaborDay } = useMemo(() => {
     const today = new Date();
@@ -54,6 +77,8 @@ export function DailyLog() {
   }, []);
 
   useEffect(() => {
+    if (hasEntrada && hasSalida) return; // Don't change location if day is complete
+
     const daysOfWeek = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const dayIndex = new Date().getDay();
     const todaySpanish = daysOfWeek[dayIndex] as ScheduleEntry['day'];
@@ -68,10 +93,12 @@ export function DailyLog() {
       } else { // nextEventType is 'Salida'
         setSelectedLocation(todaySchedule.endLocation || "");
       }
+    } else if (userLocations.length > 0) {
+      setSelectedLocation(userLocations[0].name);
     } else {
       setSelectedLocation("");
     }
-  }, [hasEntrada, schedule]);
+  }, [hasEntrada, hasSalida, schedule, userLocations]);
 
   const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {
     if (!selectedLocation) {
@@ -121,6 +148,95 @@ export function DailyLog() {
     });
   };
 
+  const handleOpenEditDialog = (type: 'Entrada' | 'Salida', time: string) => {
+    setEditingIncident({ type, time });
+    setNewTime(time);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveTime = () => {
+    if (!editingIncident || !activePeriod || !todayLaborDay) return;
+  
+    // Validation
+    if (editingIncident.type === 'Salida' && todayLaborDay.entry?.time) {
+      if (newTime < todayLaborDay.entry.time) {
+        toast({
+          variant: "destructive",
+          title: "Hora de salida inválida",
+          description: "La hora de salida no puede ser anterior a la hora de entrada.",
+        });
+        return;
+      }
+    }
+    if (editingIncident.type === 'Entrada' && todayLaborDay.exit?.time) {
+      if (newTime > todayLaborDay.exit.time) {
+        toast({
+          variant: "destructive",
+          title: "Hora de entrada inválida",
+          description: "La hora de entrada no puede ser posterior a la hora de salida.",
+        });
+        return;
+      }
+    }
+  
+    const keyToUpdate = editingIncident.type === 'Entrada' ? 'entry' : 'exit';
+    
+    const updatedPeriods = periods.map(p => {
+      if (p.id === activePeriod.id) {
+        const updatedLaborDays = p.laborDays.map(ld => {
+          if (ld.date === todayLaborDay.date) {
+            const updatedDay = { ...ld };
+            if (updatedDay[keyToUpdate]) {
+              updatedDay[keyToUpdate] = { ...updatedDay[keyToUpdate]!, time: newTime };
+            }
+            return updatedDay;
+          }
+          return ld;
+        });
+        return { ...p, laborDays: updatedLaborDays };
+      }
+      return p;
+    });
+  
+    setPeriods(updatedPeriods);
+    toast({
+      title: "Hora Actualizada",
+      description: `La hora de ${editingIncident.type.toLowerCase()} se ha actualizado.`,
+    });
+    setIsEditDialogOpen(false);
+    setEditingIncident(null);
+  };
+
+  const handleDeleteEvent = (type: 'Entrada' | 'Salida') => {
+    if (!activePeriod || !todayLaborDay) return;
+  
+    const updatedPeriods = periods.map(p => {
+      if (p.id === activePeriod.id) {
+        const updatedLaborDays = p.laborDays.map(ld => {
+          if (ld.date === todayLaborDay.date) {
+            const updatedDay = { ...ld };
+            if (type === 'Entrada') {
+              delete updatedDay.entry;
+              delete updatedDay.exit; // If entry is deleted, exit must be deleted too
+            } else { // type === 'Salida'
+              delete updatedDay.exit;
+            }
+            return updatedDay;
+          }
+          return ld;
+        });
+        return { ...p, laborDays: updatedLaborDays };
+      }
+      return p;
+    });
+  
+    setPeriods(updatedPeriods);
+    toast({
+      title: "Registro Eliminado",
+      description: `Se ha eliminado el registro de ${type.toLowerCase()}.`,
+    });
+  };
+
   const eventsForTable: ({id: string, type: 'Entrada' | 'Salida'} & Incident)[] = [];
   if (todayLaborDay?.entry) {
     eventsForTable.push({ id: 'entrada-today', type: 'Entrada', ...todayLaborDay.entry });
@@ -141,102 +257,158 @@ export function DailyLog() {
 
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Registro Diario</CardTitle>
-        <CardDescription>Registra tus eventos de entrada y salida del día.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-          <div className="lg:col-span-1">
-            <Card className="flex flex-col justify-center items-center text-center p-6 h-full bg-muted/30">
-              <p className="text-sm text-muted-foreground">Hora Actual</p>
-              <p className="text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime || "00:00:00"}</p>
-              <Clock className="h-8 w-8 text-muted-foreground mt-2" />
-            </Card>
-          </div>
+    <>
+        <Card>
+        <CardHeader>
+            <CardTitle>Registro Diario</CardTitle>
+            <CardDescription>Registra tus eventos de entrada y salida del día.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            <div className="lg:col-span-1">
+                <Card className="flex flex-col justify-center items-center text-center p-6 h-full bg-muted/30">
+                <p className="text-sm text-muted-foreground">Hora Actual</p>
+                <p className="text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime || "00:00:00"}</p>
+                <Clock className="h-8 w-8 text-muted-foreground mt-2" />
+                </Card>
+            </div>
 
-          <div className="lg:col-span-2">
-            <Card className="p-6 h-full flex flex-col justify-center">
-                <div className="space-y-4">
-                    <div>
-                        <Label htmlFor="location-select" className="mb-2 block">Ubicación de registro</Label>
-                        <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={hasEntrada && hasSalida}>
-                            <SelectTrigger id="location-select">
-                                <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                                <SelectValue placeholder="Selecciona una ubicación..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {userLocations.map(loc => (
-                                    <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+            <div className="lg:col-span-2">
+                <Card className="p-6 h-full flex flex-col justify-center">
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="location-select" className="mb-2 block">Ubicación de registro</Label>
+                            <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={hasEntrada && hasSalida}>
+                                <SelectTrigger id="location-select">
+                                    <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <SelectValue placeholder="Selecciona una ubicación..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {userLocations.map(loc => (
+                                        <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <Button
+                                size="lg"
+                                onClick={() => handleRegisterEvent('Entrada')}
+                                disabled={!activePeriod || !todayLaborDay || !selectedLocation || hasEntrada}
+                                className="h-12 text-base"
+                            >
+                                <Play className="mr-2 h-5 w-5" />
+                                Registrar Entrada
+                            </Button>
+                            <Button
+                                size="lg"
+                                variant="destructive"
+                                onClick={() => handleRegisterEvent('Salida')}
+                                disabled={!activePeriod || !todayLaborDay || !selectedLocation || !hasEntrada || hasSalida}
+                                className="h-12 text-base"
+                            >
+                                <Square className="mr-2 h-5 w-5" />
+                                Registrar Salida
+                            </Button>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <Button
-                            size="lg"
-                            onClick={() => handleRegisterEvent('Entrada')}
-                            disabled={!selectedLocation || hasEntrada}
-                            className="h-12 text-base"
-                        >
-                            <Play className="mr-2 h-5 w-5" />
-                            Registrar Entrada
-                        </Button>
-                        <Button
-                            size="lg"
-                            variant="destructive"
-                            onClick={() => handleRegisterEvent('Salida')}
-                            disabled={!selectedLocation || !hasEntrada || hasSalida}
-                            className="h-12 text-base"
-                        >
-                            <Square className="mr-2 h-5 w-5" />
-                            Registrar Salida
-                        </Button>
-                    </div>
-                </div>
-            </Card>
-          </div>
-        </div>
-        
-        <div>
-          <h3 className="text-lg font-medium mb-2">Eventos de Hoy</h3>
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Hora</TableHead>
-                    <TableHead>Ubicación</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {eventsForTable.length === 0 ? (
-                      <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                              No hay eventos registrados hoy.
-                          </TableCell>
-                      </TableRow>
-                  ) : (
-                      [...eventsForTable].reverse().map((event) => (
-                        <TableRow key={event.id}>
-                          <TableCell>
-                            <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>
-                              {event.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{formatTime12h(event.time)}</TableCell>
-                          <TableCell>{event.location}</TableCell>
+                </Card>
+            </div>
+            </div>
+            
+            <div>
+            <h3 className="text-lg font-medium mb-2">Eventos de Hoy</h3>
+            <Card>
+                <CardContent className="p-0">
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Hora</TableHead>
+                        <TableHead>Ubicación</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {eventsForTable.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                No hay eventos registrados hoy.
+                            </TableCell>
                         </TableRow>
-                      ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-      </CardContent>
-    </Card>
+                    ) : (
+                        [...eventsForTable].reverse().map((event) => (
+                            <TableRow key={event.id}>
+                            <TableCell>
+                                <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>
+                                {event.type}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>{formatTime12h(event.time)}</TableCell>
+                            <TableCell>{event.location}</TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event.type, event.time)}>
+                                        <Pencil className="h-4 w-4" />
+                                        <span className="sr-only">Editar</span>
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Eliminar</span>
+                                        </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                            {event.type === 'Entrada'
+                                                ? "Esta acción no se puede deshacer. Esto eliminará permanentemente los registros de entrada y salida de hoy."
+                                                : "Esta acción no se puede deshacer. Esto eliminará permanentemente el registro de salida."
+                                            }
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteEvent(event.type)}>Continuar</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </TableCell>
+                            </TableRow>
+                        ))
+                    )}
+                    </TableBody>
+                </Table>
+                </CardContent>
+            </Card>
+            </div>
+        </CardContent>
+        </Card>
+        
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-xs">
+            <DialogHeader>
+                <DialogTitle>Editar Hora de {editingIncident?.type}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <Label htmlFor="edit-time">Nueva Hora</Label>
+                <Input 
+                    id="edit-time" 
+                    type="time" 
+                    value={newTime} 
+                    onChange={e => setNewTime(e.target.value)}
+                    className="text-lg"
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleSaveTime}>Guardar</Button>
+            </DialogFooter>
+        </DialogContent>
+        </Dialog>
+    </>
   );
 }
