@@ -20,8 +20,7 @@ export default function SettingsPage() {
     allLocations, 
     schedule, 
     setSchedule,
-    periods,
-    setPeriods
+    periods
   } = useSettings();
 
   return (
@@ -65,7 +64,6 @@ export default function SettingsPage() {
         <TabsContent value="periods">
             <PeriodsList
               periods={periods}
-              setPeriods={setPeriods}
             />
         </TabsContent>
       </Tabs>
