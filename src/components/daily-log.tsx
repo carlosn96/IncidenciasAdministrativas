@@ -19,27 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Location, ScheduleEntry, Period, Incident } from "@/lib/types";
+import type { Period, Incident, ScheduleEntry } from "@/lib/types";
 import { Clock, Play, Square, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { format, isWithinInterval } from "date-fns";
-
-// This list would ideally be fetched or passed as a prop based on user settings
-const userLocations: Location[] = [
-    { id: "loc1", name: "PLANTEL CENTRO", campus: "Centro Universitario UNE", address: "N/A" },
-    { id: "loc9", name: "PLANTEL TORRE UNE", campus: "Centro Universitario UNE", address: "N/A" },
-    { id: "loc11", name: "PLANTEL ZAPOPAN", campus: "Centro Universitario UNE", address: "N/A" },
-];
-
-const scheduleData: ScheduleEntry[] = [
-  { day: "Lunes", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
-  { day: "Martes", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
-  { day: "Miércoles", startTime: "09:00", endTime: "13:00", startLocation: "PLANTEL TORRE UNE", endLocation: "PLANTEL TORRE UNE" },
-  { day: "Jueves", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
-  { day: "Viernes", startTime: "09:00", endTime: "15:00", startLocation: "PLANTEL ZAPOPAN", endLocation: "PLANTEL ZAPOPAN" },
-  { day: "Sábado", startTime: "", endTime: "", startLocation: "", endLocation: "" },
-];
+import { useSettings } from "@/context/settings-context";
 
 interface DailyLogProps {
   periods: Period[];
@@ -48,6 +33,7 @@ interface DailyLogProps {
 
 
 export function DailyLog({ periods, setPeriods }: DailyLogProps) {
+  const { userLocations, schedule } = useSettings();
   const [currentTime, setCurrentTime] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const { toast } = useToast();
@@ -77,9 +63,8 @@ export function DailyLog({ periods, setPeriods }: DailyLogProps) {
     const dayIndex = new Date().getDay();
     const todaySpanish = daysOfWeek[dayIndex] as ScheduleEntry['day'];
 
-    const todaySchedule = scheduleData.find(s => s.day === todaySpanish);
+    const todaySchedule = schedule.find(s => s.day === todaySpanish);
     
-    // If we haven't checked in, the next action is 'Entrada'. Otherwise, it's 'Salida'.
     const nextEventType = hasEntrada ? 'Salida' : 'Entrada';
 
     if (todaySchedule) {
@@ -91,7 +76,7 @@ export function DailyLog({ periods, setPeriods }: DailyLogProps) {
     } else {
       setSelectedLocation("");
     }
-  }, [hasEntrada, todayLaborDay]);
+  }, [hasEntrada, schedule]);
 
   const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {
     if (!selectedLocation) {

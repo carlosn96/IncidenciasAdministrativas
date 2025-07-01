@@ -41,20 +41,12 @@ import { Pencil } from "lucide-react";
 
 interface SchedulesSettingsProps {
     userLocations: Location[];
+    schedule: ScheduleEntry[];
+    setSchedule: React.Dispatch<React.SetStateAction<ScheduleEntry[]>>;
 }
 
-const initialScheduleData: ScheduleEntry[] = [
-  { day: "Lunes", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
-  { day: "Martes", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
-  { day: "Miércoles", startTime: "09:00", endTime: "13:00", startLocation: "PLANTEL TORRE UNE", endLocation: "PLANTEL TORRE UNE" },
-  { day: "Jueves", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
-  { day: "Viernes", startTime: "09:00", endTime: "15:00", startLocation: "PLANTEL ZAPOPAN", endLocation: "PLANTEL ZAPOPAN" },
-  { day: "Sábado", startTime: "", endTime: "", startLocation: "", endLocation: "" },
-];
-
-export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
+export function SchedulesSettings({ userLocations, schedule, setSchedule }: SchedulesSettingsProps) {
     const { toast } = useToast();
-    const [schedule, setSchedule] = useState<ScheduleEntry[]>(initialScheduleData);
     const [editableSchedule, setEditableSchedule] = useState<ScheduleEntry[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -138,6 +130,7 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
                                                 <SelectValue placeholder="Selecciona..." />
                                             </SelectTrigger>
                                             <SelectContent>
+                                                <SelectItem value="">Día Libre</SelectItem>
                                                 {userLocations.map(loc => (
                                                     <SelectItem key={`${loc.id}-start`} value={loc.name}>{loc.name}</SelectItem>
                                                 ))}
@@ -151,8 +144,9 @@ export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
                                         <Select value={entry.endLocation} onValueChange={value => handleScheduleChange(index, 'endLocation', value || "")}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Selecciona..." />
-                                            </SelectTrigger>
+                                            </Trigger>
                                             <SelectContent>
+                                                <SelectItem value="">Día Libre</SelectItem>
                                                 {userLocations.map(loc => (
                                                     <SelectItem key={`${loc.id}-end`} value={loc.name}>{loc.name}</SelectItem>
                                                 ))}
