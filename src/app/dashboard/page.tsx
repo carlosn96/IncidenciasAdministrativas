@@ -1,4 +1,5 @@
 import { DailyLog } from "@/components/daily-log";
+import { PeriodsList } from "@/components/periods-list";
 
 export default function DashboardPage() {
   return (
@@ -11,6 +12,7 @@ export default function DashboardPage() {
       </div>
 
       <DailyLog />
+      <PeriodsList />
     </div>
   );
 }

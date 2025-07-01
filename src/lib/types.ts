@@ -28,3 +28,10 @@ export type LaborEvent = {
   location: string;
   type: 'Entrada' | 'Salida';
 };
+
+export type Period = {
+  id: string;
+  startDate: Date;
+  endDate: Date;
+  includeSaturdays: boolean;
+};
