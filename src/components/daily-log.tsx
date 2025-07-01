@@ -12,33 +12,53 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { LaborEvent } from "@/lib/types";
-import { Clock, Play, Square } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { LaborEvent, Location } from "@/lib/types";
+import { Clock, Play, Square, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+// This list would ideally be fetched or passed as a prop based on user settings
+const userLocations: Location[] = [
+    { id: "loc1", name: "PLANTEL CENTRO", campus: "Centro Universitario UNE", address: "N/A" },
+    { id: "loc9", name: "PLANTEL TORRE UNE", campus: "Centro Universitario UNE", address: "N/A" },
+    { id: "loc11", name: "PLANTEL ZAPOPAN", campus: "Centro Universitario UNE", address: "N/A" },
+    { id: "remoto", name: "Remoto", campus: "", address: "N/A" }
+];
 
 const initialEvents: LaborEvent[] = [
   {
     id: "evt1",
     date: "2023-10-27",
-    clockInTime: "09:02 AM",
-    clockOutTime: "01:15 PM",
-    location: "Campus Principal",
-    status: "Completado",
+    time: "09:02 AM",
+    location: "PLANTEL CENTRO",
+    type: "Entrada",
   },
   {
     id: "evt2",
     date: "2023-10-27",
-    clockInTime: "02:30 PM",
-    clockOutTime: null,
-    location: "Campus Principal",
-    status: "En Progreso",
+    time: "01:15 PM",
+    location: "PLANTEL CENTRO",
+    type: "Salida",
+  },
+  {
+    id: "evt3",
+    date: "2023-10-27",
+    time: "02:30 PM",
+    location: "PLANTEL TORRE UNE",
+    type: "Entrada",
   },
 ];
 
 export function DailyLog() {
   const [currentTime, setCurrentTime] = useState("");
-  const [isClockedIn, setIsClockedIn] = useState(true);
   const [events, setEvents] = useState<LaborEvent[]>(initialEvents);
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,26 +68,32 @@ export function DailyLog() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleClockIn = () => {
-    setIsClockedIn(true);
+  const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {
+    if (!selectedLocation) {
+      toast({
+        variant: "destructive",
+        title: "Ubicación Requerida",
+        description: "Por favor, selecciona una ubicación antes de registrar.",
+      });
+      return;
+    }
+
     const newEvent: LaborEvent = {
-        id: `evt${events.length + 1}`,
-        date: new Date().toISOString().split('T')[0],
-        clockInTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        clockOutTime: null,
-        location: 'Campus Principal',
-        status: 'En Progreso'
+      id: `evt${events.length + 1}`,
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      location: selectedLocation,
+      type: type,
     };
-    setEvents(prev => [...prev.filter(e => e.status !== 'En Progreso'), newEvent]);
-    toast({ title: "Entrada Registrada", description: `Has registrado tu entrada exitosamente a las ${newEvent.clockInTime}.` });
+
+    setEvents(prev => [...prev, newEvent]);
+    toast({
+      title: `${type} Registrada`,
+      description: `Has registrado tu ${type.toLowerCase()} en ${selectedLocation} a las ${newEvent.time}.`,
+    });
   };
 
-  const handleClockOut = () => {
-    setIsClockedIn(false);
-    const clockOutTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    setEvents(prev => prev.map(e => e.status === 'En Progreso' ? { ...e, status: 'Completado', clockOutTime } : e));
-    toast({ title: "Salida Registrada", description: `Has registrado tu salida exitosamente a las ${clockOutTime}.` });
-  };
+  const lastEventType = events.length > 0 ? events[events.length - 1].type : 'Salida';
 
   return (
     <Card>
@@ -84,15 +110,31 @@ export function DailyLog() {
               <p className="text-2xl font-semibold font-mono">{currentTime}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleClockIn} disabled={isClockedIn} className="w-40">
-              <Play className="mr-2" />
-              Registrar Entrada
-            </Button>
-            <Button onClick={handleClockOut} disabled={!isClockedIn} variant="destructive" className="w-40">
-              <Square className="mr-2" />
-              Registrar Salida
-            </Button>
+          
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+             <div className="w-full sm:w-[240px]">
+                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                    <SelectTrigger>
+                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <SelectValue placeholder="Selecciona ubicación..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {userLocations.map(loc => (
+                            <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="flex gap-2 w-full">
+                <Button onClick={() => handleRegisterEvent('Entrada')} disabled={!selectedLocation || lastEventType === 'Entrada'} className="flex-1 sm:w-40">
+                  <Play className="mr-2" />
+                  Registrar Entrada
+                </Button>
+                <Button onClick={() => handleRegisterEvent('Salida')} disabled={!selectedLocation || lastEventType === 'Salida'} variant="destructive" className="flex-1 sm:w-40">
+                  <Square className="mr-2" />
+                  Registrar Salida
+                </Button>
+            </div>
           </div>
         </div>
         
@@ -102,25 +144,31 @@ export function DailyLog() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Entrada</TableHead>
-                  <TableHead>Salida</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Hora</TableHead>
                   <TableHead>Ubicación</TableHead>
-                  <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell>{event.clockInTime}</TableCell>
-                    <TableCell>{event.clockOutTime ?? "---"}</TableCell>
-                    <TableCell>{event.location}</TableCell>
-                    <TableCell>
-                      <Badge variant={event.status === 'Completado' ? 'secondary' : 'default'}>
-                        {event.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {events.length === 0 ? (
+                    <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                            No hay eventos registrados hoy.
+                        </TableCell>
+                    </TableRow>
+                ) : (
+                    [...events].reverse().map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell>
+                          <Badge variant={event.type === 'Entrada' ? 'default' : 'secondary'}>
+                            {event.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{event.time}</TableCell>
+                        <TableCell>{event.location}</TableCell>
+                      </TableRow>
+                    ))
+                )}
               </TableBody>
             </Table>
           </div>

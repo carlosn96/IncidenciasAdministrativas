@@ -23,8 +23,7 @@ export type Location = {
 export type LaborEvent = {
   id: string;
   date: string;
-  clockInTime: string;
-  clockOutTime: string | null;
+  time: string;
   location: string;
-  status: 'En Progreso' | 'Completado';
+  type: 'Entrada' | 'Salida';
 };
