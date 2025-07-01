@@ -1,10 +1,12 @@
 import type { ImgHTMLAttributes, SVGProps } from "react";
+import { cn } from "@/lib/utils";
 
-export function AppLogo(props: ImgHTMLAttributes<HTMLImageElement>) {
+export function AppLogo({ className, ...props }: ImgHTMLAttributes<HTMLImageElement>) {
   return (
     <img
       src="/assets/images/une-color.png"
       alt="Centro Universitario UNE Logo"
+      className={cn("object-contain", className)}
       {...props}
     />
   );
