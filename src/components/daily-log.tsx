@@ -47,6 +47,7 @@ import { format, isWithinInterval, parse, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSettings } from "@/context/settings-context";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -72,7 +73,7 @@ const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
 
 export function DailyLog() {
   const { periods, setPeriods, userLocations, schedule } = useSettings();
-  const [currentTime, setCurrentTime] = useState("");
+  const [currentTime, setCurrentTime] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const { toast } = useToast();
 
@@ -305,9 +306,13 @@ export function DailyLog() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             <div className="lg:col-span-1">
                 <Card className="flex flex-col justify-center items-center text-center p-4 md:p-6 h-full bg-muted/30">
-                <p className="text-sm text-muted-foreground">Hora Actual</p>
-                <p className="text-4xl md:text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime || "00:00:00"}</p>
-                <Clock className="h-8 w-8 text-muted-foreground mt-2" />
+                  <p className="text-sm text-muted-foreground">Hora Actual</p>
+                  {currentTime ? (
+                    <p className="text-4xl md:text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime}</p>
+                  ) : (
+                    <Skeleton className="h-[3rem] w-[11rem] my-1" />
+                  )}
+                  <Clock className="h-8 w-8 text-muted-foreground mt-2" />
                 </Card>
             </div>
 
