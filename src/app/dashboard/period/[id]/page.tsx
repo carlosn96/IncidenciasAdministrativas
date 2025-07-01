@@ -68,8 +68,9 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
   // Placeholder data - In a real app, you'd fetch this based on params.id
   const period = {
     id: params.id,
+    name: "Quincena del 26 de Junio al 11 de Julio",
     startDate: new Date(2024, 5, 26), // June 26, 2024
-    endDate: new Date(2024, 6, 10), // July 10, 2024
+    endDate: new Date(2024, 6, 11), // July 11, 2024 (16 days inclusive)
     includeSaturdays: true,
   };
 
@@ -119,7 +120,7 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
 
       <Card>
         <CardHeader>
-          <CardTitle>Resumen del Periodo</CardTitle>
+          <CardTitle>{period.name}</CardTitle>
           <CardDescription>
             {formattedDateRange} (Sábados {period.includeSaturdays ? "incluidos" : "excluidos"})
           </CardDescription>

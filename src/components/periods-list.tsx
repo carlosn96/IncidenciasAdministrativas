@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import type { Period } from "@/lib/types";
 import { Calendar as CalendarIcon, PlusCircle, ArrowRight } from "lucide-react";
@@ -25,27 +26,36 @@ const initialPeriods: Period[] = [];
 export function PeriodsList() {
     const [periods, setPeriods] = useState<Period[]>(initialPeriods);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [startDate, setStartDate] = useState<Date | undefined>();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
+    const [periodName, setPeriodName] = useState("");
     const { toast } = useToast();
 
-    // A period is always 15 calendar days (start date + 14 days).
-    const calculateEndDate = (startDate: Date): Date => {
-        return addDays(startDate, 14);
+    // A period is always 16 calendar days inclusive (start date + 15 days).
+    const calculateEndDate = (start: Date): Date => {
+        return addDays(start, 15);
     };
 
-    const handleDateSelect = (range: DateRange | undefined) => {
-        if (range?.from && !range.to) {
-            // If only a start date is selected, calculate the end date automatically.
-            const endDate = calculateEndDate(range.from);
-            setDateRange({ from: range.from, to: endDate });
+    useEffect(() => {
+        if (startDate) {
+            const endDate = calculateEndDate(startDate);
+            setDateRange({ from: startDate, to: endDate });
         } else {
-            // Otherwise, allow the user to select a custom range.
-            setDateRange(range);
+            setDateRange(undefined);
         }
-    };
+    }, [startDate]);
+
+    useEffect(() => {
+        if (dateRange?.from && dateRange?.to) {
+            const defaultName = `Periodo del ${format(dateRange.from, "d LLL", { locale: es })} al ${format(dateRange.to, "d LLL, yyyy", { locale: es })}`;
+            setPeriodName(defaultName);
+        } else {
+            setPeriodName("");
+        }
+    }, [dateRange]);
+
     
-    // This handler only needs to update the state for the checkbox.
     const handleSaturdaysCheckedChange = (checked: boolean | string) => {
         setIncludeSaturdays(Boolean(checked));
     };
@@ -56,13 +66,23 @@ export function PeriodsList() {
             toast({
                 variant: "destructive",
                 title: "Fechas requeridas",
-                description: "Por favor, selecciona un rango de fechas para el periodo."
+                description: "Por favor, selecciona una fecha de inicio para el periodo."
+            });
+            return;
+        }
+
+        if (!periodName.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Nombre requerido",
+                description: "Por favor, proporciona un nombre para el periodo."
             });
             return;
         }
 
         const newPeriod: Period = {
             id: uuidv4(),
+            name: periodName,
             startDate: dateRange.from,
             endDate: dateRange.to,
             includeSaturdays: includeSaturdays
@@ -76,8 +96,10 @@ export function PeriodsList() {
 
         // Reset form
         setIsAddDialogOpen(false);
+        setStartDate(undefined);
         setDateRange(undefined);
         setIncludeSaturdays(false);
+        setPeriodName("");
     };
 
     return (
@@ -100,6 +122,7 @@ export function PeriodsList() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>Nombre del Periodo</TableHead>
                                     <TableHead>Rango del Periodo</TableHead>
                                     <TableHead>Sábados Incluidos</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
@@ -108,15 +131,16 @@ export function PeriodsList() {
                             <TableBody>
                                 {periods.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                                             No hay periodos agregados.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     periods.map((period) => (
                                         <TableRow key={period.id}>
-                                            <TableCell className="font-medium">
-                                                {`${format(period.startDate, "d 'de' LLLL", { locale: es })} al ${format(period.endDate, "d 'de' LLLL, yyyy", { locale: es })}`}
+                                            <TableCell className="font-medium">{period.name}</TableCell>
+                                            <TableCell>
+                                                {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
                                             </TableCell>
                                             <TableCell>{period.includeSaturdays ? "Sí" : "No"}</TableCell>
                                             <TableCell className="text-right">
@@ -146,7 +170,16 @@ export function PeriodsList() {
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                             <Label>Rango de Fechas</Label>
+                            <Label htmlFor="period-name">Nombre del Periodo</Label>
+                            <Input
+                                id="period-name"
+                                value={periodName}
+                                onChange={(e) => setPeriodName(e.target.value)}
+                                placeholder="Ej: Segunda Quincena de Julio"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                             <Label>Fecha de Inicio (el final se calcula automáticamente)</Label>
                              <Popover>
                                 <PopoverTrigger asChild>
                                   <Button
@@ -175,11 +208,10 @@ export function PeriodsList() {
                                 <PopoverContent className="w-auto p-0" align="start">
                                   <Calendar
                                     initialFocus
-                                    mode="range"
-                                    defaultMonth={dateRange?.from}
-                                    selected={dateRange}
-                                    onSelect={handleDateSelect}
-                                    numberOfMonths={2}
+                                    mode="single"
+                                    selected={startDate}
+                                    onSelect={setStartDate}
+                                    numberOfMonths={1}
                                     locale={es}
                                   />
                                 </PopoverContent>

@@ -31,6 +31,7 @@ export type LaborEvent = {
 
 export type Period = {
   id: string;
+  name: string;
   startDate: Date;
   endDate: Date;
   includeSaturdays: boolean;
