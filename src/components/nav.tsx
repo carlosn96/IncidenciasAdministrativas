@@ -15,7 +15,6 @@ import Link from "next/link";
 import {
   LayoutDashboard,
   User,
-  Calendar,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -24,7 +23,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/profile", label: "Profile", icon: User },
-  { href: "/dashboard/schedules", label: "Schedules", icon: Calendar },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

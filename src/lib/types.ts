@@ -20,12 +20,6 @@ export type Location = {
   address: string;
 };
 
-export type IncidentType = {
-  id: string;
-  name: string;
-  requiredDocumentation: string;
-};
-
 export type LaborEvent = {
   id: string;
   date: string;

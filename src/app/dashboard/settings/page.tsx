@@ -5,7 +5,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { LocationsSettings } from "@/components/locations-settings";
-import { IncidentTypesSettings } from "@/components/incident-types-settings";
+import { SchedulesSettings } from "@/components/schedules-settings";
 
 export default function SettingsPage() {
   return (
@@ -20,13 +20,13 @@ export default function SettingsPage() {
       <Tabs defaultValue="locations" className="space-y-4">
         <TabsList>
           <TabsTrigger value="locations">Locations</TabsTrigger>
-          <TabsTrigger value="incident-types">Incident Types</TabsTrigger>
+          <TabsTrigger value="schedules">Horarios por Defecto</TabsTrigger>
         </TabsList>
         <TabsContent value="locations">
             <LocationsSettings />
         </TabsContent>
-        <TabsContent value="incident-types">
-            <IncidentTypesSettings />
+        <TabsContent value="schedules">
+            <SchedulesSettings />
         </TabsContent>
       </Tabs>
     </div>
