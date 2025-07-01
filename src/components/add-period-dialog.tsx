@@ -27,6 +27,7 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
     const { setPeriods } = useSettings();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [periodName, setPeriodName] = useState("");
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -34,15 +35,23 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
             // Reset form when dialog is closed
             setDateRange(undefined);
             setPeriodName("");
+            setIsCalendarOpen(false);
         }
     }, [open]);
 
     const handleDateSelect = (range: DateRange | undefined) => {
+        // This custom logic makes it so selecting a start date automatically creates a 15-day period.
         if (range?.from && !range.to) {
             const endDate = addDays(range.from, 15);
             setDateRange({ from: range.from, to: endDate });
+            setIsCalendarOpen(false); // Close the popover automatically
         } else {
+            // This handles clearing the selection or other edge cases.
             setDateRange(range);
+            // If the user somehow manages to select a full range manually, close it too.
+            if (range?.from && range?.to) {
+                setIsCalendarOpen(false);
+            }
         }
     };
 
@@ -114,7 +123,7 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
                          <Label>Rango de Fechas del Periodo</Label>
-                         <Popover>
+                         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                             <PopoverTrigger asChild>
                               <Button
                                 id="date"
