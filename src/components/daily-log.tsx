@@ -23,7 +23,8 @@ import type { Incident, ScheduleEntry } from "@/lib/types";
 import { Clock, Play, Square, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { format, isWithinInterval } from "date-fns";
+import { format, isWithinInterval, parse } from "date-fns";
+import { es } from "date-fns/locale";
 import { useSettings } from "@/context/settings-context";
 
 export function DailyLog() {
@@ -91,8 +92,9 @@ export function DailyLog() {
       return;
     }
 
+    const now = new Date();
     const newIncident: Incident = {
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      time: format(now, "HH:mm"),
       location: selectedLocation,
     };
     
@@ -113,7 +115,7 @@ export function DailyLog() {
 
     toast({
       title: `${type} Registrada`,
-      description: `Has registrado tu ${type.toLowerCase()} en ${selectedLocation} a las ${newIncident.time}.`,
+      description: `Has registrado tu ${type.toLowerCase()} en ${selectedLocation} a las ${format(now, 'p', { locale: es })}.`,
     });
   };
 
@@ -124,6 +126,16 @@ export function DailyLog() {
   if (todayLaborDay?.exit) {
     eventsForTable.push({ id: 'salida-today', type: 'Salida', ...todayLaborDay.exit });
   }
+
+  const formatTime12h = (timeStr?: string): string => {
+    if (!timeStr) return "---";
+    try {
+      const time = parse(timeStr, "HH:mm", new Date());
+      return format(time, "p", { locale: es });
+    } catch (error) {
+      return "---";
+    }
+  };
 
 
   return (
@@ -212,7 +224,7 @@ export function DailyLog() {
                               {event.type}
                             </Badge>
                           </TableCell>
-                          <TableCell>{event.time}</TableCell>
+                          <TableCell>{formatTime12h(event.time)}</TableCell>
                           <TableCell>{event.location}</TableCell>
                         </TableRow>
                       ))

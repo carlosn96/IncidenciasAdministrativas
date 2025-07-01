@@ -5,10 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { addDays, differenceInMinutes, format, eachDayOfInterval, getDay, parseISO } from "date-fns";
+import { differenceInMinutes, format, parse, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { LaborDay, Incident } from "@/lib/types";
-
+import { useSettings } from "@/context/settings-context";
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -56,46 +56,39 @@ const formatTotalHours = (totalMinutes: number): string => {
   return `${hours} horas ${minutes} minutos`;
 };
 
+const formatTime12h = (timeStr?: string): string => {
+  if (!timeStr) return "---";
+  try {
+    const time = parse(timeStr, "HH:mm", new Date());
+    return format(time, "p", { locale: es });
+  } catch (error) {
+    return "---";
+  }
+};
+
 
 export default function PeriodDetailPage({ params }: { params: { id: string } }) {
-  // Placeholder data - In a real app, you'd fetch this based on params.id
-  const period = {
-    id: params.id,
-    name: "Quincena del 26 de Junio al 11 de Julio",
-    startDate: new Date(2024, 5, 26), // June 26, 2024
-    endDate: new Date(2024, 6, 11), // July 11, 2024 (16 days inclusive)
-    includeSaturdays: true,
-  };
+  const { periods } = useSettings();
+  const period = periods.find(p => p.id === params.id);
 
-  // Generate mock laborDays for the period
-  const allDays = eachDayOfInterval({ start: period.startDate, end: period.endDate });
-  const laborDays: LaborDay[] = allDays
-    .map(date => {
-      const dayOfWeek = getDay(date); // 0 = Sunday, 6 = Saturday
-      if (dayOfWeek === 0) return null; // Skip Sundays
-      if (dayOfWeek === 6 && !period.includeSaturdays) return null; // Skip Saturdays if not included
+  if (!period) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <h1 className="text-2xl font-bold">Periodo no encontrado</h1>
+        <p className="text-muted-foreground mt-2">
+          El periodo que buscas no existe. Por favor, vuelve a intentarlo.
+        </p>
+        <Button asChild className="mt-6">
+          <Link href="/dashboard/settings">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver a Ajustes de Periodos
+          </Link>
+        </Button>
+      </div>
+    )
+  }
 
-      // Simulate some variance in clock-in/out times
-      const entryHour = 9 + Math.floor(Math.random() * 15) / 60; // 9:00 - 9:14
-      const exitHour = 17 + Math.floor(Math.random() * 15) / 60; // 17:00 - 17:14
-      
-      const entry: Incident = {
-          location: "PLANTEL CENTRO",
-          time: `${String(Math.floor(entryHour)).padStart(2, '0')}:${String(Math.floor((entryHour % 1) * 60)).padStart(2, '0')}`,
-      };
-      const exit: Incident = {
-          location: "PLANTEL CENTRO",
-          time: `${String(Math.floor(exitHour)).padStart(2, '0')}:${String(Math.floor((exitHour % 1) * 60)).padStart(2, '0')}`,
-      };
-
-      return {
-        date: format(date, "yyyy-MM-dd"),
-        entry,
-        exit,
-      };
-    })
-    .filter((day): day is LaborDay => day !== null);
-
+  const laborDays = period.laborDays;
   const totalMinutesWorked = calculateTotalMinutes(laborDays);
   const formattedTotalHours = formatTotalHours(totalMinutesWorked);
 
@@ -105,9 +98,9 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
     <div className="space-y-8">
       <div className="flex items-center gap-4">
         <Button asChild variant="outline" size="icon">
-          <Link href="/dashboard">
+          <Link href="/dashboard/settings">
             <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Volver al Panel</span>
+            <span className="sr-only">Volver a Ajustes</span>
           </Link>
         </Button>
         <div>
@@ -166,9 +159,9 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
                                     {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
                                 </TableCell>
                                 <TableCell>{day.entry?.location || '---'}</TableCell>
-                                <TableCell>{day.entry?.time || '---'}</TableCell>
+                                <TableCell>{formatTime12h(day.entry?.time)}</TableCell>
                                 <TableCell>{day.exit?.location || '---'}</TableCell>
-                                <TableCell>{day.exit?.time || '---'}</TableCell>
+                                <TableCell>{formatTime12h(day.exit?.time)}</TableCell>
                                 <TableCell className="text-right font-mono">
                                     {calculateWorkedHours(day.entry, day.exit)}
                                 </TableCell>
@@ -177,7 +170,7 @@ export default function PeriodDetailPage({ params }: { params: { id: string } })
                     ) : (
                         <TableRow>
                             <TableCell colSpan={6} className="text-center text-muted-foreground py-16">
-                                <p>No hay incidencias registradas para este periodo.</p>
+                                <p>No hay días laborables configurados para este periodo.</p>
                             </TableCell>
                         </TableRow>
                     )}
