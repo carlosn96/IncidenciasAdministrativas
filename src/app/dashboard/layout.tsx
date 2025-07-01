@@ -1,6 +1,6 @@
 import { Header } from "@/components/header";
 import { Nav } from "@/components/nav";
-import { SidebarProvider, Sidebar, SidebarInset, SidebarRail } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar";
 import { SettingsProvider } from "@/context/settings-context";
 
 export default function DashboardLayout({
@@ -13,7 +13,6 @@ export default function DashboardLayout({
       <SidebarProvider>
         <Sidebar variant="sidebar" collapsible="icon">
           <Nav />
-          <SidebarRail />
         </Sidebar>
         <SidebarInset>
           <Header />
