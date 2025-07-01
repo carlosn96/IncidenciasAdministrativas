@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { v4 as uuidv4 } from 'uuid';
@@ -30,6 +30,17 @@ export function PeriodsList() {
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
     const [periodName, setPeriodName] = useState("");
     const { toast } = useToast();
+
+    const handleDateSelect = (range: DateRange | undefined) => {
+        if (range?.from && !range.to) {
+            // A 'from' date was just selected, automatically set the 'to' date
+            const endDate = addDays(range.from, 15);
+            setDateRange({ from: range.from, to: endDate });
+        } else {
+            // User is manually selecting a range, has selected a range, or is clearing it
+            setDateRange(range);
+        }
+    };
 
     useEffect(() => {
         if (dateRange?.from && dateRange?.to) {
@@ -194,7 +205,7 @@ export function PeriodsList() {
                                     initialFocus
                                     mode="range"
                                     selected={dateRange}
-                                    onSelect={setDateRange}
+                                    onSelect={handleDateSelect}
                                     numberOfMonths={1}
                                     locale={es}
                                   />
