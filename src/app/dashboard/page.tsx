@@ -26,7 +26,7 @@ export default function DashboardPage() {
       <div className="space-y-8">
         <div className="flex justify-between items-start gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold font-headline">Panel de Control</h1>
+            <h1 className="text-3xl font-bold font-headline">Resumen Diario</h1>
             <p className="text-muted-foreground">
               ¡Bienvenido de nuevo, Coordinador! Aquí está tu resumen de hoy.
             </p>

@@ -21,7 +21,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const links = [
-  { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
   { href: "/dashboard/profile", label: "Perfil", icon: User },
   { href: "/dashboard/settings", label: "Ajustes", icon: Settings },
 ];
