@@ -24,7 +24,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,34 +46,40 @@ interface SchedulesSettingsProps {
 
 export function SchedulesSettings({ userLocations, schedule, setSchedule }: SchedulesSettingsProps) {
     const { toast } = useToast();
-    const [editableSchedule, setEditableSchedule] = useState<ScheduleEntry[]>([]);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [editingDay, setEditingDay] = useState<ScheduleEntry | null>(null);
+    const [dayData, setDayData] = useState<ScheduleEntry | null>(null);
 
-    const handleOpenDialog = () => {
-        setEditableSchedule(JSON.parse(JSON.stringify(schedule)));
-        setIsDialogOpen(true);
+    const handleOpenEditDialog = (day: ScheduleEntry) => {
+      setEditingDay(day);
+      setDayData(day);
+      setIsEditDialogOpen(true);
     };
 
-    const handleScheduleChange = (index: number, field: keyof Omit<ScheduleEntry, 'day'>, value: string) => {
-        const updatedSchedule = [...editableSchedule];
-        updatedSchedule[index] = { ...updatedSchedule[index], [field]: value };
-        setEditableSchedule(updatedSchedule);
+    const handleFieldChange = (field: keyof Omit<ScheduleEntry, 'day'>, value: string) => {
+      if (dayData) {
+          setDayData({ ...dayData, [field]: value });
+      }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setSchedule(editableSchedule);
-        toast({
-            title: "Horario Actualizado",
-            description: "Tu horario por defecto ha sido guardado.",
-        });
-        setIsDialogOpen(false);
-    }
+    const handleSaveChanges = () => {
+      if (dayData) {
+          setSchedule(prevSchedule =>
+              prevSchedule.map(day => (day.day === dayData.day ? dayData : day))
+          );
+          toast({
+              title: "Horario Actualizado",
+              description: `El horario para ${dayData.day} ha sido guardado.`,
+          });
+          setIsEditDialogOpen(false);
+          setEditingDay(null);
+      }
+    };
     
     const formatTime12h = (timeStr: string) => {
         if (!timeStr) return "---";
         const [hours, minutes] = timeStr.split(":");
-        if (isNaN(parseInt(hours)) || isNaN(parseInt(minutes))) return timeStr;
+        if (isNaN(parseInt(hours)) || isNaN(parseInt(minutes))) return "---";
         const h = parseInt(hours, 10);
         const ampm = h >= 12 ? 'PM' : 'AM';
         const formattedHours = h % 12 || 12;
@@ -82,117 +87,107 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
     };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start gap-4 flex-wrap">
-            <div>
-                <CardTitle>Horario Semanal por Defecto</CardTitle>
-                <CardDescription>
-                Este es su horario de trabajo semanal predeterminado. Puede ser anulado por incidencias específicas.
-                </CardDescription>
-            </div>
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={handleOpenDialog}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Editar Horario
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-4xl">
-                <form onSubmit={handleSubmit}>
-                    <DialogHeader>
-                    <DialogTitle>Editar Horario por Defecto</DialogTitle>
-                    <DialogDescription>
-                        Realice cambios en su horario semanal aquí. Haga clic en guardar cuando haya terminado.
-                    </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Día</TableHead>
-                                    <TableHead>Hora Entrada</TableHead>
-                                    <TableHead>Lugar Entrada</TableHead>
-                                    <TableHead>Hora Salida</TableHead>
-                                    <TableHead>Lugar Salida</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {editableSchedule.map((entry, index) => (
-                                <TableRow key={entry.day}>
-                                    <TableCell className="font-medium">{entry.day}</TableCell>
-                                    <TableCell>
-                                        <Input type="time" value={entry.startTime} onChange={e => handleScheduleChange(index, 'startTime', e.target.value)} />
-                                    </TableCell>
-                                     <TableCell>
-                                        <Select value={entry.startLocation || "no-location"} onValueChange={value => handleScheduleChange(index, 'startLocation', value === "no-location" ? "" : value)}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecciona..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="no-location">Día Libre</SelectItem>
-                                                {userLocations.map(loc => (
-                                                    <SelectItem key={`${loc.id}-start`} value={loc.name}>{loc.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Input type="time" value={entry.endTime} onChange={e => handleScheduleChange(index, 'endTime', e.target.value)} />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Select value={entry.endLocation || "no-location"} onValueChange={value => handleScheduleChange(index, 'endLocation', value === "no-location" ? "" : value)}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecciona..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="no-location">Día Libre</SelectItem>
-                                                {userLocations.map(loc => (
-                                                    <SelectItem key={`${loc.id}-end`} value={loc.name}>{loc.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                        <Button type="submit">Guardar Cambios</Button>
-                    </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="border rounded-lg overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Día</TableHead>
-                <TableHead>Hora de Entrada</TableHead>
-                <TableHead>Lugar de Entrada</TableHead>
-                <TableHead>Hora de Salida</TableHead>
-                <TableHead>Lugar de Salida</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schedule.map((entry) => (
-                <TableRow key={entry.day}>
-                  <TableCell className="font-medium">{entry.day}</TableCell>
-                  <TableCell>{formatTime12h(entry.startTime)}</TableCell>
-                  <TableCell>{entry.startLocation || "---"}</TableCell>
-                  <TableCell>{formatTime12h(entry.endTime)}</TableCell>
-                  <TableCell>{entry.endLocation || "---"}</TableCell>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Horario Semanal por Defecto</CardTitle>
+          <CardDescription>
+          Este es su horario de trabajo semanal predeterminado. Puede ser anulado por incidencias específicas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Día</TableHead>
+                  <TableHead>Hora de Entrada</TableHead>
+                  <TableHead>Lugar de Entrada</TableHead>
+                  <TableHead>Hora de Salida</TableHead>
+                  <TableHead>Lugar de Salida</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {schedule.map((entry) => (
+                  <TableRow key={entry.day}>
+                    <TableCell className="font-medium whitespace-nowrap">{entry.day}</TableCell>
+                    <TableCell>{entry.startTime ? formatTime12h(entry.startTime) : "---"}</TableCell>
+                    <TableCell>{entry.startLocation || "---"}</TableCell>
+                    <TableCell>{entry.endTime ? formatTime12h(entry.endTime) : "---"}</TableCell>
+                    <TableCell>{entry.endLocation || "---"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(entry)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Horario para {editingDay?.day}</DialogTitle>
+            <DialogDescription>
+              Ajusta las horas y lugares para este día.
+            </DialogDescription>
+          </DialogHeader>
+          {dayData && (
+             <div className="grid gap-6 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startTime">Hora Entrada</Label>
+                    <Input id="startTime" type="time" value={dayData.startTime} onChange={e => handleFieldChange('startTime', e.target.value)} />
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="startLocation">Lugar Entrada</Label>
+                    <Select value={dayData.startLocation || "no-location"} onValueChange={value => handleFieldChange('startLocation', value === "no-location" ? "" : value)}>
+                        <SelectTrigger id="startLocation">
+                            <SelectValue placeholder="Selecciona..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="no-location">Día Libre</SelectItem>
+                            {userLocations.map(loc => (
+                                <SelectItem key={`${loc.id}-start`} value={loc.name}>{loc.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="endTime">Hora Salida</Label>
+                    <Input id="endTime" type="time" value={dayData.endTime} onChange={e => handleFieldChange('endTime', e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endLocation">Lugar Salida</Label>
+                    <Select value={dayData.endLocation || "no-location"} onValueChange={value => handleFieldChange('endLocation', value === "no-location" ? "" : value)}>
+                        <SelectTrigger id="endLocation">
+                            <SelectValue placeholder="Selecciona..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="no-location">Día Libre</SelectItem>
+                            {userLocations.map(loc => (
+                                <SelectItem key={`${loc.id}-end`} value={loc.name}>{loc.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+            </div>
+          )}
+          <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSaveChanges}>Guardar Cambios</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
