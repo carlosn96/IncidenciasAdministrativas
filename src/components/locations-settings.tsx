@@ -131,7 +131,7 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
                     <TableCell className="text-right">
                        <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                            <Button variant="ghost" size="sm" className="text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Borrar
                             </Button>
