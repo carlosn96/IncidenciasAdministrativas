@@ -125,12 +125,12 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
                                         <Input type="time" value={entry.startTime} onChange={e => handleScheduleChange(index, 'startTime', e.target.value)} />
                                     </TableCell>
                                      <TableCell>
-                                        <Select value={entry.startLocation} onValueChange={value => handleScheduleChange(index, 'startLocation', value || "")}>
+                                        <Select value={entry.startLocation || "no-location"} onValueChange={value => handleScheduleChange(index, 'startLocation', value === "no-location" ? "" : value)}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Selecciona..." />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="">Día Libre</SelectItem>
+                                                <SelectItem value="no-location">Día Libre</SelectItem>
                                                 {userLocations.map(loc => (
                                                     <SelectItem key={`${loc.id}-start`} value={loc.name}>{loc.name}</SelectItem>
                                                 ))}
@@ -141,12 +141,12 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
                                         <Input type="time" value={entry.endTime} onChange={e => handleScheduleChange(index, 'endTime', e.target.value)} />
                                     </TableCell>
                                     <TableCell>
-                                        <Select value={entry.endLocation} onValueChange={value => handleScheduleChange(index, 'endLocation', value || "")}>
+                                        <Select value={entry.endLocation || "no-location"} onValueChange={value => handleScheduleChange(index, 'endLocation', value === "no-location" ? "" : value)}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Selecciona..." />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="">Día Libre</SelectItem>
+                                                <SelectItem value="no-location">Día Libre</SelectItem>
                                                 {userLocations.map(loc => (
                                                     <SelectItem key={`${loc.id}-end`} value={loc.name}>{loc.name}</SelectItem>
                                                 ))}
