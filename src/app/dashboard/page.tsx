@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { DailyLog } from "@/components/daily-log";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/context/settings-context";
 import { isWithinInterval, format } from "date-fns";
 import { es } from "date-fns/locale";
-import { PlusCircle, CalendarDays } from "lucide-react";
+import { PlusCircle, CalendarDays, ArrowRight } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 export default function DashboardPage() {
@@ -37,22 +38,27 @@ export default function DashboardPage() {
         </div>
 
         {activePeriod ? (
-            <Card className="bg-primary/5 border-primary/20">
-                <CardHeader className="flex flex-row items-center gap-4 p-4">
-                    <div className="flex items-center justify-center bg-primary/10 text-primary rounded-full h-10 w-10">
-                        <CalendarDays className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <CardDescription>Periodo Activo</CardDescription>
-                        <CardTitle className="text-xl">{activePeriod.name}</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
-                <p>
-                    Este periodo va del <strong>{format(activePeriod.startDate, "d 'de' LLLL", { locale: es })}</strong> al <strong>{format(activePeriod.endDate, "d 'de' LLLL, yyyy", { locale: es })}</strong>.
-                </p>
-                </CardContent>
-            </Card>
+            <Link href={`/dashboard/period/${activePeriod.id}`} className="block group">
+              <Card className="bg-primary/5 border-primary/20 group-hover:bg-primary/10 group-hover:border-primary/30 transition-colors">
+                  <CardHeader className="flex flex-row items-center justify-between gap-4 p-4">
+                      <div className="flex items-center gap-4">
+                          <div className="flex items-center justify-center bg-primary/10 text-primary rounded-full h-10 w-10">
+                              <CalendarDays className="h-5 w-5" />
+                          </div>
+                          <div>
+                              <CardDescription>Periodo Activo</CardDescription>
+                              <CardTitle className="text-xl">{activePeriod.name}</CardTitle>
+                          </div>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
+                  <p>
+                      Este periodo va del <strong>{format(activePeriod.startDate, "d 'de' LLLL", { locale: es })}</strong> al <strong>{format(activePeriod.endDate, "d 'de' LLLL, yyyy", { locale: es })}</strong>.
+                  </p>
+                  </CardContent>
+              </Card>
+            </Link>
         ) : (
             <Card className="border-dashed">
                 <CardHeader className="text-center p-6">
