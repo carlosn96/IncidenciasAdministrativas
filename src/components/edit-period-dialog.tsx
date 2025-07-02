@@ -12,9 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import type { Period, LaborDay } from "@/lib/types";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { useSettings } from "@/context/settings-context";
 import { Checkbox } from "./ui/checkbox";
 
@@ -29,7 +26,6 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [periodName, setPeriodName] = useState("");
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
-    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -42,16 +38,8 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
             setDateRange(undefined);
             setPeriodName("");
             setIncludeSaturdays(false);
-            setIsCalendarOpen(false);
         }
     }, [period, open]);
-
-    const handleDateSelect = (range: DateRange | undefined) => {
-        setDateRange(range);
-        if (range?.to || !range?.from) { // Close if range is complete or cleared
-            setIsCalendarOpen(false);
-        }
-    };
 
     const handleSaveChanges = () => {
         if (!period) return;
@@ -143,43 +131,17 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
                     </div>
                     <div className="grid gap-2">
                          <Label>Rango de Fechas del Periodo</Label>
-                         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !dateRange && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dateRange?.from ? (
-                                  dateRange.to ? (
-                                    <>
-                                      {format(dateRange.from, "d 'de' LLL", { locale: es })} -{" "}
-                                      {format(dateRange.to, "d 'de' LLL, yyyy", { locale:es })}
-                                    </>
-                                  ) : (
-                                    format(dateRange.from, "d 'de' LLL, yyyy", { locale: es })
-                                  )
-                                ) : (
-                                  <span>Selecciona un rango de fechas</span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={dateRange?.from}
-                                    selected={dateRange}
-                                    onSelect={handleDateSelect}
-                                    numberOfMonths={1}
-                                    locale={es}
-                                  />
-                            </PopoverContent>
-                          </Popover>
+                         <div className="rounded-md border flex justify-center">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={1}
+                                locale={es}
+                                />
+                         </div>
                     </div>
                      <div className="flex items-center space-x-2 pt-2">
                         <Checkbox 

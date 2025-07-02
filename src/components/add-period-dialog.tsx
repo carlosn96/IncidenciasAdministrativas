@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, addDays, eachDayOfInterval, getDay, parseISO } from "date-fns";
+import { format, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { v4 as uuidv4 } from 'uuid';
@@ -13,9 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import type { Period, LaborDay } from "@/lib/types";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { useSettings } from "@/context/settings-context";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -29,7 +26,6 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [periodName, setPeriodName] = useState("");
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
-    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -38,24 +34,8 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
             setDateRange(undefined);
             setPeriodName("");
             setIncludeSaturdays(false);
-            setIsCalendarOpen(false);
         }
     }, [open]);
-
-    const handleDateSelect = (range: DateRange | undefined) => {
-        // This custom logic makes it so selecting a start date automatically creates a 15-day period.
-        if (range?.from && !range.to) {
-            const endDate = addDays(range.from, 15);
-            setDateRange({ from: range.from, to: endDate });
-            setIsCalendarOpen(false); // Close on select
-        } else {
-            // This handles other cases, like manual dragging or clearing.
-            setDateRange(range);
-            if (range?.to || !range?.from) { // Close if range is complete or cleared
-                setIsCalendarOpen(false);
-            }
-        }
-    };
 
     useEffect(() => {
         if (dateRange?.from && dateRange?.to) {
@@ -87,11 +67,7 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
 
         const allDays = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
         const newLaborDays: LaborDay[] = allDays
-            .filter(day => {
-                const dayOfWeek = getDay(day);
-                // Exclude only Sundays
-                return dayOfWeek !== 0;
-            })
+            .filter(day => getDay(day) !== 0) // Exclude Sundays
             .map(day => ({
                 date: format(day, "yyyy-MM-dd"),
             }));
@@ -137,53 +113,27 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                         <Label>Rango de Fechas del Periodo</Label>
-                         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !dateRange && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dateRange?.from ? (
-                                  dateRange.to ? (
-                                    <>
-                                      {format(dateRange.from, "d 'de' LLL", { locale: es })} -{" "}
-                                      {format(dateRange.to, "d 'de' LLL, yyyy", { locale:es })}
-                                    </>
-                                  ) : (
-                                    format(dateRange.from, "d 'de' LLL, yyyy", { locale: es })
-                                  )
-                                ) : (
-                                  <span>Selecciona un rango de fechas</span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  initialFocus
-                                  mode="range"
-                                  selected={dateRange}
-                                  onSelect={handleDateSelect}
-                                  numberOfMonths={1}
-                                  locale={es}
-                                />
-                            </PopoverContent>
-                          </Popover>
-                    </div>
-                     <div className="grid gap-2">
                         <Label htmlFor="period-name">Nombre del Periodo</Label>
                         <Input
                             id="period-name"
                             value={periodName}
                             onChange={(e) => setPeriodName(e.target.value)}
                             placeholder="Ej: Segunda Quincena de Julio"
-                            disabled={!dateRange}
+                            disabled={!dateRange?.from || !dateRange.to}
                         />
+                    </div>
+                     <div className="grid gap-2">
+                         <Label>Rango de Fechas del Periodo</Label>
+                         <div className="rounded-md border flex justify-center">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={1}
+                                locale={es}
+                            />
+                         </div>
                     </div>
                     <div className="flex items-center space-x-2 pt-2">
                         <Checkbox 
