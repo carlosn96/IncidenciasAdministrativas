@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -24,11 +25,13 @@ import {
   User,
   Settings,
   LogOut,
+  BarChart,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const links = [
   { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
+  { href: "/dashboard/projections", label: "Proyecciones", icon: BarChart },
   { href: "/dashboard/profile", label: "Perfil", icon: User },
   { href: "/dashboard/settings", label: "Ajustes", icon: Settings },
 ];

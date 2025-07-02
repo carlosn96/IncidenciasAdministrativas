@@ -1,3 +1,4 @@
+
 export type User = {
   name: string;
   email: string;
@@ -30,6 +31,8 @@ export type LaborDay = {
   date: string; // "YYYY-MM-DD"
   entry?: Incident;
   exit?: Incident;
+  projectedEntry?: Incident;
+  projectedExit?: Incident;
 };
 
 export type Period = {
