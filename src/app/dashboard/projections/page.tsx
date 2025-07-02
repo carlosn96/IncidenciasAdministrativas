@@ -103,6 +103,22 @@ export default function ProjectionsPage() {
   const handleSaveChanges = () => {
     if (!selectedPeriodId) return;
 
+    // Validation logic
+    for (const day of projections) {
+      // Use actual time if it exists, otherwise use projected time.
+      const entryTime = day.entry?.time || day.projectedEntry?.time;
+      const exitTime = day.exit?.time || day.projectedExit?.time;
+
+      if (entryTime && exitTime && entryTime > exitTime) {
+        toast({
+          variant: "destructive",
+          title: "Error de Validación",
+          description: `En la fecha ${format(parseISO(day.date), "d 'de' LLLL", { locale: es })}, la hora de entrada no puede ser posterior a la de salida.`,
+        });
+        return; // Stop the save process
+      }
+    }
+
     setPeriods(prevPeriods =>
       prevPeriods.map(p => {
         if (p.id === selectedPeriodId) {
@@ -230,7 +246,10 @@ export default function ProjectionsPage() {
                     </TableHeader>
                     <TableBody>
                       {projections.map((day) => {
-                        const projectedMinutes = calculateMinutes(day.projectedEntry, day.projectedExit);
+                        // For calculating projected hours, prioritize actual times, then projected times
+                        const entryForCalc = day.entry || day.projectedEntry;
+                        const exitForCalc = day.exit || day.projectedExit;
+                        const projectedMinutes = calculateMinutes(entryForCalc, exitForCalc);
                         const actualMinutes = calculateMinutes(day.entry, day.exit);
     
                         return (
