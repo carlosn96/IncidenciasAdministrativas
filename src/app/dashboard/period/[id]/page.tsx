@@ -359,11 +359,11 @@ export default function PeriodDetailPage() {
                   <div className="border rounded-lg">
                       {laborDays.map((day, index) => (
                           <div key={day.date} className={cn("p-4", index < laborDays.length - 1 && "border-b")}>
-                              <div className="flex justify-between items-baseline mb-2">
+                              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-2">
                                   <p className="font-medium capitalize">
                                       {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
                                   </p>
-                                  <p className="font-mono font-semibold text-right">
+                                  <p className="font-mono font-semibold text-right w-full sm:w-auto">
                                       {calculateWorkedHours(day.entry, day.exit)}
                                   </p>
                               </div>

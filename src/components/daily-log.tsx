@@ -307,8 +307,8 @@ export function DailyLog() {
             <CardDescription>Registra tus eventos de entrada y salida del día.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-            <div className="lg:col-span-1">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            <div className="md:col-span-1">
                 <Card className="flex flex-col justify-center items-center text-center p-4 md:p-6 h-full bg-muted/30">
                   {currentTime && currentDay ? (
                     <>
@@ -324,7 +324,7 @@ export function DailyLog() {
                 </Card>
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="md:col-span-2">
                 <Card className="p-4 md:p-6 h-full flex flex-col justify-center">
                     <div className="space-y-4">
                         <div>
