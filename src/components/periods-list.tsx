@@ -27,7 +27,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { Period } from "@/lib/types";
-import { PlusCircle, ArrowRight, Pencil, MoreHorizontal, Trash2 } from "lucide-react";
+import { PlusCircle, ArrowRight, Pencil, MoreHorizontal, Trash2, BarChart } from "lucide-react";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
 import { cn } from "@/lib/utils";
@@ -114,6 +114,12 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                             <span>Ver Incidencias</span>
                                                         </Link>
                                                     </DropdownMenuItem>
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/dashboard/projections?period=${period.id}`} className="w-full">
+                                                            <BarChart className="mr-2 h-4 w-4" />
+                                                            <span>Realizar Proyección</span>
+                                                        </Link>
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => handleEditClick(period)}>
                                                         <Pencil className="mr-2 h-4 w-4" />
                                                         <span>Editar</span>
@@ -177,6 +183,12 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                                 <ArrowRight className="mr-2 h-4 w-4" />
                                                                 <span>Ver Incidencias</span>
                                                             </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                          <Link href={`/dashboard/projections?period=${period.id}`}>
+                                                              <BarChart className="mr-2 h-4 w-4" />
+                                                              <span>Realizar Proyección</span>
+                                                          </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleEditClick(period)}>
                                                             <Pencil className="mr-2 h-4 w-4" />

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSettings } from "@/context/settings-context";
 import type { Period, LaborDay, Incident } from "@/lib/types";
@@ -57,10 +58,18 @@ const formatMinutesToHours = (totalMinutes: number): string => {
 };
 
 export default function ProjectionsPage() {
+  const searchParams = useSearchParams();
   const { periods, setPeriods } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const periodIdFromUrl = searchParams.get("period");
+    if (periodIdFromUrl && periods.some(p => p.id === periodIdFromUrl)) {
+      setSelectedPeriodId(periodIdFromUrl);
+    }
+  }, [searchParams, periods]);
 
   const selectedPeriod = useMemo(() => {
     return periods.find((p) => p.id === selectedPeriodId);
