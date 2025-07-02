@@ -30,6 +30,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
+import { useSettings } from "@/context/settings-context";
 
 const links = [
   { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
@@ -41,6 +42,7 @@ const links = [
 export function Nav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useSettings();
 
   const handleSignOut = async () => {
     try {
@@ -89,15 +91,15 @@ export function Nav() {
             <button className="w-full outline-none ring-sidebar-ring focus-visible:ring-2 rounded-md">
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="https://placehold.co/100x100.png" alt="User" data-ai-hint="user avatar" />
-                  <AvatarFallback>U</AvatarFallback>
+                  <AvatarImage src={user?.photoURL ?? ""} alt={user?.displayName ?? "User"} data-ai-hint="user avatar" />
+                  <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
                   <p className="truncate text-left text-sm font-medium text-sidebar-primary">
-                    Usuario Coordinador
+                    {user?.displayName ?? "Usuario"}
                   </p>
                   <p className="truncate text-left text-xs text-sidebar-foreground/70">
-                    coordinador@institucion.edu
+                    {user?.email ?? "..."}
                   </p>
                 </div>
               </div>

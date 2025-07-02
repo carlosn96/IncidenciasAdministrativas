@@ -14,9 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, Save } from "lucide-react";
+import { useSettings } from "@/context/settings-context";
 
 export default function ProfilePage() {
     const { toast } = useToast();
+    const { user } = useSettings();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,8 +48,8 @@ export default function ProfilePage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="user avatar" />
-                <AvatarFallback>UC</AvatarFallback>
+                <AvatarImage src={user?.photoURL ?? ""} data-ai-hint="user avatar" />
+                <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback>
               </Avatar>
               <Button type="button" variant="outline">
                 <Camera className="mr-2 h-4 w-4" />
@@ -57,14 +59,14 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nombre Completo</Label>
-                <Input id="name" defaultValue="Usuario Coordinador" />
+                <Input id="name" defaultValue={user?.displayName ?? ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Correo Electrónico</Label>
                 <Input
                   id="email"
                   type="email"
-                  defaultValue="coordinador@institucion.edu"
+                  defaultValue={user?.email ?? ""}
                   readOnly
                   className="bg-muted/50"
                 />
@@ -75,7 +77,7 @@ export default function ProfilePage() {
               <Textarea
                 id="background"
                 placeholder="Ej: Doctorado en Ciencias de la Computación"
-                defaultValue="Doctorado en Educación, Maestría en Tecnología Educativa"
+                defaultValue=""
               />
             </div>
             <div className="space-y-2">
@@ -83,7 +85,7 @@ export default function ProfilePage() {
               <Textarea
                 id="courses"
                 placeholder="Ej: Introducción a la Programación, Algoritmos Avanzados"
-                defaultValue="Cálculo I, Álgebra Lineal, Física Moderna"
+                defaultValue=""
               />
             </div>
             <div className="flex justify-end">
