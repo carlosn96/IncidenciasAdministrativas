@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Tabs,
   TabsContent,
@@ -23,6 +25,15 @@ export default function SettingsPage() {
     periods
   } = useSettings();
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const tab = searchParams.get("tab") || "locations";
+
+  const handleTabChange = (value: string) => {
+    router.push(`${pathname}?tab=${value}`, { scroll: false });
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -32,7 +43,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="locations" className="space-y-4">
+      <Tabs value={tab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="overflow-x-auto h-auto justify-start">
           <TabsTrigger value="locations">
             <MapPin className="mr-2 h-4 w-4" />

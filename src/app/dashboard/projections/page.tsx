@@ -152,7 +152,7 @@ export default function ProjectionsPage() {
                   Para poder planificar tus horas, primero necesitas crear un periodo de trabajo.
               </p>
               <Button asChild>
-                  <Link href="/dashboard/settings">
+                  <Link href="/dashboard/settings?tab=periods">
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Crear Nuevo Periodo
                   </Link>
