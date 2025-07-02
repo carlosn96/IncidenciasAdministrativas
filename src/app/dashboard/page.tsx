@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -10,6 +11,7 @@ import { isWithinInterval, format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { PlusCircle, CalendarDays, ArrowRight, Clock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import type { LaborDay } from "@/lib/types";
 
 // Helper functions
@@ -48,10 +50,22 @@ export default function DashboardPage() {
     return periods.find(p => isWithinInterval(today, { start: p.startDate, end: p.endDate }));
   }, [periods]);
 
-  const formattedTotalHours = useMemo(() => {
-    if (!activePeriod) return "";
-    const totalMinutes = calculateTotalMinutes(activePeriod.laborDays);
-    return formatTotalHours(totalMinutes);
+  const periodStats = useMemo(() => {
+    if (!activePeriod) return null;
+
+    const totalMinutesWorked = calculateTotalMinutes(activePeriod.laborDays);
+    const formattedTotalHours = formatTotalHours(totalMinutesWorked);
+
+    const totalMinutesExpected = activePeriod.totalDurationMinutes || 0;
+    const remainingMinutes = Math.max(0, totalMinutesExpected - totalMinutesWorked);
+    const formattedRemainingHours = formatTotalHours(remainingMinutes);
+    const progressPercentage = totalMinutesExpected > 0 ? Math.min(100, (totalMinutesWorked / totalMinutesExpected) * 100) : 0;
+    
+    return {
+      formattedTotalHours,
+      formattedRemainingHours,
+      progressPercentage
+    };
   }, [activePeriod]);
 
   return (
@@ -83,12 +97,23 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground">
                         Este periodo va del <strong>{format(activePeriod.startDate, "d 'de' LLLL", { locale: es })}</strong> al <strong>{format(activePeriod.endDate, "d 'de' LLLL, yyyy", { locale: es })}</strong>.
                     </p>
-                    {formattedTotalHours && (
+                    {periodStats && (
                         <>
                             <div className="border-t my-3 border-primary/10" />
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Clock className="h-4 w-4 text-primary" />
-                                <span>Total de horas laboradas: <strong className="font-semibold text-primary/90">{formattedTotalHours}</strong></span>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="h-4 w-4 text-primary" />
+                                        <span>Horas laboradas</span>
+                                    </div>
+                                    <strong className="font-semibold text-primary/90">{periodStats.formattedTotalHours}</strong>
+                                </div>
+                                <div className="space-y-1">
+                                    <Progress value={periodStats.progressPercentage} className="h-2" />
+                                    <p className="text-xs text-right text-muted-foreground">
+                                      Restantes: {periodStats.formattedRemainingHours}
+                                    </p>
+                                </div>
                             </div>
                         </>
                     )}
