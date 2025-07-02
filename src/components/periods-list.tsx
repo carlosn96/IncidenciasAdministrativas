@@ -9,8 +9,14 @@ import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Period } from "@/lib/types";
-import { PlusCircle, ArrowRight, Pencil } from "lucide-react";
+import { PlusCircle, ArrowRight, Pencil, MoreHorizontal } from "lucide-react";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
 import { cn } from "@/lib/utils";
@@ -51,21 +57,33 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                             <div className="border rounded-lg">
                                 {periods.map((period, index) => (
                                     <div key={period.id} className={cn("p-4", index < periods.length - 1 && "border-b")}>
-                                        <p className="font-medium">{period.name}</p>
-                                        <p className="text-sm text-muted-foreground whitespace-nowrap">
-                                            {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
-                                        </p>
-                                        <div className="mt-4 flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" onClick={() => handleEditClick(period)}>
-                                                <Pencil className="mr-2 h-4 w-4" />
-                                                Editar
-                                            </Button>
-                                            <Button asChild variant="outline" size="sm">
-                                                <Link href={`/dashboard/period/${period.id}`}>
-                                                    Ver Incidencias
-                                                    <ArrowRight className="ml-2 h-4 w-4" />
-                                                </Link>
-                                            </Button>
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1 overflow-hidden">
+                                                <p className="font-medium truncate">{period.name}</p>
+                                                <p className="text-sm text-muted-foreground whitespace-nowrap">
+                                                    {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
+                                                </p>
+                                            </div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2">
+                                                        <span className="sr-only">Abrir menú</span>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/dashboard/period/${period.id}`} className="w-full">
+                                                            <ArrowRight className="mr-2 h-4 w-4" />
+                                                            <span>Ver Incidencias</span>
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleEditClick(period)}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        <span>Editar</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </div>
                                 ))}
@@ -84,7 +102,7 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                 <TableRow>
                                     <TableHead>Nombre del Periodo</TableHead>
                                     <TableHead>Rango del Periodo</TableHead>
-                                    <TableHead className="text-right">Acciones</TableHead>
+                                    <TableHead className="text-right w-[100px]">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -101,17 +119,27 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                             <TableCell className="whitespace-nowrap">
                                                 {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
                                             </TableCell>
-                                            <TableCell className="text-right space-x-2">
-                                                <Button variant="ghost" size="sm" onClick={() => handleEditClick(period)}>
-                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                    Editar
-                                                </Button>
-                                                <Button asChild variant="outline" size="sm">
-                                                    <Link href={`/dashboard/period/${period.id}`}>
-                                                        Ver Incidencias
-                                                        <ArrowRight className="ml-2 h-4 w-4" />
-                                                    </Link>
-                                                </Button>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <span className="sr-only">Abrir menú de acciones</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/dashboard/period/${period.id}`}>
+                                                                <ArrowRight className="mr-2 h-4 w-4" />
+                                                                <span>Ver Incidencias</span>
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleEditClick(period)}>
+                                                            <Pencil className="mr-2 h-4 w-4" />
+                                                            <span>Editar</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))
