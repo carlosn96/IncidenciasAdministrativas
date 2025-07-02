@@ -15,6 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, Save } from "lucide-react";
 import { useSettings } from "@/context/settings-context";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 export default function ProfilePage() {
     const { toast } = useToast();
@@ -51,10 +53,22 @@ export default function ProfilePage() {
                 <AvatarImage src={user?.photoURL ?? ""} data-ai-hint="user avatar" />
                 <AvatarFallback>{user?.displayName?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback>
               </Avatar>
-              <Button type="button" variant="outline">
-                <Camera className="mr-2 h-4 w-4" />
-                Cambiar Foto
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {/* The span is needed to make the tooltip work on a disabled button */}
+                    <span tabIndex={0}>
+                      <Button type="button" variant="outline" disabled>
+                        <Camera className="mr-2 h-4 w-4" />
+                        Cambiar Foto
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Esta función requiere un plan de pago en Firebase.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
