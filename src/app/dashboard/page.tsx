@@ -6,10 +6,37 @@ import { DailyLog } from "@/components/daily-log";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/context/settings-context";
-import { isWithinInterval, format } from "date-fns";
+import { isWithinInterval, format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { PlusCircle, CalendarDays, ArrowRight } from "lucide-react";
+import { PlusCircle, CalendarDays, ArrowRight, Clock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import type { LaborDay } from "@/lib/types";
+
+// Helper functions
+const calculateTotalMinutes = (days: LaborDay[]): number => {
+  return days.reduce((total, day) => {
+    if (!day.entry?.time || !day.exit?.time) return total;
+
+    const [startHour, startMinute] = day.entry.time.split(":").map(Number);
+    const [endHour, endMinute] = day.exit.time.split(":").map(Number);
+
+    const startDate = new Date(0);
+    startDate.setHours(startHour, startMinute, 0, 0);
+
+    const endDate = new Date(0);
+    endDate.setHours(endHour, endMinute, 0, 0);
+
+    const diffMinutes = differenceInMinutes(endDate, startDate);
+    return total + (diffMinutes > 0 ? diffMinutes : 0);
+  }, 0);
+};
+
+const formatTotalHours = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours} horas ${minutes} minutos`;
+};
+
 
 export default function DashboardPage() {
   const { periods } = useSettings();
@@ -20,6 +47,12 @@ export default function DashboardPage() {
     // The periods are sorted by start date descending. The first one that includes today is the most recent one.
     return periods.find(p => isWithinInterval(today, { start: p.startDate, end: p.endDate }));
   }, [periods]);
+
+  const formattedTotalHours = useMemo(() => {
+    if (!activePeriod) return "";
+    const totalMinutes = calculateTotalMinutes(activePeriod.laborDays);
+    return formatTotalHours(totalMinutes);
+  }, [activePeriod]);
 
   return (
     <>
@@ -46,10 +79,19 @@ export default function DashboardPage() {
                       </div>
                       <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                   </CardHeader>
-                  <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
-                  <p>
-                      Este periodo va del <strong>{format(activePeriod.startDate, "d 'de' LLLL", { locale: es })}</strong> al <strong>{format(activePeriod.endDate, "d 'de' LLLL, yyyy", { locale: es })}</strong>.
-                  </p>
+                  <CardContent className="p-4 pt-0 text-sm">
+                    <p className="text-muted-foreground">
+                        Este periodo va del <strong>{format(activePeriod.startDate, "d 'de' LLLL", { locale: es })}</strong> al <strong>{format(activePeriod.endDate, "d 'de' LLLL, yyyy", { locale: es })}</strong>.
+                    </p>
+                    {formattedTotalHours && (
+                        <>
+                            <div className="border-t my-3 border-primary/10" />
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Clock className="h-4 w-4 text-primary" />
+                                <span>Total de horas laboradas: <strong className="font-semibold text-primary/90">{formattedTotalHours}</strong></span>
+                            </div>
+                        </>
+                    )}
                   </CardContent>
               </Card>
             </Link>
