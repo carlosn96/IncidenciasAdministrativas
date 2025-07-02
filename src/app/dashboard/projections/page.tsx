@@ -232,7 +232,7 @@ export default function ProjectionsPage() {
                             <TableCell>
                               <Input
                                 type="time"
-                                value={day.projectedEntry?.time || ""}
+                                value={day.entry?.time || day.projectedEntry?.time || ""}
                                 onChange={(e) => handleProjectionChange(day.date, 'projectedEntry', e.target.value)}
                                 className="w-32"
                                 disabled={!!day.entry}
@@ -241,7 +241,7 @@ export default function ProjectionsPage() {
                             <TableCell>
                               <Input
                                 type="time"
-                                value={day.projectedExit?.time || ""}
+                                value={day.exit?.time || day.projectedExit?.time || ""}
                                 onChange={(e) => handleProjectionChange(day.date, 'projectedExit', e.target.value)}
                                 className="w-32"
                                 disabled={!!day.exit}
