@@ -47,9 +47,13 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
         if (range?.from && !range.to) {
             const endDate = addDays(range.from, 15);
             setDateRange({ from: range.from, to: endDate });
+            setIsCalendarOpen(false); // Close on select
         } else {
-            // This handles clearing the selection or other edge cases.
+            // This handles other cases, like manual dragging or clearing.
             setDateRange(range);
+            if (range?.to || !range?.from) { // Close if range is complete or cleared
+                setIsCalendarOpen(false);
+            }
         }
     };
 
@@ -159,22 +163,15 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                                 )}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 flex flex-col max-h-[90vh]" align="start">
-                                <div className="overflow-y-auto">
-                                  <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    selected={dateRange}
-                                    onSelect={handleDateSelect}
-                                    numberOfMonths={1}
-                                    locale={es}
-                                  />
-                                </div>
-                                <div className="p-3 border-t shrink-0">
-                                    <Button onClick={() => setIsCalendarOpen(false)} className="w-full">
-                                        Aceptar
-                                    </Button>
-                                </div>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  initialFocus
+                                  mode="range"
+                                  selected={dateRange}
+                                  onSelect={handleDateSelect}
+                                  numberOfMonths={1}
+                                  locale={es}
+                                />
                             </PopoverContent>
                           </Popover>
                     </div>

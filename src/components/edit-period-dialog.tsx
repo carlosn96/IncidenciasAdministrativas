@@ -46,6 +46,13 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
         }
     }, [period, open]);
 
+    const handleDateSelect = (range: DateRange | undefined) => {
+        setDateRange(range);
+        if (range?.to || !range?.from) { // Close if range is complete or cleared
+            setIsCalendarOpen(false);
+        }
+    };
+
     const handleSaveChanges = () => {
         if (!period) return;
 
@@ -161,23 +168,16 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
                                 )}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 flex flex-col max-h-[90vh]" align="start">
-                                <div className="overflow-y-auto">
+                            <PopoverContent className="w-auto p-0" align="start">
                                   <Calendar
                                     initialFocus
                                     mode="range"
                                     defaultMonth={dateRange?.from}
                                     selected={dateRange}
-                                    onSelect={setDateRange}
+                                    onSelect={handleDateSelect}
                                     numberOfMonths={1}
                                     locale={es}
                                   />
-                                </div>
-                                <div className="p-3 border-t shrink-0">
-                                    <Button onClick={() => setIsCalendarOpen(false)} className="w-full">
-                                        Aceptar
-                                    </Button>
-                                </div>
                             </PopoverContent>
                           </Popover>
                     </div>
