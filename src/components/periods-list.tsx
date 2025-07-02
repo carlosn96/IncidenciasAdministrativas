@@ -25,7 +25,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { Period } from "@/lib/types";
 import { PlusCircle, ArrowRight, Pencil, MoreHorizontal, Trash2 } from "lucide-react";
@@ -43,6 +42,11 @@ export function PeriodsList({ periods }: PeriodsListProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState<Period | null>(null);
+
+    // State for delete confirmation
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [periodToDelete, setPeriodToDelete] = useState<Period | null>(null);
+
     const { setPeriods } = useSettings();
     const { toast } = useToast();
 
@@ -51,12 +55,20 @@ export function PeriodsList({ periods }: PeriodsListProps) {
         setIsEditDialogOpen(true);
     };
 
-    const handleDeletePeriod = (periodId: string) => {
-        setPeriods(prev => prev.filter(p => p.id !== periodId));
+    const handleDeleteTrigger = (period: Period) => {
+        setPeriodToDelete(period);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleDeletePeriod = () => {
+        if (!periodToDelete) return;
+        setPeriods(prev => prev.filter(p => p.id !== periodToDelete.id));
         toast({
             title: "Periodo Eliminado",
             description: "El periodo ha sido eliminado exitosamente.",
         });
+        setIsDeleteDialogOpen(false);
+        setPeriodToDelete(null);
     };
 
     return (
@@ -107,35 +119,13 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                         <span>Editar</span>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <DropdownMenuItem
-                                                                onSelect={(e) => e.preventDefault()}
-                                                                className="text-destructive focus:text-destructive"
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                <span>Eliminar</span>
-                                                            </DropdownMenuItem>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente
-                                                                    el periodo y todas sus incidencias asociadas.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                <AlertDialogAction
-                                                                    onClick={() => handleDeletePeriod(period.id)}
-                                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                                >
-                                                                    Eliminar
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDeleteTrigger(period)}
+                                                        className="text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        <span>Eliminar</span>
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
@@ -193,35 +183,13 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                             <span>Editar</span>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem
-                                                                    onSelect={(e) => e.preventDefault()}
-                                                                    className="text-destructive focus:text-destructive"
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                                    <span>Eliminar</span>
-                                                                </DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente
-                                                                        el periodo y todas sus incidencias asociadas.
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                    <AlertDialogAction
-                                                                        onClick={() => handleDeletePeriod(period.id)}
-                                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                                    >
-                                                                        Eliminar
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleDeleteTrigger(period)}
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            <span>Eliminar</span>
+                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -236,6 +204,26 @@ export function PeriodsList({ periods }: PeriodsListProps) {
 
             <AddPeriodDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
             <EditPeriodDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} period={selectedPeriod} />
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente
+                            el periodo y todas sus incidencias asociadas.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setPeriodToDelete(null)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeletePeriod}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
