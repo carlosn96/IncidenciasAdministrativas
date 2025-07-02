@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -13,6 +12,7 @@ import type { LaborDay, Incident } from "@/lib/types";
 import { useSettings } from "@/context/settings-context";
 import { cn } from "@/lib/utils";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
+import { useParams } from "next/navigation";
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -71,7 +71,8 @@ const formatTime12h = (timeStr?: string): string => {
 };
 
 
-export default function PeriodDetailPage({ params }: { params: { id: string } }) {
+export default function PeriodDetailPage() {
+  const params = useParams<{ id: string }>();
   const { periods } = useSettings();
   const period = periods.find(p => p.id === params.id);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

@@ -32,7 +32,7 @@ const initialScheduleData: ScheduleEntry[] = [
   { day: "Miércoles", startTime: "09:00", endTime: "13:00", startLocation: "PLANTEL TORRE UNE", endLocation: "PLANTEL TORRE UNE" },
   { day: "Jueves", startTime: "09:00", endTime: "17:00", startLocation: "PLANTEL CENTRO", endLocation: "PLANTEL CENTRO" },
   { day: "Viernes", startTime: "09:00", endTime: "15:00", startLocation: "PLANTEL ZAPOPAN", endLocation: "PLANTEL ZAPOPAN" },
-  { day: "Sábado", startTime: "", endTime: "", startLocation: "no-location", endLocation: "no-location" },
+  { day: "Sábado", startTime: "", endTime: "", startLocation: "", endLocation: "" },
 ];
 
 interface SettingsContextType {
