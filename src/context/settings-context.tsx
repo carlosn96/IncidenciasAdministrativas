@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -92,6 +93,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           }
         } catch (e) {
           console.error("Failed to fetch user data from Firestore", e);
+          // Fallback to initial state in case of error
           setUserLocations(getInitialUserLocations());
           setSchedule(getInitialScheduleData());
           setPeriods(getInitialPeriods());
@@ -112,13 +114,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   // Effect for saving user data to Firestore whenever it changes
   useEffect(() => {
+    // We only save if there's a user and we are not in the initial loading phase.
     if (user && !isLoading) {
       const saveData = async () => {
         const docRef = doc(db, "users", user.uid);
         const dataToStore = {
           userLocations,
           schedule,
-          periods // Firestore handles JS Date to Timestamp conversion
+          periods // Firestore handles JS Date to Timestamp conversion automatically
         };
         try {
           await setDoc(docRef, dataToStore);
