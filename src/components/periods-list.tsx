@@ -13,13 +13,27 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { Period } from "@/lib/types";
-import { PlusCircle, ArrowRight, Pencil, MoreHorizontal } from "lucide-react";
+import { PlusCircle, ArrowRight, Pencil, MoreHorizontal, Trash2 } from "lucide-react";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/context/settings-context";
+import { useToast } from "@/hooks/use-toast";
 
 interface PeriodsListProps {
     periods: Period[];
@@ -29,10 +43,20 @@ export function PeriodsList({ periods }: PeriodsListProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState<Period | null>(null);
+    const { setPeriods } = useSettings();
+    const { toast } = useToast();
 
     const handleEditClick = (period: Period) => {
         setSelectedPeriod(period);
         setIsEditDialogOpen(true);
+    };
+
+    const handleDeletePeriod = (periodId: string) => {
+        setPeriods(prev => prev.filter(p => p.id !== periodId));
+        toast({
+            title: "Periodo Eliminado",
+            description: "El periodo ha sido eliminado exitosamente.",
+        });
     };
 
     return (
@@ -82,6 +106,36 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                         <Pencil className="mr-2 h-4 w-4" />
                                                         <span>Editar</span>
                                                     </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem
+                                                                onSelect={(e) => e.preventDefault()}
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                <span>Eliminar</span>
+                                                            </DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente
+                                                                    el periodo y todas sus incidencias asociadas.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    onClick={() => handleDeletePeriod(period.id)}
+                                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                >
+                                                                    Eliminar
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
@@ -138,6 +192,36 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                             <Pencil className="mr-2 h-4 w-4" />
                                                             <span>Editar</span>
                                                         </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem
+                                                                    onSelect={(e) => e.preventDefault()}
+                                                                    className="text-destructive focus:text-destructive"
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    <span>Eliminar</span>
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente
+                                                                        el periodo y todas sus incidencias asociadas.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                    <AlertDialogAction
+                                                                        onClick={() => handleDeletePeriod(period.id)}
+                                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                    >
+                                                                        Eliminar
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
