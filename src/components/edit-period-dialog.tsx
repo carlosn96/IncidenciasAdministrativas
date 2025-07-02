@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import type { Period, LaborDay, ScheduleEntry } from "@/lib/types";
+import type { Period, LaborDay } from "@/lib/types";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -23,10 +23,8 @@ interface EditPeriodDialogProps {
     period: Period | null;
 }
 
-const daysOfWeek: ScheduleEntry['day'][] = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-
 export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialogProps) {
-    const { setPeriods, schedule } = useSettings();
+    const { setPeriods } = useSettings();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [periodName, setPeriodName] = useState("");
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -77,26 +75,8 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
                     return existingDay; // Keep existing data
                 }
 
-                // This is a new day, create it with defaults from schedule
-                const dayOfWeek = daysOfWeek[getDay(day)];
-                const daySchedule = schedule.find(s => s.day === dayOfWeek);
-                
-                const newLaborDay: LaborDay = { date: dateStr };
-
-                if (daySchedule?.startTime && daySchedule.startLocation && daySchedule.startLocation !== 'no-location') {
-                    newLaborDay.entry = {
-                        time: daySchedule.startTime,
-                        location: daySchedule.startLocation
-                    };
-                }
-                if (daySchedule?.endTime && daySchedule.endLocation && daySchedule.endLocation !== 'no-location') {
-                     newLaborDay.exit = {
-                        time: daySchedule.endTime,
-                        location: daySchedule.endLocation
-                    };
-                }
-
-                return newLaborDay;
+                // This is a new day, create it without any defaults.
+                return { date: dateStr };
             });
 
         const updatedPeriod: Period = {
