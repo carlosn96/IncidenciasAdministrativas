@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Clock, Pencil } from "lucide-react";
@@ -13,6 +14,12 @@ import { useSettings } from "@/context/settings-context";
 import { cn } from "@/lib/utils";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
 import { useParams } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -73,9 +80,82 @@ const formatTime12h = (timeStr?: string): string => {
 
 export default function PeriodDetailPage() {
   const params = useParams<{ id: string }>();
-  const { periods } = useSettings();
+  const { periods, setPeriods, userLocations } = useSettings();
   const period = periods.find(p => p.id === params.id);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  // State for editing a single day
+  const [isEditDayDialogOpen, setIsEditDayDialogOpen] = useState(false);
+  const [dayToEdit, setDayToEdit] = useState<LaborDay | null>(null);
+  
+  // Form state for the day editing dialog
+  const [entryTime, setEntryTime] = useState("");
+  const [entryLocation, setEntryLocation] = useState("");
+  const [exitTime, setExitTime] = useState("");
+  const [exitLocation, setExitLocation] = useState("");
+
+  useEffect(() => {
+    if (dayToEdit) {
+      setEntryTime(dayToEdit.entry?.time || "");
+      setEntryLocation(dayToEdit.entry?.location || "");
+      setExitTime(dayToEdit.exit?.time || "");
+      setExitLocation(dayToEdit.exit?.location || "");
+    }
+  }, [dayToEdit]);
+
+
+  const handleOpenEditDayDialog = (day: LaborDay) => {
+    setDayToEdit(day);
+    setIsEditDayDialogOpen(true);
+  };
+
+  const handleSaveDayChanges = () => {
+    if (!period || !dayToEdit) return;
+
+    if (entryTime && exitTime && exitTime < entryTime) {
+      toast({
+        variant: "destructive",
+        title: "Error de validación",
+        description: "La hora de salida no puede ser anterior a la hora de entrada.",
+      });
+      return;
+    }
+
+    const updatedLaborDays = period.laborDays.map(day => {
+      if (day.date === dayToEdit.date) {
+        const newDay = { ...day };
+
+        if (entryTime && entryLocation) {
+          newDay.entry = { time: entryTime, location: entryLocation };
+        } else {
+          delete newDay.entry;
+        }
+
+        if (exitTime && exitLocation && newDay.entry) {
+          newDay.exit = { time: exitTime, location: exitLocation };
+        } else {
+          delete newDay.exit;
+        }
+
+        return newDay;
+      }
+      return day;
+    });
+    
+    const updatedPeriod = { ...period, laborDays: updatedLaborDays };
+
+    setPeriods(prevPeriods =>
+      prevPeriods.map(p => (p.id === period.id ? updatedPeriod : p))
+    );
+
+    toast({
+      title: "Día Actualizado",
+      description: "Los cambios en el día se han guardado correctamente.",
+    });
+    setIsEditDayDialogOpen(false);
+    setDayToEdit(null);
+  };
 
   if (!period) {
     return (
@@ -179,6 +259,12 @@ export default function PeriodDetailPage() {
                                       <p className="text-muted-foreground">{day.exit?.location || '---'}</p>
                                   </div>
                               </div>
+                               <div className="mt-4 flex justify-end">
+                                  <Button variant="outline" size="sm" onClick={() => handleOpenEditDayDialog(day)}>
+                                      <Pencil className="mr-2 h-4 w-4"/>
+                                      Editar Día
+                                  </Button>
+                              </div>
                           </div>
                       ))}
                   </div>
@@ -200,6 +286,7 @@ export default function PeriodDetailPage() {
                           <TableHead>Lugar Salida</TableHead>
                           <TableHead>Hora Salida</TableHead>
                           <TableHead className="text-right">Horas Laboradas</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -216,11 +303,17 @@ export default function PeriodDetailPage() {
                                   <TableCell className="text-right font-mono">
                                       {calculateWorkedHours(day.entry, day.exit)}
                                   </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDayDialog(day)}>
+                                        <Pencil className="h-4 w-4" />
+                                        <span className="sr-only">Editar Día</span>
+                                    </Button>
+                                  </TableCell>
                               </TableRow>
                           ))
                       ) : (
                           <TableRow>
-                              <TableCell colSpan={6} className="text-center text-muted-foreground py-16">
+                              <TableCell colSpan={7} className="text-center text-muted-foreground py-16">
                                   <p>No hay días laborables configurados para este periodo.</p>
                               </TableCell>
                           </TableRow>
@@ -231,7 +324,67 @@ export default function PeriodDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isEditDayDialogOpen} onOpenChange={setIsEditDayDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Día</DialogTitle>
+            {dayToEdit && 
+              <DialogDescription>
+                  Editando registros para el {format(parseISO(dayToEdit.date), "EEEE, d 'de' LLLL", { locale: es })}.
+              </DialogDescription>
+            }
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="space-y-4 p-4 rounded-md border bg-muted/30">
+              <h4 className="font-medium">Entrada</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="entryTime">Hora</Label>
+                  <Input id="entryTime" type="time" value={entryTime} onChange={(e) => setEntryTime(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="entryLocation">Lugar</Label>
+                  <Select value={entryLocation} onValueChange={setEntryLocation}>
+                    <SelectTrigger id="entryLocation">
+                      <SelectValue placeholder="Selecciona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userLocations.map(loc => <SelectItem key={`${loc.id}-entry`} value={loc.name}>{loc.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4 p-4 rounded-md border bg-muted/30">
+              <h4 className="font-medium">Salida</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="exitTime">Hora</Label>
+                  <Input id="exitTime" type="time" value={exitTime} onChange={(e) => setExitTime(e.target.value)} disabled={!entryTime || !entryLocation} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="exitLocation">Lugar</Label>
+                  <Select value={exitLocation} onValueChange={setExitLocation} disabled={!entryTime || !entryLocation}>
+                    <SelectTrigger id="exitLocation">
+                      <SelectValue placeholder="Selecciona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userLocations.map(loc => <SelectItem key={`${loc.id}-exit`} value={loc.name}>{loc.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDayDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveDayChanges}>Guardar Cambios</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <EditPeriodDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} period={period} />
     </>
   );
 }
+
