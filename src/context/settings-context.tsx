@@ -2,8 +2,10 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { Location, ScheduleEntry, Period } from '@/lib/types';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
 
 // Master list of all possible locations
 const ALL_UNE_LOCATIONS: Location[] = [
@@ -59,66 +61,74 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [schedule, setSchedule] = useState<ScheduleEntry[]>(getInitialScheduleData());
   const [periods, setPeriods] = useState<Period[]>(getInitialPeriods());
   
-  // Effect for handling authentication state changes and loading user data
+  // Effect for handling authentication state changes and loading user data from Firestore
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
 
       if (currentUser) {
-        // User is signed in, load their data from localStorage
-        const storageKey = `incidencias-data-${currentUser.uid}`;
+        setIsLoading(true);
+        const docRef = doc(db, "users", currentUser.uid);
         try {
-            const savedData = localStorage.getItem(storageKey);
-            if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                setUserLocations(parsedData.userLocations || getInitialUserLocations());
-                setSchedule(parsedData.schedule || getInitialScheduleData());
-                // Important: Re-hydrate date objects from strings
-                const rehydratedPeriods = (parsedData.periods || []).map((p: any) => ({
-                    ...p,
-                    startDate: new Date(p.startDate),
-                    endDate: new Date(p.endDate),
-                }));
-                setPeriods(rehydratedPeriods || getInitialPeriods());
-            } else {
-                // No saved data found, use initial state
-                setUserLocations(getInitialUserLocations());
-                setSchedule(getInitialScheduleData());
-                setPeriods(getInitialPeriods());
-            }
-        } catch (e) {
-            console.error("Failed to parse user data from localStorage", e);
-            // If parsing fails, reset to initial state for safety
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserLocations(data.userLocations || getInitialUserLocations());
+            setSchedule(data.schedule || getInitialScheduleData());
+            
+            // Important: Re-hydrate date objects from Firestore Timestamps
+            const rehydratedPeriods = (data.periods || []).map((p: any) => ({
+              ...p,
+              startDate: p.startDate?.toDate ? p.startDate.toDate() : new Date(p.startDate),
+              endDate: p.endDate?.toDate ? p.endDate.toDate() : new Date(p.endDate),
+            })).sort((a: Period, b: Period) => b.startDate.getTime() - a.startDate.getTime());
+            
+            setPeriods(rehydratedPeriods || getInitialPeriods());
+          } else {
+            // New user, use initial state. Data will be saved on first change.
             setUserLocations(getInitialUserLocations());
             setSchedule(getInitialScheduleData());
             setPeriods(getInitialPeriods());
+          }
+        } catch (e) {
+          console.error("Failed to fetch user data from Firestore", e);
+          setUserLocations(getInitialUserLocations());
+          setSchedule(getInitialScheduleData());
+          setPeriods(getInitialPeriods());
+        } finally {
+          setIsLoading(false);
         }
       } else {
         // User is signed out, clear all user-specific data
         setUserLocations(getInitialUserLocations());
         setSchedule(getInitialScheduleData());
         setPeriods(getInitialPeriods());
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, []); // This effect runs once on mount to set up the auth listener
+  }, []); // Runs once on mount
 
-  // Effect for saving user data to localStorage whenever it changes
+  // Effect for saving user data to Firestore whenever it changes
   useEffect(() => {
-    // We prevent saving during the initial loading phase to avoid overwriting hydrated state with initial state
     if (user && !isLoading) {
-      const storageKey = `incidencias-data-${user.uid}`;
-      const dataToStore = {
-        userLocations,
-        schedule,
-        periods
+      const saveData = async () => {
+        const docRef = doc(db, "users", user.uid);
+        const dataToStore = {
+          userLocations,
+          schedule,
+          periods // Firestore handles JS Date to Timestamp conversion
+        };
+        try {
+          await setDoc(docRef, dataToStore);
+        } catch (error) {
+          console.error("Error saving data to Firestore:", error);
+        }
       };
-      localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+      saveData();
     }
-  }, [userLocations, schedule, periods, user, isLoading]);
+  }, [user, isLoading, userLocations, schedule, periods]);
 
 
   const value = {
