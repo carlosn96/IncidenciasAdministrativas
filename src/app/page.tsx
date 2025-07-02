@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -11,29 +12,62 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { AppLogo, GoogleIcon } from "@/components/icons";
 import { LoadingScreen } from "@/components/loading-screen";
+import { auth } from "@/lib/firebase";
+import { GoogleAuthProvider, signInWithPopup, AuthError } from "firebase/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
-    setTimeout(() => {
+    const provider = new GoogleAuthProvider();
+    const institutionDomain = process.env.NEXT_PUBLIC_INSTITUTION_DOMAIN;
+
+    if (!institutionDomain) {
+      console.error("El dominio de la institución no está configurado en las variables de entorno.");
+      toast({
+        variant: "destructive",
+        title: "Error de Configuración",
+        description: "El administrador no ha configurado el dominio de la institución.",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    provider.setCustomParameters({ hd: institutionDomain });
+
+    try {
+      await signInWithPopup(auth, provider);
       router.push("/dashboard");
-    }, 1500);
+    } catch (error) {
+      const authError = error as AuthError;
+      console.error("Error de autenticación:", authError.code, authError.message);
+      
+      let description = "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.";
+      if (authError.code === 'auth/popup-closed-by-user') {
+        description = "Has cerrado la ventana de inicio de sesión. Por favor, inténtalo de nuevo.";
+      } else if (authError.code === 'auth/cancelled-popup-request') {
+        description = "Se ha cancelado el inicio de sesión.";
+      } else if (authError.code === 'auth/operation-not-allowed') {
+         description = "El inicio de sesión con Google no está habilitado. Contacta al administrador.";
+      } else {
+        description = `Por favor, utiliza una cuenta de correo con el dominio @${institutionDomain}.`;
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Inicio de Sesión Fallido",
+        description: description,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  const handleGoogleLogin = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 1500);
-  }
 
   return (
     <>
@@ -48,48 +82,23 @@ export default function LoginPage() {
               Incidencias Administrativas
             </CardTitle>
             <CardDescription>
-              Accede a tu panel de coordinador
+              Accede a tu panel con tu cuenta institucional
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo Electrónico</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="email@institucion.edu"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" type="password" required />
-              </div>
-              <Button type="submit" className="w-full">
-                Iniciar Sesión
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <div className="relative w-full">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  O continuar con
-                </span>
-              </div>
-            </div>
-            <Button
+             <Button
               variant="outline"
-              className="w-full"
+              className="w-full h-12 text-base"
               onClick={handleGoogleLogin}
             >
-              <GoogleIcon className="mr-2 h-4 w-4" />
+              <GoogleIcon className="mr-2 h-5 w-5" />
               Continuar con Google
             </Button>
+          </CardContent>
+           <CardFooter>
+            <p className="text-xs text-muted-foreground text-center w-full">
+              Utiliza tu cuenta de Google proporcionada por la institución para acceder.
+            </p>
           </CardFooter>
         </Card>
       </main>
