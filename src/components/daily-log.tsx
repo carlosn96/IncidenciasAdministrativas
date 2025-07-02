@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { Incident, ScheduleEntry } from "@/lib/types";
-import { Clock, Play, Square, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Play, Square, MapPin, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { format, isWithinInterval, parse, differenceInMinutes } from "date-fns";
@@ -74,6 +74,7 @@ const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
 export function DailyLog() {
   const { periods, setPeriods, userLocations, schedule } = useSettings();
   const [currentTime, setCurrentTime] = useState<string | null>(null);
+  const [currentDay, setCurrentDay] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const { toast } = useToast();
 
@@ -101,6 +102,9 @@ export function DailyLog() {
   const hasSalida = !!todayLaborDay?.exit;
 
   useEffect(() => {
+    const today = new Date();
+    setCurrentDay(format(today, "EEEE, d 'de' LLLL 'de' yyyy", { locale: es }));
+
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString('en-US'));
     }, 1000);
@@ -306,13 +310,17 @@ export function DailyLog() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             <div className="lg:col-span-1">
                 <Card className="flex flex-col justify-center items-center text-center p-4 md:p-6 h-full bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Hora Actual</p>
-                  {currentTime ? (
-                    <p className="text-4xl md:text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime}</p>
+                  {currentTime && currentDay ? (
+                    <>
+                      <p className="text-4xl md:text-5xl font-bold font-mono tracking-tighter text-primary">{currentTime}</p>
+                      <p className="text-base text-muted-foreground mt-2 capitalize">{currentDay}</p>
+                    </>
                   ) : (
-                    <Skeleton className="h-[3rem] w-[11rem] my-1" />
+                    <>
+                      <Skeleton className="h-[3rem] w-[11rem] mb-2" />
+                      <Skeleton className="h-5 w-48" />
+                    </>
                   )}
-                  <Clock className="h-8 w-8 text-muted-foreground mt-2" />
                 </Card>
             </div>
 
