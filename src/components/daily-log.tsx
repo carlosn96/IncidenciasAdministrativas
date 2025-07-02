@@ -43,7 +43,7 @@ import type { Incident, ScheduleEntry } from "@/lib/types";
 import { Play, Square, MapPin, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { format, isWithinInterval, parse, differenceInMinutes } from "date-fns";
+import { format, isWithinInterval, parse, differenceInMinutes, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSettings } from "@/context/settings-context";
 import { cn } from "@/lib/utils";
@@ -87,7 +87,7 @@ export function DailyLog() {
     const today = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
 
-    const activePeriod = periods.find(p => isWithinInterval(today, { start: p.startDate, end: p.endDate }));
+    const activePeriod = periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
     const todayLaborDay = activePeriod?.laborDays.find(ld => ld.date === todayStr);
     
     return { activePeriod, todayLaborDay };

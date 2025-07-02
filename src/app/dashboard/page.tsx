@@ -7,7 +7,7 @@ import { DailyLog } from "@/components/daily-log";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/context/settings-context";
-import { isWithinInterval, format, differenceInMinutes } from "date-fns";
+import { isWithinInterval, format, differenceInMinutes, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { PlusCircle, CalendarDays, ArrowRight, Clock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const activePeriod = useMemo(() => {
     const today = new Date();
     // The periods are sorted by start date descending. The first one that includes today is the most recent one.
-    return periods.find(p => isWithinInterval(today, { start: p.startDate, end: p.endDate }));
+    return periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
   }, [periods]);
 
   const periodStats = useMemo(() => {
