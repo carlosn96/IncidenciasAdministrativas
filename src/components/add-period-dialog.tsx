@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, eachDayOfInterval, getDay, parseISO } from "date-fns";
+import { format, eachDayOfInterval, getDay, parseISO, areIntervalsOverlapping } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { v4 as uuidv4 } from 'uuid';
@@ -22,7 +22,7 @@ interface AddPeriodDialogProps {
 }
 
 export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
-    const { setPeriods } = useSettings();
+    const { periods, setPeriods } = useSettings();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [periodName, setPeriodName] = useState("");
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
@@ -61,6 +61,23 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                 variant: "destructive",
                 title: "Nombre requerido",
                 description: "Por favor, proporciona un nombre para el periodo."
+            });
+            return;
+        }
+
+        // Validation for overlapping periods
+        const isOverlapping = periods.some(p => 
+            areIntervalsOverlapping(
+                { start: dateRange.from!, end: dateRange.to! },
+                { start: p.startDate, end: p.endDate }
+            )
+        );
+
+        if (isOverlapping) {
+            toast({
+                variant: "destructive",
+                title: "Fechas Superpuestas",
+                description: "El rango de fechas seleccionado se superpone con un periodo existente. Por favor, elige un rango diferente."
             });
             return;
         }
