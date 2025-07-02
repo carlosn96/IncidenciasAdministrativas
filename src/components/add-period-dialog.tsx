@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, addDays, eachDayOfInterval, getDay } from "date-fns";
+import { format, addDays, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +17,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/context/settings-context";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface AddPeriodDialogProps {
     open: boolean;
@@ -27,6 +28,7 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
     const { setPeriods } = useSettings();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [periodName, setPeriodName] = useState("");
+    const [includeSaturdays, setIncludeSaturdays] = useState(false);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const { toast } = useToast();
 
@@ -35,6 +37,7 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
             // Reset form when dialog is closed
             setDateRange(undefined);
             setPeriodName("");
+            setIncludeSaturdays(false);
             setIsCalendarOpen(false);
         }
     }, [open]);
@@ -89,7 +92,15 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                 date: format(day, "yyyy-MM-dd"),
             }));
 
-        const workingDaysCount = newLaborDays.length;
+        const workingDaysForCalc = newLaborDays.filter(day => {
+            const dayOfWeek = getDay(parseISO(day.date));
+            if (includeSaturdays) {
+                return dayOfWeek !== 0; // Mon-Sat
+            }
+            return dayOfWeek !== 0 && dayOfWeek !== 6; // Mon-Fri
+        });
+
+        const workingDaysCount = workingDaysForCalc.length;
         const totalDurationMinutes = workingDaysCount * 8 * 60; // 8 hours per day
 
         const newPeriod: Period = {
@@ -99,6 +110,7 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
             endDate: dateRange.to,
             laborDays: newLaborDays,
             totalDurationMinutes: totalDurationMinutes,
+            includeSaturdays: includeSaturdays,
         };
 
         setPeriods(prev => [newPeriod, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
@@ -173,6 +185,16 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                             placeholder="Ej: Segunda Quincena de Julio"
                             disabled={!dateRange}
                         />
+                    </div>
+                    <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox 
+                            id="include-saturdays"
+                            checked={includeSaturdays} 
+                            onCheckedChange={(checked) => setIncludeSaturdays(checked === true)}
+                        />
+                        <Label htmlFor="include-saturdays" className="font-normal text-sm">
+                            Incluir sábados en el cómputo de horas
+                        </Label>
                     </div>
                 </div>
                 <DialogFooter>
