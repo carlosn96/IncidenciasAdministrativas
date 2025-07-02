@@ -89,12 +89,16 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                 date: format(day, "yyyy-MM-dd"),
             }));
 
+        const workingDaysCount = newLaborDays.length;
+        const totalDurationMinutes = workingDaysCount * 8 * 60; // 8 hours per day
+
         const newPeriod: Period = {
             id: uuidv4(),
             name: periodName.trim(),
             startDate: dateRange.from,
             endDate: dateRange.to,
-            laborDays: newLaborDays
+            laborDays: newLaborDays,
+            totalDurationMinutes: totalDurationMinutes,
         };
 
         setPeriods(prev => [newPeriod, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));

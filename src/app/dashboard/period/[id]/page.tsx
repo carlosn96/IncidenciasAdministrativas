@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 
 
 // Helper function to calculate worked hours
@@ -268,6 +269,12 @@ export default function PeriodDetailPage() {
   const laborDays = period.laborDays;
   const totalMinutesWorked = calculateTotalMinutes(laborDays);
   const formattedTotalHours = formatTotalHours(totalMinutesWorked);
+  
+  const totalMinutesExpected = period.totalDurationMinutes || 0;
+  const remainingMinutes = Math.max(0, totalMinutesExpected - totalMinutesWorked);
+  const formattedRemainingHours = formatTotalHours(remainingMinutes);
+  const formattedExpectedHours = formatTotalHours(totalMinutesExpected);
+  const progressPercentage = totalMinutesExpected > 0 ? Math.min(100, (totalMinutesWorked / totalMinutesExpected) * 100) : 0;
 
   const formattedDateRange = `${format(period.startDate, "d 'de' LLLL", { locale: es })} al ${format(period.endDate, "d 'de' LLLL, yyyy", { locale: es })}`;
 
@@ -311,15 +318,30 @@ export default function PeriodDetailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="flex items-center p-4 md:p-6 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center bg-primary/10 text-primary rounded-full h-12 w-12 mr-4">
-                      <Clock className="h-6 w-6" />
-                  </div>
-                  <div>
-                      <p className="text-sm text-muted-foreground">Total de Horas Laboradas en el Periodo</p>
-                      <p className="text-2xl font-bold">{formattedTotalHours}</p>
-                  </div>
-              </div>
+            <div className="space-y-4 rounded-lg bg-muted/50 p-4 md:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center">
+                        <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <Clock className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-muted-foreground">Horas Laboradas</p>
+                            <p className="text-2xl font-bold">{formattedTotalHours}</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Horas Restantes</p>
+                        <p className="text-lg font-semibold">{formattedRemainingHours}</p>
+                    </div>
+                </div>
+                <div>
+                    <Progress value={progressPercentage} className="h-2" />
+                    <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
+                        <span>Progreso</span>
+                        <span>Meta: {formattedExpectedHours}</span>
+                    </div>
+                </div>
+            </div>
           </CardContent>
         </Card>
 

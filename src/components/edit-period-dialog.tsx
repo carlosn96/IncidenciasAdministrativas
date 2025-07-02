@@ -79,12 +79,16 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
                 return { date: dateStr };
             });
 
+        const workingDaysCount = newLaborDays.length;
+        const totalDurationMinutes = workingDaysCount * 8 * 60;
+
         const updatedPeriod: Period = {
             ...period,
             name: periodName.trim(),
             startDate: dateRange.from,
             endDate: dateRange.to,
-            laborDays: newLaborDays
+            laborDays: newLaborDays,
+            totalDurationMinutes: totalDurationMinutes
         };
 
         setPeriods(prev => prev.map(p => p.id === updatedPeriod.id ? updatedPeriod : p)

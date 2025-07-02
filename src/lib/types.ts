@@ -38,4 +38,5 @@ export type Period = {
   startDate: Date;
   endDate: Date;
   laborDays: LaborDay[];
+  totalDurationMinutes: number; // Expected duration based on 8 hours per working day
 };
