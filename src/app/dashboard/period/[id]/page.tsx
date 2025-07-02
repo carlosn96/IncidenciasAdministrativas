@@ -257,7 +257,7 @@ export default function PeriodDetailPage() {
           El periodo que buscas no existe. Por favor, vuelve a intentarlo.
         </p>
         <Button asChild className="mt-6">
-          <Link href="/dashboard/settings">
+          <Link href="/dashboard/settings?tab=periods">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver a Ajustes de Periodos
           </Link>
@@ -284,7 +284,7 @@ export default function PeriodDetailPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
-              <Link href="/dashboard/settings">
+              <Link href="/dashboard/settings?tab=periods">
                 <ArrowLeft className="h-4 w-4" />
                 <span className="sr-only">Volver a Ajustes</span>
               </Link>
