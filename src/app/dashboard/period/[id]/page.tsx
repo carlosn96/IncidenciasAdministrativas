@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Clock, Pencil } from "lucide-react";
+import { ArrowLeft, Clock, Pencil, Download } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { differenceInMinutes, format, parse, parseISO, getDay } from "date-fns";
@@ -182,6 +182,72 @@ export default function PeriodDetailPage() {
     setDayToEdit(null);
   };
 
+  const handleDownloadCSV = () => {
+    if (!period) return;
+
+    // Sanitize period name for filename
+    const fileName = `Reporte_${period.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
+
+    const headers = [
+      "Fecha",
+      "Día de la Semana",
+      "Lugar Entrada",
+      "Hora Entrada (24h)",
+      "Hora Entrada (12h)",
+      "Lugar Salida",
+      "Hora Salida (24h)",
+      "Hora Salida (12h)",
+      "Horas Laboradas",
+    ];
+
+    const rows = period.laborDays.map(day => {
+        const date = parseISO(day.date);
+        const dayOfWeek = format(date, "EEEE", { locale: es });
+        const formattedDate = format(date, "yyyy-MM-dd");
+
+        const entryTime24 = day.entry?.time || '---';
+        const entryTime12 = formatTime12h(day.entry?.time);
+        const entryLocation = day.entry?.location || '---';
+
+        const exitTime24 = day.exit?.time || '---';
+        const exitTime12 = formatTime12h(day.exit?.time);
+        const exitLocation = day.exit?.location || '---';
+        
+        const workedHours = calculateWorkedHours(day.entry, day.exit);
+
+        const rowData = [
+            formattedDate,
+            dayOfWeek,
+            entryLocation,
+            entryTime24,
+            entryTime12,
+            exitLocation,
+            exitTime24,
+            exitTime12,
+            workedHours
+        ];
+
+        return rowData.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
+    const link = document.createElement("a");
+
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Reporte Descargado",
+      description: `El archivo ${fileName} se ha descargado correctamente.`,
+    });
+  };
+
   if (!period) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
@@ -208,7 +274,7 @@ export default function PeriodDetailPage() {
   return (
     <>
       <div className="space-y-8">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
               <Link href="/dashboard/settings">
@@ -223,11 +289,18 @@ export default function PeriodDetailPage() {
                 </p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Editar Periodo</span>
-            <span className="sm:hidden">Editar</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Editar Periodo</span>
+              <span className="sm:hidden">Editar</span>
+            </Button>
+            <Button variant="outline" onClick={handleDownloadCSV}>
+              <Download className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Descargar</span>
+              <span className="sm:hidden">CSV</span>
+            </Button>
+          </div>
         </div>
 
         <Card>
