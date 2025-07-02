@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { useSettings } from "@/context/settings-context";
 import type { Period, LaborDay, Incident } from "@/lib/types";
 import {
@@ -30,7 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { BarChart, Save } from "lucide-react";
+import { BarChart, Save, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -142,119 +143,139 @@ export default function ProjectionsPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Selecciona un Periodo</CardTitle>
-          <div className="max-w-sm pt-2">
-            <Select onValueChange={setSelectedPeriodId} value={selectedPeriodId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Elige un periodo para planificar..." />
-              </SelectTrigger>
-              <SelectContent>
-                {periods.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        {selectedPeriod ? (
-          <CardContent className="space-y-6">
-            {stats && (
-                <Card className="bg-muted/50">
-                    <CardHeader>
-                        <CardTitle>Resumen de Proyección</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            <div>
-                                <p className="text-sm text-muted-foreground">Meta del Periodo</p>
-                                <p className="text-xl font-bold">{stats.expected}</p>
-                            </div>
-                             <div>
-                                <p className="text-sm text-muted-foreground">Total Real</p>
-                                <p className="text-xl font-bold">{stats.actual}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Total Proyectado</p>
-                                <p className="text-xl font-bold">{stats.projected}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Balanza</p>
-                                <p className={cn("text-xl font-bold", stats.differenceMinutes < 0 ? "text-destructive" : "text-green-600")}>{stats.difference}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            <div className="border rounded-lg overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Entrada Proyectada</TableHead>
-                    <TableHead>Salida Proyectada</TableHead>
-                    <TableHead className="text-right">Horas Proyectadas</TableHead>
-                    <TableHead className="text-right">Horas Reales</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {projections.map((day) => {
-                    const projectedMinutes = calculateMinutes(day.projectedEntry, day.projectedExit);
-                    const actualMinutes = calculateMinutes(day.entry, day.exit);
-
-                    return (
-                        <TableRow key={day.date} className={cn(actualMinutes > 0 && "bg-green-500/10")}>
-                        <TableCell className="font-medium capitalize whitespace-nowrap">
-                          {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="time"
-                            value={day.projectedEntry?.time || ""}
-                            onChange={(e) => handleProjectionChange(day.date, 'projectedEntry', e.target.value)}
-                            className="w-32"
-                            disabled={!!day.entry}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="time"
-                            value={day.projectedExit?.time || ""}
-                            onChange={(e) => handleProjectionChange(day.date, 'projectedExit', e.target.value)}
-                            className="w-32"
-                            disabled={!!day.exit}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatMinutesToHours(projectedMinutes)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-bold">
-                          {formatMinutesToHours(actualMinutes)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="flex justify-end">
-                <Button onClick={handleSaveChanges}>
-                    <Save className="mr-2 h-4 w-4"/>
-                    Guardar Proyección
-                </Button>
+        {periods.length === 0 ? (
+          <CardContent>
+            <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground border rounded-lg border-dashed">
+              <BarChart className="h-12 w-12 mb-4 text-muted-foreground/50"/>
+              <h3 className="text-xl font-semibold text-card-foreground">No Tienes Periodos</h3>
+              <p className="mt-2 mb-6 max-w-sm">
+                  Para poder planificar tus horas, primero necesitas crear un periodo de trabajo.
+              </p>
+              <Button asChild>
+                  <Link href="/dashboard/settings">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Crear Nuevo Periodo
+                  </Link>
+              </Button>
             </div>
           </CardContent>
         ) : (
-          <CardContent>
-            <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground border rounded-lg border-dashed">
-                <BarChart className="h-12 w-12 mb-4 text-muted-foreground/50"/>
-                <p className="font-medium">No has seleccionado un periodo.</p>
-                <p className="text-sm">Por favor, elige un periodo de la lista de arriba para empezar a planificar.</p>
-            </div>
-          </CardContent>
+          <>
+            <CardHeader>
+              <CardTitle>Selecciona un Periodo</CardTitle>
+              <div className="max-w-sm pt-2">
+                <Select onValueChange={setSelectedPeriodId} value={selectedPeriodId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Elige un periodo para planificar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periods.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            {selectedPeriod ? (
+              <CardContent className="space-y-6">
+                {stats && (
+                    <Card className="bg-muted/50">
+                        <CardHeader>
+                            <CardTitle>Resumen de Proyección</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Meta del Periodo</p>
+                                    <p className="text-xl font-bold">{stats.expected}</p>
+                                </div>
+                                 <div>
+                                    <p className="text-sm text-muted-foreground">Total Real</p>
+                                    <p className="text-xl font-bold">{stats.actual}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Total Proyectado</p>
+                                    <p className="text-xl font-bold">{stats.projected}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Balanza</p>
+                                    <p className={cn("text-xl font-bold", stats.differenceMinutes < 0 ? "text-destructive" : "text-green-600")}>{stats.difference}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+    
+                <div className="border rounded-lg overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Entrada Proyectada</TableHead>
+                        <TableHead>Salida Proyectada</TableHead>
+                        <TableHead className="text-right">Horas Proyectadas</TableHead>
+                        <TableHead className="text-right">Horas Reales</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {projections.map((day) => {
+                        const projectedMinutes = calculateMinutes(day.projectedEntry, day.projectedExit);
+                        const actualMinutes = calculateMinutes(day.entry, day.exit);
+    
+                        return (
+                            <TableRow key={day.date} className={cn(actualMinutes > 0 && "bg-green-500/10")}>
+                            <TableCell className="font-medium capitalize whitespace-nowrap">
+                              {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="time"
+                                value={day.projectedEntry?.time || ""}
+                                onChange={(e) => handleProjectionChange(day.date, 'projectedEntry', e.target.value)}
+                                className="w-32"
+                                disabled={!!day.entry}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="time"
+                                value={day.projectedExit?.time || ""}
+                                onChange={(e) => handleProjectionChange(day.date, 'projectedExit', e.target.value)}
+                                className="w-32"
+                                disabled={!!day.exit}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatMinutesToHours(projectedMinutes)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold">
+                              {formatMinutesToHours(actualMinutes)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="flex justify-end">
+                    <Button onClick={handleSaveChanges}>
+                        <Save className="mr-2 h-4 w-4"/>
+                        Guardar Proyección
+                    </Button>
+                </div>
+              </CardContent>
+            ) : (
+              <CardContent>
+                <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground border rounded-lg border-dashed">
+                    <BarChart className="h-12 w-12 mb-4 text-muted-foreground/50"/>
+                    <p className="font-medium">No has seleccionado un periodo.</p>
+                    <p className="text-sm">Por favor, elige un periodo de la lista de arriba para empezar a planificar.</p>
+                </div>
+              </CardContent>
+            )}
+          </>
         )}
       </Card>
     </div>
