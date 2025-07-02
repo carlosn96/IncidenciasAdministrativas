@@ -159,20 +159,22 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
                                 )}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                initialFocus
-                                mode="range"
-                                selected={dateRange}
-                                onSelect={handleDateSelect}
-                                numberOfMonths={1}
-                                locale={es}
-                              />
-                              <div className="p-3 border-t">
-                                <Button onClick={() => setIsCalendarOpen(false)} className="w-full">
-                                    Aceptar
-                                </Button>
-                              </div>
+                            <PopoverContent className="w-auto p-0 flex flex-col max-h-[90vh]" align="start">
+                                <div className="overflow-y-auto">
+                                  <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    selected={dateRange}
+                                    onSelect={handleDateSelect}
+                                    numberOfMonths={1}
+                                    locale={es}
+                                  />
+                                </div>
+                                <div className="p-3 border-t shrink-0">
+                                    <Button onClick={() => setIsCalendarOpen(false)} className="w-full">
+                                        Aceptar
+                                    </Button>
+                                </div>
                             </PopoverContent>
                           </Popover>
                     </div>
