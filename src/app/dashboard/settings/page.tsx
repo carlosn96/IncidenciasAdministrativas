@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
@@ -60,7 +59,7 @@ export default function SettingsPage() {
           <TabsTrigger value="periods">
             <CalendarDays className="mr-2 h-4 w-4" />
             Periodos
-          </TabsTria>
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="locations">
             <LocationsSettings
