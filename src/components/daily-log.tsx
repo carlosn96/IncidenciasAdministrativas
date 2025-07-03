@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { Incident, ScheduleEntry } from "@/lib/types";
-import { Play, Square, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Play, Square, MapPin, Pencil, Trash2, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { format, isWithinInterval, parse, differenceInMinutes, endOfDay } from "date-fns";
@@ -329,17 +330,29 @@ export function DailyLog() {
                     <div className="space-y-4">
                         <div>
                             <Label htmlFor="location-select" className="mb-2 block">Ubicación de registro</Label>
-                            <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={hasEntrada && hasSalida}>
-                                <SelectTrigger id="location-select">
-                                    <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                                    <SelectValue placeholder="Selecciona una ubicación..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {userLocations.map(loc => (
-                                        <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            {userLocations.length > 0 ? (
+                                <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={hasEntrada && hasSalida}>
+                                    <SelectTrigger id="location-select">
+                                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                                        <SelectValue placeholder="Selecciona una ubicación..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {userLocations.map(loc => (
+                                            <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center text-center p-4 rounded-md border border-dashed bg-muted/50">
+                                    <p className="text-sm text-muted-foreground">Primero debes añadir una ubicación de trabajo.</p>
+                                    <Button asChild variant="link" size="sm" className="mt-1 h-auto p-0">
+                                        <Link href="/dashboard/settings?tab=locations">
+                                            Ir a configuración
+                                            <ArrowRight className="ml-1 h-4 w-4"/>
+                                        </Link>
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                             <Button
