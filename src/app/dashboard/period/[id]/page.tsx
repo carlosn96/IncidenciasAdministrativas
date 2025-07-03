@@ -393,7 +393,14 @@ export default function PeriodDetailPage() {
                                         </span>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>Para planificar días futuros, usa la sección de Proyecciones.</p>
+                                        <div className="text-center">
+                                            <p className="mb-2">Para planificar días futuros, usa la sección de Proyecciones.</p>
+                                            <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
+                                              <Link href={`/dashboard/projections?period=${period?.id}`}>
+                                                Ir a Proyecciones
+                                              </Link>
+                                            </Button>
+                                        </div>
                                     </TooltipContent>
                                 </Tooltip>
                             ) : (
@@ -473,7 +480,14 @@ export default function PeriodDetailPage() {
                                             </span>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            <p>Para planificar días futuros, usa la sección de Proyecciones.</p>
+                                           <div className="text-center">
+                                                <p className="mb-2">Para planificar días futuros, usa la sección de Proyecciones.</p>
+                                                <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
+                                                  <Link href={`/dashboard/projections?period=${period?.id}`}>
+                                                    Ir a Proyecciones
+                                                  </Link>
+                                                </Button>
+                                            </div>
                                         </TooltipContent>
                                     </Tooltip>
                                 ) : (
