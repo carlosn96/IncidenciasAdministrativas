@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { DaySchedule, Location, Schedule } from "@/lib/types";
-import { Pencil, PlusCircle, MoreVertical, Trash2 } from "lucide-react";
+import { Pencil, PlusCircle, MoreVertical, Trash2, Save } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -86,17 +86,27 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
             const newEntries = prev.entries.map(entry => {
                 const isSaturday = entry.day === 'Sábado';
     
-                if (isSaturday && !bulkIncludeSaturdays) {
-                    return entry;
+                // Condition to apply the bulk update
+                const shouldUpdate = !isSaturday || bulkIncludeSaturdays;
+
+                if (shouldUpdate) {
+                    return {
+                        ...entry,
+                        startTime: bulkStartTime,
+                        endTime: bulkEndTime,
+                        startLocation: bulkStartLocation,
+                        endLocation: bulkEndLocation,
+                    };
+                } else { 
+                    // This case is only for Saturday when bulkIncludeSaturdays is false, so we clear it.
+                    return {
+                        ...entry,
+                        startTime: "",
+                        endTime: "",
+                        startLocation: "",
+                        endLocation: "",
+                    };
                 }
-                
-                return {
-                    ...entry,
-                    startTime: bulkStartTime,
-                    endTime: bulkEndTime,
-                    startLocation: bulkStartLocation,
-                    endLocation: bulkEndLocation,
-                };
             });
             return { ...prev, entries: newEntries };
         });
@@ -208,7 +218,10 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
 
                 <DialogFooter className="p-6 pt-4 border-t">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                    <Button onClick={handleSaveChanges}>Guardar Cambios</Button>
+                    <Button onClick={handleSaveChanges}>
+                        <Save className="mr-2 h-4 w-4" />
+                        Guardar Cambios
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
