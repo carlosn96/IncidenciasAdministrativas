@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: "Sistema de Gestión de Incidencias Administrativas",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{

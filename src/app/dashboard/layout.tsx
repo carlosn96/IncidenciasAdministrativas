@@ -4,8 +4,6 @@ import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar"
 import { SettingsProvider } from "@/context/settings-context";
 import { AuthGuard } from "@/components/auth-guard";
 
-export const dynamic = "force-dynamic";
-
 export default function DashboardLayout({
   children,
 }: {

@@ -18,8 +18,6 @@ import { auth } from "@/lib/firebase";
 import { GoogleAuthProvider, signInWithPopup, AuthError } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
-export const dynamic = 'force-dynamic';
-
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
