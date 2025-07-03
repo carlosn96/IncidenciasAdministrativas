@@ -51,7 +51,7 @@ const formatTime12h = (timeStr?: string): string => {
 
 
 export default function DashboardPage() {
-  const { periods } = useSettings();
+  const { periods, user } = useSettings();
   const [isAddPeriodDialogOpen, setIsAddPeriodDialogOpen] = useState(false);
 
   const { activePeriod, todayLaborDay } = useMemo(() => {
@@ -83,7 +83,7 @@ export default function DashboardPage() {
   }, [activePeriod]);
   
   const showProjectedEntry = !!(todayLaborDay?.projectedEntry && !todayLaborDay.entry);
-  const showProjectedExit = !!todayLaborDay?.projectedExit;
+  const showProjectedExit = !!todayLaborDay?.projectedExit && !todayLaborDay.exit;
   const showProjectionCard = (showProjectedEntry || showProjectedExit) && !todayLaborDay?.exit;
 
   return (
@@ -92,7 +92,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold font-headline">Resumen Diario</h1>
           <p className="text-muted-foreground">
-            ¡Bienvenido de nuevo, Coordinador! Aquí está tu resumen de hoy.
+            {`¡Bienvenido de nuevo, ${user?.displayName?.split(" ")[0] || 'Coordinador'}! Aquí está tu resumen de hoy.`}
           </p>
         </div>
 
