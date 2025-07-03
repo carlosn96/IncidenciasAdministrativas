@@ -372,129 +372,144 @@ export default function PeriodDetailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Mobile View */}
-            <div className="md:hidden">
-              {laborDays.length > 0 ? (
-                  <div className="border rounded-lg">
-                      {laborDays.map((day, index) => {
-                          const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
-                          return (
-                          <div key={day.date} className={cn("p-4", index < laborDays.length - 1 && "border-b")}>
-                              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-2">
-                                  <p className="font-medium capitalize">
-                                      {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
-                                  </p>
-                                  <p className="font-mono font-semibold text-right w-full sm:w-auto">
-                                      {calculateWorkedHours(day.entry, day.exit)}
-                                  </p>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4 text-sm mt-2">
-                                  <div>
-                                      <p className="font-semibold text-muted-foreground">Entrada</p>
-                                      <p>{formatTime12h(day.entry?.time)}</p>
-                                      <p className="text-muted-foreground">{day.entry?.location || '---'}</p>
-                                  </div>
-                                  <div>
-                                      <p className="font-semibold text-muted-foreground">Salida</p>
-                                      <p>{formatTime12h(day.exit?.time)}</p>
-                                      <p className="text-muted-foreground">{day.exit?.location || '---'}</p>
-                                  </div>
-                              </div>
-                               <div className="mt-4 flex justify-end">
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span tabIndex={0}>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleOpenEditDayDialog(day)}
-                                            disabled={isFutureDay}
-                                          >
-                                            <Pencil className="mr-2 h-4 w-4"/>
-                                            Editar Día
-                                          </Button>
-                                        </span>
-                                      </TooltipTrigger>
-                                      {isFutureDay && (
-                                        <TooltipContent>
-                                          <p>Para planificar días futuros, usa la sección de Proyecciones.</p>
-                                        </TooltipContent>
-                                      )}
-                                    </Tooltip>
-                                  </TooltipProvider>
-                              </div>
-                          </div>
-                      )})}
-                  </div>
-              ) : (
-                  <div className="text-center text-muted-foreground py-16 border rounded-lg">
-                      <p>No hay días laborables configurados para este periodo.</p>
-                  </div>
-              )}
-            </div>
-
-            {/* Desktop View */}
-            <div className="hidden md:block border rounded-lg overflow-x-auto">
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Lugar Entrada</TableHead>
-                          <TableHead>Hora Entrada</TableHead>
-                          <TableHead>Lugar Salida</TableHead>
-                          <TableHead>Hora Salida</TableHead>
-                          <TableHead className="text-right">Horas Laboradas</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {laborDays.length > 0 ? (
-                          laborDays.map((day) => {
+            <TooltipProvider>
+              {/* Mobile View */}
+              <div className="md:hidden">
+                {laborDays.length > 0 ? (
+                    <div className="border rounded-lg">
+                        {laborDays.map((day, index) => {
                             const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
-                            return (
-                              <TableRow key={day.date}>
-                                  <TableCell className="font-medium capitalize whitespace-nowrap">
-                                      {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
-                                  </TableCell>
-                                  <TableCell>{day.entry?.location || '---'}</TableCell>
-                                  <TableCell>{formatTime12h(day.entry?.time)}</TableCell>
-                                  <TableCell>{day.exit?.location || '---'}</TableCell>
-                                  <TableCell>{formatTime12h(day.exit?.time)}</TableCell>
-                                  <TableCell className="text-right font-mono">
-                                      {calculateWorkedHours(day.entry, day.exit)}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span tabIndex={0}>
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenEditDayDialog(day)} disabled={isFutureDay}>
-                                                <Pencil className="h-4 w-4" />
-                                                <span className="sr-only">Editar Día</span>
+                            
+                            const editButton = isFutureDay ? (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span tabIndex={0}>
+                                            <Button variant="outline" size="sm" disabled>
+                                                <Pencil className="mr-2 h-4 w-4"/>
+                                                Editar Día
                                             </Button>
-                                          </span>
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Para planificar días futuros, usa la sección de Proyecciones.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenEditDayDialog(day)}
+                                >
+                                    <Pencil className="mr-2 h-4 w-4"/>
+                                    Editar Día
+                                </Button>
+                            );
+
+                            return (
+                                <div key={day.date} className={cn("p-4", index < laborDays.length - 1 && "border-b")}>
+                                    <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-2">
+                                        <p className="font-medium capitalize">
+                                            {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                                        </p>
+                                        <p className="font-mono font-semibold text-right w-full sm:w-auto">
+                                            {calculateWorkedHours(day.entry, day.exit)}
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-sm mt-2">
+                                        <div>
+                                            <p className="font-semibold text-muted-foreground">Entrada</p>
+                                            <p>{formatTime12h(day.entry?.time)}</p>
+                                            <p className="text-muted-foreground">{day.entry?.location || '---'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-muted-foreground">Salida</p>
+                                            <p>{formatTime12h(day.exit?.time)}</p>
+                                            <p className="text-muted-foreground">{day.exit?.location || '---'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex justify-end">
+                                        {editButton}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                ) : (
+                    <div className="text-center text-muted-foreground py-16 border rounded-lg">
+                        <p>No hay días laborables configurados para este periodo.</p>
+                    </div>
+                )}
+              </div>
+
+              {/* Desktop View */}
+              <div className="hidden md:block border rounded-lg overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Lugar Entrada</TableHead>
+                            <TableHead>Hora Entrada</TableHead>
+                            <TableHead>Lugar Salida</TableHead>
+                            <TableHead>Hora Salida</TableHead>
+                            <TableHead className="text-right">Horas Laboradas</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {laborDays.length > 0 ? (
+                            laborDays.map((day) => {
+                                const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+
+                                const editButton = isFutureDay ? (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span tabIndex={0}>
+                                                <Button variant="ghost" size="icon" disabled>
+                                                    <Pencil className="h-4 w-4" />
+                                                    <span className="sr-only">Editar Día</span>
+                                                </Button>
+                                            </span>
                                         </TooltipTrigger>
-                                        {isFutureDay && (
-                                          <TooltipContent>
+                                        <TooltipContent>
                                             <p>Para planificar días futuros, usa la sección de Proyecciones.</p>
-                                          </TooltipContent>
-                                        )}
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </TableCell>
-                              </TableRow>
-                          )})
-                      ) : (
-                          <TableRow>
-                              <TableCell colSpan={7} className="text-center text-muted-foreground py-16">
-                                  <p>No hay días laborables configurados para este periodo.</p>
-                              </TableCell>
-                          </TableRow>
-                      )}
-                  </TableBody>
-              </Table>
-            </div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                ) : (
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDayDialog(day)}>
+                                        <Pencil className="h-4 w-4" />
+                                        <span className="sr-only">Editar Día</span>
+                                    </Button>
+                                );
+
+                                return (
+                                    <TableRow key={day.date}>
+                                        <TableCell className="font-medium capitalize whitespace-nowrap">
+                                            {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                                        </TableCell>
+                                        <TableCell>{day.entry?.location || '---'}</TableCell>
+                                        <TableCell>{formatTime12h(day.entry?.time)}</TableCell>
+                                        <TableCell>{day.exit?.location || '---'}</TableCell>
+                                        <TableCell>{formatTime12h(day.exit?.time)}</TableCell>
+                                        <TableCell className="text-right font-mono">
+                                            {calculateWorkedHours(day.entry, day.exit)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {editButton}
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={7} className="text-center text-muted-foreground py-16">
+                                    <p>No hay días laborables configurados para este periodo.</p>
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+              </div>
+            </TooltipProvider>
           </CardContent>
         </Card>
       </div>
