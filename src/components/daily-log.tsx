@@ -77,12 +77,14 @@ export function DailyLog() {
   const [currentTime, setCurrentTime] = useState<string | null>(null);
   const [currentDay, setCurrentDay] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [manualLocation, setManualLocation] = useState<string>("");
   const { toast } = useToast();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingIncident, setEditingIncident] = useState<({ type: 'Entrada' | 'Salida' } & Incident) | null>(null);
   const [newTime, setNewTime] = useState("");
   const [newLocation, setNewLocation] = useState("");
+  const [newManualLocation, setNewManualLocation] = useState("");
 
   const { activePeriod, todayLaborDay } = useMemo(() => {
     const today = new Date();
@@ -137,11 +139,13 @@ export function DailyLog() {
   }, [hasEntrada, hasSalida, schedule, userLocations]);
 
   const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {
-    if (!selectedLocation) {
+    const locationToRegister = selectedLocation === 'manual' ? manualLocation.trim() : selectedLocation;
+
+    if (!locationToRegister) {
       toast({
         variant: "destructive",
         title: "Ubicación Requerida",
-        description: "Por favor, selecciona una ubicación antes de registrar.",
+        description: "Por favor, selecciona o especifica una ubicación antes de registrar.",
       });
       return;
     }
@@ -158,7 +162,7 @@ export function DailyLog() {
     const now = new Date();
     const newIncident: Incident = {
       time: format(now, "HH:mm"),
-      location: selectedLocation,
+      location: locationToRegister,
     };
     
     const keyToUpdate = type === 'Entrada' ? 'entry' : 'exit';
@@ -180,23 +184,34 @@ export function DailyLog() {
 
     toast({
       title: `${type} Registrada`,
-      description: `Has registrado tu ${type.toLowerCase()} en ${selectedLocation} a las ${format(now, 'p', { locale: es })}.`,
+      description: `Has registrado tu ${type.toLowerCase()} en ${locationToRegister} a las ${format(now, 'p', { locale: es })}.`,
     });
   };
 
   const handleOpenEditDialog = (incident: { type: 'Entrada' | 'Salida' } & Incident) => {
     setEditingIncident(incident);
     setNewTime(incident.time);
-    setNewLocation(incident.location);
+    
+    const isManual = !userLocations.some(loc => loc.name === incident.location);
+    if (isManual) {
+        setNewLocation('manual');
+        setNewManualLocation(incident.location);
+    } else {
+        setNewLocation(incident.location);
+        setNewManualLocation('');
+    }
+    
     setIsEditDialogOpen(true);
   };
 
   const handleSaveChanges = () => {
-    if (!editingIncident || !activePeriod || !todayLaborDay || !newLocation) {
+    const locationToSave = newLocation === 'manual' ? newManualLocation.trim() : newLocation;
+
+    if (!editingIncident || !activePeriod || !todayLaborDay || !locationToSave) {
         toast({
             variant: "destructive",
-            title: "Ubicación requerida",
-            description: "Por favor, selecciona una ubicación.",
+            title: "Datos incompletos",
+            description: "Por favor, completa la hora y la ubicación.",
         });
         return;
     }
@@ -231,7 +246,7 @@ export function DailyLog() {
           if (ld.date === todayLaborDay.date) {
             const updatedDay = { ...ld };
             if (updatedDay[keyToUpdate]) {
-              updatedDay[keyToUpdate] = { ...updatedDay[keyToUpdate]!, time: newTime, location: newLocation };
+              updatedDay[keyToUpdate] = { ...updatedDay[keyToUpdate]!, time: newTime, location: locationToSave };
             }
             return updatedDay;
           }
@@ -331,17 +346,38 @@ export function DailyLog() {
                         <div>
                             <Label htmlFor="location-select" className="mb-2 block">Ubicación de registro</Label>
                             {userLocations.length > 0 ? (
-                                <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={hasEntrada && hasSalida}>
-                                    <SelectTrigger id="location-select">
-                                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                                        <SelectValue placeholder="Selecciona una ubicación..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {userLocations.map(loc => (
-                                            <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <>
+                                    <Select 
+                                        value={selectedLocation} 
+                                        onValueChange={(value) => {
+                                            setSelectedLocation(value);
+                                            if (value !== 'manual') {
+                                                setManualLocation(""); // Clear manual input if another option is selected
+                                            }
+                                        }} 
+                                        disabled={hasEntrada && hasSalida}
+                                    >
+                                        <SelectTrigger id="location-select">
+                                            <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                                            <SelectValue placeholder="Selecciona una ubicación..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {userLocations.map(loc => (
+                                                <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                            ))}
+                                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedLocation === 'manual' && (
+                                        <Input 
+                                            className="mt-2"
+                                            placeholder="Escribe la ubicación manual"
+                                            value={manualLocation}
+                                            onChange={(e) => setManualLocation(e.target.value)}
+                                            disabled={hasEntrada && hasSalida}
+                                        />
+                                    )}
+                                </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center text-center p-4 rounded-md border border-dashed bg-muted/50">
                                     <p className="text-sm text-muted-foreground">Primero debes añadir una ubicación de trabajo.</p>
@@ -358,7 +394,7 @@ export function DailyLog() {
                             <Button
                                 size="lg"
                                 onClick={() => handleRegisterEvent('Entrada')}
-                                disabled={!activePeriod || !todayLaborDay || !selectedLocation || hasEntrada}
+                                disabled={!activePeriod || !todayLaborDay || (!selectedLocation || (selectedLocation === 'manual' && !manualLocation)) || hasEntrada}
                                 className="h-12 text-base"
                             >
                                 <Play className="mr-2 h-5 w-5" />
@@ -368,7 +404,7 @@ export function DailyLog() {
                                 size="lg"
                                 variant="destructive"
                                 onClick={() => handleRegisterEvent('Salida')}
-                                disabled={!activePeriod || !todayLaborDay || !selectedLocation || !hasEntrada || hasSalida}
+                                disabled={!activePeriod || !todayLaborDay || (!selectedLocation || (selectedLocation === 'manual' && !manualLocation)) || !hasEntrada || hasSalida}
                                 className="h-12 text-base"
                             >
                                 <Square className="mr-2 h-5 w-5" />
@@ -539,8 +575,18 @@ export function DailyLog() {
                             {userLocations.map(loc => (
                                 <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
                             ))}
+                            <SelectItem value="manual">Otro (especificar)</SelectItem>
                         </SelectContent>
                     </Select>
+                    {newLocation === 'manual' && (
+                        <Input
+                            id="edit-manual-location"
+                            placeholder="Escribe la ubicación"
+                            value={newManualLocation}
+                            onChange={(e) => setNewManualLocation(e.target.value)}
+                            className="mt-2"
+                        />
+                    )}
                 </div>
             </div>
             <DialogFooter>

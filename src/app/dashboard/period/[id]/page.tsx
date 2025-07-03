@@ -95,15 +95,26 @@ export default function PeriodDetailPage() {
   const [entryLocation, setEntryLocation] = useState("");
   const [exitTime, setExitTime] = useState("");
   const [exitLocation, setExitLocation] = useState("");
+  const [manualEntryLocation, setManualEntryLocation] = useState("");
+  const [manualExitLocation, setManualExitLocation] = useState("");
+
 
   useEffect(() => {
     if (dayToEdit) {
       // If the day already has an entry, use that data.
       if (dayToEdit.entry) {
         setEntryTime(dayToEdit.entry?.time || "");
-        setEntryLocation(dayToEdit.entry?.location || "");
+        const entryLoc = dayToEdit.entry?.location || "";
+        const isEntryManual = entryLoc && !userLocations.some(l => l.name === entryLoc);
+        setEntryLocation(isEntryManual ? "manual" : entryLoc);
+        setManualEntryLocation(isEntryManual ? entryLoc : "");
+
         setExitTime(dayToEdit.exit?.time || "");
-        setExitLocation(dayToEdit.exit?.location || "");
+        const exitLoc = dayToEdit.exit?.location || "";
+        const isExitManual = exitLoc && !userLocations.some(l => l.name === exitLoc);
+        setExitLocation(isExitManual ? "manual" : exitLoc);
+        setManualExitLocation(isExitManual ? exitLoc : "");
+
       } else {
         // If the day is empty, load from default schedule.
         const dayDate = parseISO(dayToEdit.date);
@@ -120,15 +131,18 @@ export default function PeriodDetailPage() {
           setExitTime(defaultDaySchedule.endTime || "");
           setExitLocation(defaultDaySchedule.endLocation || "");
         } else {
-          // Fallback if no schedule is found (e.g., for Sunday, which is filtered out)
+          // Fallback if no schedule is found
           setEntryTime("");
           setEntryLocation("");
           setExitTime("");
           setExitLocation("");
         }
+        // Reset manual fields for new entries
+        setManualEntryLocation("");
+        setManualExitLocation("");
       }
     }
-  }, [dayToEdit, schedule]);
+  }, [dayToEdit, schedule, userLocations]);
 
 
   const handleOpenEditDayDialog = (day: LaborDay) => {
@@ -148,18 +162,22 @@ export default function PeriodDetailPage() {
       return;
     }
 
+    const finalEntryLocation = entryLocation === 'manual' ? manualEntryLocation.trim() : entryLocation;
+    const finalExitLocation = exitLocation === 'manual' ? manualExitLocation.trim() : exitLocation;
+
+
     const updatedLaborDays = period.laborDays.map(day => {
       if (day.date === dayToEdit.date) {
         const newDay = { ...day };
 
-        if (entryTime && entryLocation) {
-          newDay.entry = { time: entryTime, location: entryLocation };
+        if (entryTime && finalEntryLocation) {
+          newDay.entry = { time: entryTime, location: finalEntryLocation };
         } else {
           delete newDay.entry;
         }
 
-        if (exitTime && exitLocation && newDay.entry) {
-          newDay.exit = { time: exitTime, location: exitLocation };
+        if (exitTime && finalExitLocation && newDay.entry) {
+          newDay.exit = { time: exitTime, location: finalExitLocation };
         } else {
           delete newDay.exit;
         }
@@ -471,8 +489,17 @@ export default function PeriodDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {userLocations.map(loc => <SelectItem key={`${loc.id}-entry`} value={loc.name}>{loc.name}</SelectItem>)}
+                      <SelectItem value="manual">Otro (especificar)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {entryLocation === 'manual' && (
+                    <Input
+                        className="mt-2"
+                        placeholder="Escribe la ubicación"
+                        value={manualEntryLocation}
+                        onChange={(e) => setManualEntryLocation(e.target.value)}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -491,8 +518,18 @@ export default function PeriodDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {userLocations.map(loc => <SelectItem key={`${loc.id}-exit`} value={loc.name}>{loc.name}</SelectItem>)}
+                      <SelectItem value="manual">Otro (especificar)</SelectItem>
                     </SelectContent>
                   </Select>
+                   {exitLocation === 'manual' && (
+                    <Input
+                        className="mt-2"
+                        placeholder="Escribe la ubicación"
+                        value={manualExitLocation}
+                        onChange={(e) => setManualExitLocation(e.target.value)}
+                        disabled={!entryTime || !entryLocation}
+                    />
+                  )}
                 </div>
               </div>
             </div>
