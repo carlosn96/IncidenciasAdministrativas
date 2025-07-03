@@ -62,7 +62,6 @@ export default function ProjectionsPage() {
     if (periodIdFromUrl && periods.some(p => p.id === periodIdFromUrl)) {
       setSelectedPeriodId(periodIdFromUrl);
     } else if (periods.length > 0) {
-      // Select the most recent period by default if none is in URL
       setSelectedPeriodId(periods[0].id);
     }
   }, [searchParams, periods]);
@@ -72,45 +71,48 @@ export default function ProjectionsPage() {
   }, [selectedPeriodId, periods]);
 
   const applyScheduleToProjections = useCallback((overwrite = false) => {
-    if (!selectedPeriod || !activeSchedule) return;
+    if (!projections.length || !activeSchedule) return;
 
-    const newProjections = selectedPeriod.laborDays.map(day => {
+    const newProjections = projections.map(day => {
         const newDay = JSON.parse(JSON.stringify(day));
-
-        // Skip if day has a real entry and we're not force-overwriting
-        if (newDay.entry && !overwrite) return newDay;
+        if (newDay.entry) return newDay; // Never overwrite a real entry
         
         const dayDate = parseISO(day.date);
-        const dayOfWeekIndex = getDay(dayDate); // 0=Sun, 1=Mon...
+        const dayOfWeekIndex = getDay(dayDate);
         const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
         
         const scheduleForDay = activeSchedule.entries.find(e => e.day === dayName);
         if (!scheduleForDay) return newDay;
 
-        // Apply schedule to projected entry
         if (scheduleForDay.startTime && scheduleForDay.startLocation) {
             if (!newDay.projectedEntry || overwrite) {
                 newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
             }
+        } else if (overwrite) {
+          delete newDay.projectedEntry;
         }
-        // Apply schedule to projected exit
+
         if (scheduleForDay.endTime && scheduleForDay.endLocation) {
              if (!newDay.projectedExit || overwrite) {
                 newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
             }
+        } else if (overwrite) {
+          delete newDay.projectedExit;
         }
         return newDay;
     });
 
     setProjections(newProjections);
-  }, [selectedPeriod, activeSchedule]);
+    if(overwrite) {
+      toast({ title: "Horario Cargado", description: "La proyección se ha actualizado con tu horario por defecto."})
+    }
+  }, [projections, activeSchedule, toast]);
 
   useEffect(() => {
     if (selectedPeriod) {
-      // Auto-load on period change (Feature 1)
       const initialProjections = selectedPeriod.laborDays.map(day => {
         const newDay = JSON.parse(JSON.stringify(day));
-        if (newDay.entry || newDay.projectedEntry || newDay.projectedExit) return newDay;
+        if (newDay.entry) return newDay;
         
         if (activeSchedule) {
             const dayDate = parseISO(day.date);
@@ -118,11 +120,13 @@ export default function ProjectionsPage() {
             const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
             const scheduleForDay = activeSchedule.entries.find(e => e.day === dayName);
 
-            if (scheduleForDay?.startTime && scheduleForDay?.startLocation) {
-              newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
-            }
-            if (scheduleForDay?.endTime && scheduleForDay?.endLocation) {
-              newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
+            if (scheduleForDay) {
+                if (!newDay.projectedEntry && scheduleForDay.startTime && scheduleForDay.startLocation) {
+                  newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
+                }
+                if (!newDay.projectedExit && scheduleForDay.endTime && scheduleForDay.endLocation) {
+                  newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
+                }
             }
         }
         return newDay;
@@ -158,7 +162,18 @@ export default function ProjectionsPage() {
     if (!selectedPeriodId) return;
 
     for (const day of projections) {
-        // ... (validation logic is the same)
+        if ((day.projectedEntry?.time && !day.projectedEntry?.location) || (!day.projectedEntry?.time && day.projectedEntry?.location)) {
+            toast({ variant: 'destructive', title: 'Datos Incompletos', description: `La entrada proyectada para el ${format(parseISO(day.date), "d MMM", { locale: es })} está incompleta.` });
+            return;
+        }
+        if ((day.projectedExit?.time && !day.projectedExit?.location) || (!day.projectedExit?.time && day.projectedExit?.location)) {
+            toast({ variant: 'destructive', title: 'Datos Incompletos', description: `La salida proyectada para el ${format(parseISO(day.date), "d MMM", { locale: es })} está incompleta.` });
+            return;
+        }
+        if (day.projectedEntry?.time && day.projectedExit?.time && day.projectedExit.time < day.projectedEntry.time) {
+            toast({ variant: 'destructive', title: 'Error de Horas', description: `La hora de salida no puede ser anterior a la de entrada para el ${format(parseISO(day.date), "d MMM", { locale: es })}.` });
+            return;
+        }
     }
 
     setPeriods(prevPeriods =>
@@ -195,10 +210,10 @@ export default function ProjectionsPage() {
         return;
     }
 
-    const newEntries: DaySchedule[] = daysOfWeekSpanish.slice(1, 7).map((dayName, index) => {
-        const dayInProjection = projections.find(p => getDay(parseISO(p.date)) === (index + 1));
-        const entry = dayInProjection?.entry || dayInProjection?.projectedEntry;
-        const exit = dayInProjection?.exit || dayInProjection?.projectedExit;
+    const newEntries: DaySchedule[] = daysOfWeekSpanish.slice(1, 7).map((dayName) => {
+        const dayInProjection = projections.find(p => format(parseISO(p.date), 'EEEE', { locale: es }) === dayName);
+        const entry = dayInProjection?.projectedEntry || dayInProjection?.entry;
+        const exit = dayInProjection?.projectedExit || dayInProjection?.exit;
 
         return {
             day: dayName as DaySchedule['day'],
@@ -232,8 +247,8 @@ export default function ProjectionsPage() {
     
     if (!scheduleForDay || (!scheduleForDay.startTime && !scheduleForDay.startLocation)) return null;
 
-    const entry = day.entry || day.projectedEntry;
-    const exit = day.exit || day.projectedExit;
+    const entry = day.projectedEntry || day.entry;
+    const exit = day.projectedExit || day.exit;
     
     let deviations: string[] = [];
     if (entry && (entry.time !== scheduleForDay.startTime || entry.location !== scheduleForDay.startLocation)) {
@@ -249,7 +264,6 @@ export default function ProjectionsPage() {
 
   const stats = useMemo(() => {
     if (!selectedPeriod || projections.length === 0) return null;
-    // ... (stats calculation is the same)
     const totalMinutesExpected = selectedPeriod.totalDurationMinutes || 0;
     const totalMinutesActual = projections.reduce((total, day) => total + calculateMinutes(day.entry, day.exit), 0);
     const totalMinutesProjected = projections.reduce((total, day) => {
@@ -280,7 +294,11 @@ export default function ProjectionsPage() {
       <Card>
         {periods.length === 0 ? (
           <CardContent>
-            {/* ... (no periods message is the same) ... */}
+            <div className="flex flex-col items-center justify-center text-center py-16 text-muted-foreground border rounded-lg border-dashed">
+              <BarChart className="h-12 w-12 mb-4 text-muted-foreground/50"/>
+              <p className="font-medium">Aún no has creado periodos.</p>
+              <p className="text-sm">Ve a <Link href="/dashboard/settings?tab=periods" className="underline font-semibold">Ajustes de Periodos</Link> para empezar.</p>
+            </div>
           </CardContent>
         ) : (
           <>
@@ -338,7 +356,24 @@ export default function ProjectionsPage() {
               <CardContent className="space-y-6">
                 {stats && (
                     <Card className="bg-muted/50">
-                        {/* ... (stats card is the same) ... */}
+                        <CardContent className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Meta Periodo</p>
+                                <p className="text-lg md:text-xl font-bold">{stats.expected}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Horas Reales</p>
+                                <p className="text-lg md:text-xl font-bold">{stats.actual}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Total Proyectado</p>
+                                <p className="text-lg md:text-xl font-bold">{stats.projected}</p>
+                            </div>
+                            <div className={cn(stats.differenceMinutes < 0 ? "text-destructive" : "text-green-600")}>
+                                <p className="text-sm">Balanza</p>
+                                <p className="text-lg md:text-xl font-bold">{stats.difference}</p>
+                            </div>
+                        </CardContent>
                     </Card>
                 )}
                 
@@ -348,23 +383,49 @@ export default function ProjectionsPage() {
                       {projections.map((day) => {
                          const deviationMessage = checkDeviation(day);
                          return (
-                           <div key={day.date} className={cn("border rounded-lg p-4", calculateMinutes(day.entry, day.exit) > 0 && "bg-green-500/10 border-green-500/20")}>
+                           <div key={day.date} className={cn("border rounded-lg p-4", day.entry && "bg-green-500/10 border-green-500/20")}>
                               <div className="flex justify-between items-start mb-4">
-                                <div className="font-medium capitalize flex items-center gap-2">
-                                  {format(parseISO(day.date), "EEEE", { locale: es })}
+                                <p className="font-medium capitalize">
+                                  {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
                                   {deviationMessage && (
                                     <Tooltip>
-                                      <TooltipTrigger>
-                                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                      <TooltipTrigger asChild>
+                                        <button className="ml-2 align-middle"><AlertTriangle className="h-4 w-4 text-amber-500" /></button>
                                       </TooltipTrigger>
                                       <TooltipContent><p>{deviationMessage}</p></TooltipContent>
                                     </Tooltip>
                                   )}
-                                  <span className="block text-sm text-muted-foreground font-normal">
-                                    {format(parseISO(day.date), "d 'de' LLLL", { locale: es })}
-                                  </span>
+                                </p>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label>Entrada Proyectada</Label>
+                                  <Input type="time" value={day.projectedEntry?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedEntry", "time", e.target.value)} disabled={!!day.entry} />
+                                  <Select value={day.projectedEntry?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedEntry", "location", value)} disabled={!!day.entry}>
+                                    <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                    <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
+                                  </Select>
                                 </div>
-                                {/* ... (rest of mobile card is the same, just needs the check for deviation) ... */}
+                                <div className="space-y-2">
+                                  <Label>Salida Proyectada</Label>
+                                  <Input type="time" value={day.projectedExit?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedExit", "time", e.target.value)} disabled={!!day.entry} />
+                                  <Select value={day.projectedExit?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedExit", "location", value)} disabled={!!day.entry}>
+                                    <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                    <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                               
+                              <div className="flex justify-between mt-4 text-sm pt-4 border-t">
+                                <div>
+                                    <span className="text-muted-foreground">Proyectadas: </span>
+                                    <span className="font-mono font-semibold">{formatMinutesToHours(calculateMinutes(day.projectedEntry || day.entry, day.projectedExit || day.exit))}</span>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Reales: </span>
+                                    <span className="font-mono font-semibold text-green-600">{formatMinutesToHours(calculateMinutes(day.entry, day.exit))}</span>
+                                </div>
                               </div>
                            </div>
                          )
@@ -376,7 +437,7 @@ export default function ProjectionsPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="min-w-[200px]">Fecha</TableHead>
+                            <TableHead className="min-w-[180px]">Fecha</TableHead>
                             <TableHead>Hora Entrada</TableHead>
                             <TableHead>Lugar Entrada</TableHead>
                             <TableHead>Hora Salida</TableHead>
@@ -389,21 +450,34 @@ export default function ProjectionsPage() {
                           {projections.map((day) => {
                             const deviationMessage = checkDeviation(day);
                             return (
-                                <TableRow key={day.date} className={cn(calculateMinutes(day.entry, day.exit) > 0 && "bg-green-500/10")}>
+                                <TableRow key={day.date} className={cn(day.entry && "bg-green-500/10")}>
                                     <TableCell className="font-medium capitalize whitespace-nowrap">
                                       <div className="flex items-center gap-2">
-                                        {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                                        {format(parseISO(day.date), "EEEE, d", { locale: es })}
                                         {deviationMessage && (
                                           <Tooltip>
-                                            <TooltipTrigger>
-                                              <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                            </TooltipTrigger>
+                                            <TooltipTrigger asChild><button><AlertTriangle className="h-4 w-4 text-amber-500" /></button></TooltipTrigger>
                                             <TooltipContent><p>{deviationMessage}</p></TooltipContent>
                                           </Tooltip>
                                         )}
                                       </div>
                                     </TableCell>
-                                    {/* ... (rest of desktop row is the same) ... */}
+                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedEntry?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} /></TableCell>
+                                    <TableCell>
+                                      <Select value={day.projectedEntry?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v)} disabled={!!day.entry}>
+                                        <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                        <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
+                                      </Select>
+                                    </TableCell>
+                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedExit?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.entry} /></TableCell>
+                                    <TableCell>
+                                       <Select value={day.projectedExit?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v)} disabled={!!day.entry}>
+                                        <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                        <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
+                                      </Select>
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono">{formatMinutesToHours(calculateMinutes(day.projectedEntry || day.entry, day.projectedExit || day.exit))}</TableCell>
+                                    <TableCell className="text-right font-mono text-green-600">{formatMinutesToHours(calculateMinutes(day.entry, day.exit))}</TableCell>
                                 </TableRow>
                             );
                           })}
@@ -434,3 +508,5 @@ export default function ProjectionsPage() {
     </div>
   );
 }
+
+    
