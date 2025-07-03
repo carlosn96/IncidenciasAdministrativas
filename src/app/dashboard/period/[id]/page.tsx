@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Clock, Pencil, Download } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { differenceInMinutes, format, parse, parseISO, getDay } from "date-fns";
+import { differenceInMinutes, format, parse, parseISO, getDay, isAfter, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { LaborDay, Incident, ScheduleEntry } from "@/lib/types";
 import { useSettings } from "@/context/settings-context";
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 // Helper function to calculate worked hours
@@ -375,7 +376,9 @@ export default function PeriodDetailPage() {
             <div className="md:hidden">
               {laborDays.length > 0 ? (
                   <div className="border rounded-lg">
-                      {laborDays.map((day, index) => (
+                      {laborDays.map((day, index) => {
+                          const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+                          return (
                           <div key={day.date} className={cn("p-4", index < laborDays.length - 1 && "border-b")}>
                               <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-2">
                                   <p className="font-medium capitalize">
@@ -398,13 +401,31 @@ export default function PeriodDetailPage() {
                                   </div>
                               </div>
                                <div className="mt-4 flex justify-end">
-                                  <Button variant="outline" size="sm" onClick={() => handleOpenEditDayDialog(day)}>
-                                      <Pencil className="mr-2 h-4 w-4"/>
-                                      Editar Día
-                                  </Button>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span tabIndex={0}>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleOpenEditDayDialog(day)}
+                                            disabled={isFutureDay}
+                                          >
+                                            <Pencil className="mr-2 h-4 w-4"/>
+                                            Editar Día
+                                          </Button>
+                                        </span>
+                                      </TooltipTrigger>
+                                      {isFutureDay && (
+                                        <TooltipContent>
+                                          <p>Para planificar días futuros, usa la sección de Proyecciones.</p>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
                               </div>
                           </div>
-                      ))}
+                      )})}
                   </div>
               ) : (
                   <div className="text-center text-muted-foreground py-16 border rounded-lg">
@@ -429,7 +450,9 @@ export default function PeriodDetailPage() {
                   </TableHeader>
                   <TableBody>
                       {laborDays.length > 0 ? (
-                          laborDays.map((day) => (
+                          laborDays.map((day) => {
+                            const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+                            return (
                               <TableRow key={day.date}>
                                   <TableCell className="font-medium capitalize whitespace-nowrap">
                                       {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
@@ -442,13 +465,26 @@ export default function PeriodDetailPage() {
                                       {calculateWorkedHours(day.entry, day.exit)}
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDayDialog(day)}>
-                                        <Pencil className="h-4 w-4" />
-                                        <span className="sr-only">Editar Día</span>
-                                    </Button>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span tabIndex={0}>
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenEditDayDialog(day)} disabled={isFutureDay}>
+                                                <Pencil className="h-4 w-4" />
+                                                <span className="sr-only">Editar Día</span>
+                                            </Button>
+                                          </span>
+                                        </TooltipTrigger>
+                                        {isFutureDay && (
+                                          <TooltipContent>
+                                            <p>Para planificar días futuros, usa la sección de Proyecciones.</p>
+                                          </TooltipContent>
+                                        )}
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   </TableCell>
                               </TableRow>
-                          ))
+                          )})
                       ) : (
                           <TableRow>
                               <TableCell colSpan={7} className="text-center text-muted-foreground py-16">
