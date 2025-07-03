@@ -50,7 +50,11 @@ export default function LoginPage() {
       
       let description = "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.";
       if (authError.code === 'auth/popup-closed-by-user') {
-        description = "Has cerrado la ventana de inicio de sesión. Por favor, inténtalo de nuevo.";
+        if (window.location.hostname.endsWith('cloudworkstations.dev')) {
+            description = `El dominio ${window.location.hostname} debe estar en la lista de "Dominios autorizados" en tu consola de Firebase Authentication.`;
+        } else {
+            description = "Has cerrado la ventana de inicio de sesión. Por favor, inténtalo de nuevo.";
+        }
       } else if (authError.code === 'auth/cancelled-popup-request') {
         description = "Se ha cancelado el inicio de sesión.";
       } else if (authError.code === 'auth/operation-not-allowed') {
