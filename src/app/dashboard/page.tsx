@@ -7,9 +7,9 @@ import { DailyLog } from "@/components/daily-log";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/context/settings-context";
-import { isWithinInterval, format, differenceInMinutes, endOfDay } from "date-fns";
+import { isWithinInterval, format, differenceInMinutes, endOfDay, parse } from "date-fns";
 import { es } from "date-fns/locale";
-import { PlusCircle, CalendarDays, ArrowRight, Clock } from "lucide-react";
+import { PlusCircle, CalendarDays, ArrowRight, Clock, BrainCircuit, MapPin } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { LaborDay } from "@/lib/types";
@@ -39,15 +39,29 @@ const formatTotalHours = (totalMinutes: number): string => {
   return `${hours} horas ${minutes} minutos`;
 };
 
+const formatTime12h = (timeStr?: string): string => {
+  if (!timeStr) return "---";
+  try {
+    const time = parse(timeStr, "HH:mm", new Date());
+    return format(time, "p", { locale: es });
+  } catch (error) {
+    return "---";
+  }
+};
+
 
 export default function DashboardPage() {
   const { periods } = useSettings();
   const [isAddPeriodDialogOpen, setIsAddPeriodDialogOpen] = useState(false);
 
-  const activePeriod = useMemo(() => {
+  const { activePeriod, todayLaborDay } = useMemo(() => {
     const today = new Date();
-    // The periods are sorted by start date descending. The first one that includes today is the most recent one.
-    return periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
+    const todayStr = format(today, "yyyy-MM-dd");
+
+    const activePeriod = periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
+    const todayLaborDay = activePeriod?.laborDays.find(ld => ld.date === todayStr);
+    
+    return { activePeriod, todayLaborDay };
   }, [periods]);
 
   const periodStats = useMemo(() => {
@@ -134,6 +148,46 @@ export default function DashboardPage() {
             </Card>
         )}
         
+        {todayLaborDay?.projectedEntry && !todayLaborDay?.entry && (
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-4 pb-4">
+              <div className="flex items-center justify-center bg-muted text-muted-foreground rounded-full h-10 w-10">
+                <BrainCircuit className="h-5 w-5" />
+              </div>
+              <div>
+                <CardDescription>Proyección para Hoy</CardDescription>
+                <CardTitle className="text-xl">Plan del Día</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <p className="font-semibold">Entrada Proyectada</p>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>{formatTime12h(todayLaborDay.projectedEntry.time)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>{todayLaborDay.projectedEntry.location}</span>
+                </div>
+              </div>
+              {todayLaborDay.projectedExit && (
+                <div className="space-y-1">
+                  <p className="font-semibold">Salida Proyectada</p>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>{formatTime12h(todayLaborDay.projectedExit.time)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{todayLaborDay.projectedExit.location}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex justify-end -mt-4">
              <Button variant="outline" onClick={() => setIsAddPeriodDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
