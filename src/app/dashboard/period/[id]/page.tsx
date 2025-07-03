@@ -50,7 +50,7 @@ const calculateTotalMinutes = (days: LaborDay[]): number => {
     if (!day.entry?.time || !day.exit?.time) return total;
 
     const [startHour, startMinute] = day.entry.time.split(":").map(Number);
-    const [endHour, endMinute] = exit.time.split(":").map(Number);
+    const [endHour, endMinute] = day.exit.time.split(":").map(Number);
 
     const startDate = new Date(0);
     startDate.setHours(startHour, startMinute, 0, 0);
