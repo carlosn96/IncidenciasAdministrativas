@@ -1,8 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import type { Location, Period, Schedule } from '@/lib/types';
-import type { User as FirebaseUser } from 'firebase/auth'; // We keep the type for compatibility
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -62,69 +63,71 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // State for user-specific data
-  const [userLocations, setUserLocations] = useState<Location[]>(getInitialUserLocations());
-  const [schedules, setSchedules] = useState<Schedule[]>(getInitialSchedules());
+  const [userLocations, setUserLocations] = useState<Location[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
-  const [periods, setPeriods] = useState<Period[]>(getInitialPeriods());
+  const [periods, setPeriods] = useState<Period[]>([]);
   
-  // Effect for loading data from localStorage on mount
+  // Effect for handling Firebase auth state change
   useEffect(() => {
-    setIsLoading(true);
-    try {
-      const storedData = localStorage.getItem('userAppData');
-      if (storedData) {
-        const data = JSON.parse(storedData);
-        setUserLocations(data.userLocations || getInitialUserLocations());
-        
-        const loadedSchedules = data.schedules || getInitialSchedules();
-        setSchedules(loadedSchedules);
-        
-        const loadedActiveScheduleId = data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null);
-        setActiveScheduleId(loadedActiveScheduleId);
-        
-        const rehydratedPeriods = (data.periods || []).map((p: any) => ({
-          ...p,
-          startDate: new Date(p.startDate),
-          endDate: new Date(p.endDate),
-        })).sort((a: Period, b: Period) => b.startDate.getTime() - a.startDate.getTime());
-        
-        setPeriods(rehydratedPeriods);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setIsLoading(true);
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        // User is logged in, load their data from localStorage
+        try {
+          const storedData = localStorage.getItem(`userAppData-${firebaseUser.uid}`);
+          if (storedData) {
+            const data = JSON.parse(storedData);
+            setUserLocations(data.userLocations || getInitialUserLocations());
+            
+            const loadedSchedules = data.schedules || getInitialSchedules();
+            setSchedules(loadedSchedules);
+            
+            setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
+            
+            const rehydratedPeriods = (data.periods || []).map((p: any) => ({
+              ...p,
+              startDate: new Date(p.startDate),
+              endDate: new Date(p.endDate),
+            })).sort((a: Period, b: Period) => b.startDate.getTime() - a.startDate.getTime());
+            setPeriods(rehydratedPeriods);
+          } else {
+            // New user, set initial data
+            setUserLocations(getInitialUserLocations());
+            const initialSchedules = getInitialSchedules();
+            setSchedules(initialSchedules);
+            setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
+            setPeriods(getInitialPeriods());
+          }
+        } catch (error) {
+          console.error("Failed to load data from localStorage", error);
+        }
       } else {
-        const initialSchedules = getInitialSchedules();
-        setSchedules(initialSchedules);
-        setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
+        // User is logged out, reset state
+        setUserLocations([]);
+        setSchedules([]);
+        setActiveScheduleId(null);
+        setPeriods([]);
       }
-    } catch (error) {
-      console.error("Failed to load data from localStorage", error);
-      const initialSchedules = getInitialSchedules();
-      setSchedules(initialSchedules);
-      setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
-    }
-    
-    // Set a mock user since we are not authenticating
-    setUser({
-        uid: 'local-user',
-        displayName: 'Usuario Local',
-        email: 'local.user@example.com',
-        photoURL: `https://placehold.co/100x100.png`,
-    } as FirebaseUser);
+      setIsLoading(false);
+    });
 
-    setIsLoading(false);
+    return () => unsubscribe();
   }, []);
 
   // Effect for saving user data to localStorage whenever it changes
   useEffect(() => {
-    // We only save if we are not in the initial loading phase.
-    if (!isLoading) {
+    if (!isLoading && user) {
       const dataToStore = {
         userLocations,
         schedules,
         activeScheduleId,
         periods,
       };
-      localStorage.setItem('userAppData', JSON.stringify(dataToStore));
+      localStorage.setItem(`userAppData-${user.uid}`, JSON.stringify(dataToStore));
     }
-  }, [isLoading, userLocations, schedules, activeScheduleId, periods]);
+  }, [isLoading, user, userLocations, schedules, activeScheduleId, periods]);
 
 
   const value = {

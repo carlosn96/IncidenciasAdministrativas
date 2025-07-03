@@ -30,7 +30,9 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const tab = searchParams.get("tab") || "locations";
+  // Ensure tab is one of the allowed values to prevent errors
+  const currentTab = searchParams.get("tab");
+  const tab = ["locations", "schedules", "periods"].includes(currentTab || "") ? currentTab : "locations";
 
   const handleTabChange = (value: string) => {
     router.push(`${pathname}?tab=${value}`, { scroll: false });
@@ -46,7 +48,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={handleTabChange} className="space-y-4">
-        <TabsList className="overflow-x-auto h-auto justify-start">
+        <TabsList className="grid w-full grid-cols-1 sm:w-auto sm:inline-flex sm:h-10">
           <TabsTrigger value="locations">
             <MapPin className="mr-2 h-4 w-4" />
             Mis Ubicaciones
@@ -58,7 +60,7 @@ export default function SettingsPage() {
           <TabsTrigger value="periods">
             <CalendarDays className="mr-2 h-4 w-4" />
             Periodos
-          </TabsTrigger>
+          </TabsTria>
         </TabsList>
         <TabsContent value="locations">
             <LocationsSettings

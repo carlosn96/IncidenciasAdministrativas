@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay } from "date-fns";
+import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
 import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +63,9 @@ export default function ProjectionsPage() {
     if (periodIdFromUrl && periods.some(p => p.id === periodIdFromUrl)) {
       setSelectedPeriodId(periodIdFromUrl);
     } else if (periods.length > 0) {
-      setSelectedPeriodId(periods[0].id);
+      // Default to the first period if none is specified or found
+      const sortedPeriods = [...periods].sort((a,b) => b.startDate.getTime() - a.startDate.getTime());
+      setSelectedPeriodId(sortedPeriods[0].id);
     }
   }, [searchParams, periods]);
 
@@ -71,16 +73,25 @@ export default function ProjectionsPage() {
     return periods.find((p) => p.id === selectedPeriodId);
   }, [selectedPeriodId, periods]);
 
+
   const applyScheduleToProjections = useCallback((overwrite = false) => {
-    if (!projections.length || !activeSchedule) return;
+    if (!projections.length || !activeSchedule) {
+      if (!activeSchedule) {
+        toast({
+          variant: 'destructive',
+          title: 'Sin Horario Activo',
+          description: 'No tienes una plantilla de horario activa para cargar. Ve a Ajustes > Horarios para seleccionar una.'
+        });
+      }
+      return;
+    }
 
     const newProjections = projections.map(day => {
-        // Create a deep copy to avoid direct state mutation
         const newDay = JSON.parse(JSON.stringify(day)); 
         
-        // Skip days that are in the past and already have real entries
-        const isPastOrToday = !isBefore(startOfDay(new Date()), parseISO(day.date));
-        if (isPastOrToday && newDay.entry) {
+        // Skip days that are in the past or have real entries
+        const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
+        if (isPastDay && newDay.entry) {
             return newDay;
         }
 
@@ -96,22 +107,17 @@ export default function ProjectionsPage() {
             }
             return newDay;
         }
-
-        // Apply schedule to projectedEntry if it's empty or we're overwriting
+        
+        // Always apply schedule to future days
         if (scheduleForDay.startTime && scheduleForDay.startLocation) {
-            if (overwrite || !newDay.projectedEntry) {
-                newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
-            }
-        } else if (overwrite) {
+            newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
+        } else {
           delete newDay.projectedEntry;
         }
 
-        // Apply schedule to projectedExit if it's empty or we're overwriting
         if (scheduleForDay.endTime && scheduleForDay.endLocation) {
-             if (overwrite || !newDay.projectedExit) {
-                newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
-            }
-        } else if (overwrite) {
+            newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
+        } else {
           delete newDay.projectedExit;
         }
         
@@ -124,22 +130,24 @@ export default function ProjectionsPage() {
     }
   }, [projections, activeSchedule, toast]);
 
+  // This effect initializes projections when a period is selected.
   useEffect(() => {
     if (selectedPeriod) {
       const initialProjections = selectedPeriod.laborDays.map(day => {
         const newDay = JSON.parse(JSON.stringify(day));
         
-        if (activeSchedule) {
+        // Pre-fill with active schedule only if no projection exists
+        if (activeSchedule && !newDay.projectedEntry && !newDay.projectedExit) {
             const dayDate = parseISO(day.date);
             const dayOfWeekIndex = getDay(dayDate);
             const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
             const scheduleForDay = activeSchedule.entries.find(e => e.day === dayName);
 
             if (scheduleForDay) {
-                if (!newDay.projectedEntry && scheduleForDay.startTime && scheduleForDay.startLocation) {
+                if (scheduleForDay.startTime && scheduleForDay.startLocation) {
                   newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
                 }
-                if (!newDay.projectedExit && scheduleForDay.endTime && scheduleForDay.endLocation) {
+                if (scheduleForDay.endTime && scheduleForDay.endLocation) {
                   newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
                 }
             }
@@ -401,6 +409,7 @@ export default function ProjectionsPage() {
                     {/* Mobile View */}
                     <div className="md:hidden space-y-4">
                       {projections.map((day) => {
+                         const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
                          const deviationMessage = checkDeviation(day);
                          return (
                            <div key={day.date} className={cn("border rounded-lg p-4", day.entry && "bg-green-500/10 border-green-500/20")}>
@@ -421,16 +430,16 @@ export default function ProjectionsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Entrada Proyectada</Label>
-                                  <Input type="time" value={day.projectedEntry?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedEntry", "time", e.target.value)} disabled={!!day.entry} />
-                                  <Select value={day.projectedEntry?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedEntry", "location", value)} disabled={!!day.entry}>
+                                  <Input type="time" value={day.projectedEntry?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedEntry", "time", e.target.value)} disabled={!!day.entry || isPastDay} />
+                                  <Select value={day.projectedEntry?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedEntry", "location", value)} disabled={!!day.entry || isPastDay}>
                                     <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                     <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Salida Proyectada</Label>
-                                  <Input type="time" value={day.projectedExit?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedExit", "time", e.target.value)} disabled={!!day.entry} />
-                                  <Select value={day.projectedExit?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedExit", "location", value)} disabled={!!day.entry}>
+                                  <Input type="time" value={day.projectedExit?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedExit", "time", e.target.value)} disabled={!!day.entry || isPastDay} />
+                                  <Select value={day.projectedExit?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedExit", "location", value)} disabled={!!day.entry || isPastDay}>
                                     <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                     <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
                                   </Select>
@@ -468,6 +477,7 @@ export default function ProjectionsPage() {
                         </TableHeader>
                         <TableBody>
                           {projections.map((day) => {
+                            const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
                             const deviationMessage = checkDeviation(day);
                             return (
                                 <TableRow key={day.date} className={cn(day.entry && "bg-green-500/10")}>
@@ -482,16 +492,16 @@ export default function ProjectionsPage() {
                                         )}
                                       </div>
                                     </TableCell>
-                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedEntry?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} /></TableCell>
+                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedEntry?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry || isPastDay} /></TableCell>
                                     <TableCell>
-                                      <Select value={day.projectedEntry?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v)} disabled={!!day.entry}>
+                                      <Select value={day.projectedEntry?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v)} disabled={!!day.entry || isPastDay}>
                                         <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                         <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
                                       </Select>
                                     </TableCell>
-                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedExit?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.entry} /></TableCell>
+                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedExit?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.entry || isPastDay} /></TableCell>
                                     <TableCell>
-                                       <Select value={day.projectedExit?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v)} disabled={!!day.entry}>
+                                       <Select value={day.projectedExit?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v)} disabled={!!day.entry || isPastDay}>
                                         <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                         <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
                                       </Select>

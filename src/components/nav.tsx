@@ -32,21 +32,38 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSettings } from "@/context/settings-context";
 import { isWithinInterval, endOfDay } from "date-fns";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, periods } = useSettings();
+  const { toast } = useToast();
 
   const activePeriod = useMemo(() => {
     const today = new Date();
     return periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
   }, [periods]);
 
-  const handleSignOut = () => {
-    // In local mode, "signing out" means clearing the stored data and reloading.
-    localStorage.clear();
-    window.location.href = "/"; // Force a full reload to clear all state.
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Sesión Cerrada",
+        description: "Has cerrado sesión correctamente.",
+      });
+      // The onAuthStateChanged listener in SettingsProvider will handle redirecting.
+      // But we can push to be faster.
+      router.push("/");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo cerrar la sesión. Por favor, inténtalo de nuevo.",
+      });
+    }
   };
 
 
@@ -81,7 +98,7 @@ export function Nav() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === `/dashboard/period/${activePeriod.id}`}
+                isActive={pathname.startsWith(`/dashboard/period/${activePeriod.id}`)}
                 tooltip="Periodo Actual"
               >
                 <Link href={`/dashboard/period/${activePeriod.id}`}>
@@ -95,7 +112,7 @@ export function Nav() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={pathname === "/dashboard/projections"}
+              isActive={pathname.startsWith("/dashboard/projections")}
               tooltip="Proyecciones"
             >
               <Link href="/dashboard/projections">
@@ -108,7 +125,7 @@ export function Nav() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={pathname === "/dashboard/profile"}
+              isActive={pathname.startsWith("/dashboard/profile")}
               tooltip="Perfil"
             >
               <Link href="/dashboard/profile">
@@ -121,7 +138,7 @@ export function Nav() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={pathname === "/dashboard/settings"}
+              isActive={pathname.startsWith("/dashboard/settings")}
               tooltip="Ajustes"
             >
               <Link href="/dashboard/settings">

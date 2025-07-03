@@ -1,6 +1,6 @@
 
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -13,30 +13,42 @@ const firebaseConfig = {
 };
 
 // Validate that all Firebase config variables are present.
-// This is a common source of errors when deploying to services like Vercel.
 const missingConfigKeys = Object.entries(firebaseConfig)
   .filter(([key, value]) => !value)
   .map(([key]) => key);
 
 if (missingConfigKeys.length > 0) {
   const errorMessage = `Firebase configuration is incomplete. The following environment variables are missing: ${missingConfigKeys.join(", ")}. Please make sure all NEXT_PUBLIC_FIREBASE_* variables are set in your deployment environment.`;
-  console.error(errorMessage); // Log the error clearly in the console.
-  throw new Error(errorMessage);
+  console.error(errorMessage);
+  if (typeof window !== "undefined") {
+    // Only throw error on client side to avoid build failures
+    throw new Error(errorMessage);
+  }
 }
-
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-enableIndexedDbPersistence(db)
-  .catch((err) => {
-    if (err.code == 'failed-precondition') {
-      console.warn("Firestore persistence failed to enable. This can happen if multiple tabs are open.");
-    } else if (err.code == 'unimplemented') {
-      console.warn("Firestore persistence is not supported in this browser.");
-    }
-  });
+// Configure Google Auth Provider
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({
+  prompt: 'select_account',
+  hd: 'universidad-une.com', // Restrict to a specific domain if needed
+});
 
-export { app, auth, db };
+
+// Try to enable offline persistence
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db)
+    .catch((err) => {
+      if (err.code == 'failed-precondition') {
+        console.warn("Firestore persistence failed to enable. This can happen if multiple tabs are open.");
+      } else if (err.code == 'unimplemented') {
+        console.warn("Firestore persistence is not supported in this browser.");
+      }
+    });
+}
+
+export { app, auth, db, provider };
