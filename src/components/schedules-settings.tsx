@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { DaySchedule, Location, Schedule } from "@/lib/types";
 import { Pencil, PlusCircle, MoreVertical, Trash2 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // --- ScheduleEditDialog (New Component) ---
 
@@ -47,6 +48,13 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
         return schedule ? JSON.parse(JSON.stringify(schedule)) : JSON.parse(JSON.stringify(BLANK_SCHEDULE));
     });
 
+    const [bulkStartTime, setBulkStartTime] = useState("");
+    const [bulkEndTime, setBulkEndTime] = useState("");
+    const [bulkStartLocation, setBulkStartLocation] = useState("");
+    const [bulkEndLocation, setBulkEndLocation] = useState("");
+    const [bulkIncludeSaturdays, setBulkIncludeSaturdays] = useState(true);
+    const { toast } = useToast();
+
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({...prev, name: e.target.value}));
     };
@@ -63,6 +71,41 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
     const handleSaveChanges = () => {
         onSave(formData);
     };
+
+    const handleBulkApply = () => {
+        if (!bulkStartTime || !bulkStartLocation || !bulkEndTime || !bulkEndLocation) {
+            toast({
+                variant: "destructive",
+                title: "Datos incompletos",
+                description: "Por favor, completa todos los campos del horario rápido para aplicarlo."
+            });
+            return;
+        }
+
+        setFormData(prev => {
+            const newEntries = prev.entries.map(entry => {
+                const isSaturday = entry.day === 'Sábado';
+    
+                if (isSaturday && !bulkIncludeSaturdays) {
+                    return entry;
+                }
+                
+                return {
+                    ...entry,
+                    startTime: bulkStartTime,
+                    endTime: bulkEndTime,
+                    startLocation: bulkStartLocation,
+                    endLocation: bulkEndLocation,
+                };
+            });
+            return { ...prev, entries: newEntries };
+        });
+
+        toast({
+            title: "Horario Aplicado",
+            description: "El horario rápido se ha aplicado a los días correspondientes."
+        });
+    };
     
     const isCreating = !schedule?.id;
 
@@ -78,15 +121,51 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="template-name">Nombre de la Plantilla</Label>
-                        <Input 
-                            id="template-name" 
-                            placeholder="Ej. Horario de Verano"
-                            value={formData.name}
-                            onChange={handleNameChange}
-                        />
+                <div className="space-y-2 pt-4">
+                    <Label htmlFor="template-name">Nombre de la Plantilla</Label>
+                    <Input 
+                        id="template-name" 
+                        placeholder="Ej. Horario de Verano"
+                        value={formData.name}
+                        onChange={handleNameChange}
+                    />
+                </div>
+
+                <div className="space-y-4 rounded-md border p-4">
+                    <h4 className="font-medium text-sm">Definir Horario Rápido</h4>
+                    <p className="text-sm text-muted-foreground -mt-2">
+                        Aplica el mismo horario a varios días a la vez. Esto modificará la tabla de abajo.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                         <div className="space-y-2">
+                            <Label htmlFor="bulk-start-time">Hora Entrada</Label>
+                            <Input id="bulk-start-time" type="time" value={bulkStartTime} onChange={(e) => setBulkStartTime(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="bulk-start-location">Lugar Entrada</Label>
+                            <Select value={bulkStartLocation} onValueChange={setBulkStartLocation}>
+                                <SelectTrigger id="bulk-start-location"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                <SelectContent>{userLocations.map(loc => (<SelectItem key={`${loc.id}-bulk-start`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="bulk-end-time">Hora Salida</Label>
+                            <Input id="bulk-end-time" type="time" value={bulkEndTime} onChange={(e) => setBulkEndTime(e.target.value)} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="bulk-end-location">Lugar Salida</Label>
+                            <Select value={bulkEndLocation} onValueChange={setBulkEndLocation}>
+                                <SelectTrigger id="bulk-end-location"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                <SelectContent>{userLocations.map(loc => (<SelectItem key={`${loc.id}-bulk-end`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="bulk-saturdays" checked={bulkIncludeSaturdays} onCheckedChange={(checked) => setBulkIncludeSaturdays(checked === true)} />
+                            <Label htmlFor="bulk-saturdays" className="font-normal text-sm">Incluir sábados</Label>
+                        </div>
+                        <Button type="button" variant="secondary" onClick={handleBulkApply}>Aplicar a Días</Button>
                     </div>
                 </div>
 
@@ -223,10 +302,9 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
         if (!timeStr) return "---";
         const [hours, minutes] = timeStr.split(":");
         if (isNaN(parseInt(hours)) || isNaN(parseInt(minutes))) return "---";
-        const h = parseInt(hours, 10);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const formattedHours = h % 12 || 12;
-        return `${String(formattedHours).padStart(2, '0')}:${minutes} ${ampm}`;
+        const d = new Date();
+        d.setHours(parseInt(hours), parseInt(minutes));
+        return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
   return (
