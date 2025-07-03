@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -21,62 +20,46 @@ import { useSettings } from "@/context/settings-context";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [isProcessingLogin, setIsProcessingLogin] = useState(true); // Start true to show loader on initial load
   const { toast } = useToast();
-  const { user, isLoading: isAuthLoading } = useSettings();
+  const { user, isLoading } = useSettings();
+  const [isProcessingClick, setIsProcessingClick] = useState(false);
 
   useEffect(() => {
-    // This effect runs once on component mount to process any pending redirect sign-in.
-    const processRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        // If 'result' is not null, it means a sign-in redirect has just completed.
-        // The onAuthStateChanged listener in SettingsProvider will handle the user state update,
-        // and the other useEffect will then redirect to the dashboard.
-        // We don't need to do anything with the 'result' object here.
-      } catch (error) {
-        const authError = error as AuthError;
-        // Handle specific errors, e.g., account exists with different credential
-        console.error("Error processing redirect result:", authError);
-        toast({
-          variant: "destructive",
-          title: "Error de inicio de sesión",
-          description: "Hubo un problema al verificar tus credenciales. Por favor, intenta de nuevo.",
-        });
-      } finally {
-        // We're done processing the redirect, so we can stop showing the main loader.
-        // The rest of the loading logic is handled by isAuthLoading and the user object.
-        setIsProcessingLogin(false);
-      }
-    };
-
-    processRedirectResult();
+    // Process the redirect result on page load.
+    // The onAuthStateChanged listener in SettingsProvider will handle the user state.
+    // We just need to handle potential errors here.
+    getRedirectResult(auth).catch((error) => {
+      const authError = error as AuthError;
+      console.error("Error processing redirect result:", authError);
+      toast({
+        variant: "destructive",
+        title: "Error de inicio de sesión",
+        description: `Hubo un problema al verificar tus credenciales. (${authError.code})`,
+      });
+    });
   }, [toast]);
 
   useEffect(() => {
     // This effect handles redirecting the user to the dashboard once they are logged in.
-    if (!isAuthLoading && user) {
+    if (!isLoading && user) {
       router.replace("/dashboard");
     }
-  }, [user, isAuthLoading, router]);
+  }, [user, isLoading, router]);
 
   const handleGoogleLogin = async () => {
-    setIsProcessingLogin(true); // Show loader when user clicks login
+    setIsProcessingClick(true);
     const provider = new GoogleAuthProvider();
     const institutionDomain = process.env.NEXT_PUBLIC_INSTITUTION_DOMAIN;
 
-    if (!institutionDomain) {
-      console.error("El dominio de la institución no está configurado en las variables de entorno.");
+    if (institutionDomain) {
+      provider.setCustomParameters({ hd: institutionDomain });
+    } else {
+      console.warn("ADVERTENCIA: No se ha configurado un dominio institucional (NEXT_PUBLIC_INSTITUTION_DOMAIN). Se permitirá el acceso desde cualquier cuenta de Google. Esto es inseguro para producción.");
       toast({
-        variant: "destructive",
-        title: "Error de Configuración",
-        description: "El administrador no ha configurado el dominio de la institución.",
+          title: "Advertencia de Configuración",
+          description: "No se ha configurado un dominio institucional. Se permitirá cualquier cuenta.",
       });
-      setIsProcessingLogin(false);
-      return;
     }
-
-    provider.setCustomParameters({ hd: institutionDomain });
 
     try {
       await signInWithRedirect(auth, provider);
@@ -90,16 +73,16 @@ export default function LoginPage() {
         title: "Error de Autenticación",
         description: "No se pudo iniciar el proceso de inicio de sesión. Por favor, inténtalo de nuevo.",
       });
-      setIsProcessingLogin(false);
+      setIsProcessingClick(false);
     }
   };
 
-  // Show a loading screen while we process a potential redirect, while auth state is loading, or if a user object already exists (which means we are about to redirect).
-  if (isProcessingLogin || isAuthLoading || user) {
+  // Show a loading screen while we wait for the auth state to be resolved
+  // or if the user is already logged in (in which case we're about to redirect).
+  if (isLoading || user) {
     return <LoadingScreen />;
   }
 
-  // Only show the login page if we're done loading and there's no user.
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-secondary/40 p-4">
       <Card className="w-full max-w-sm">
@@ -119,10 +102,10 @@ export default function LoginPage() {
             variant="outline"
             className="w-full h-12 text-base"
             onClick={handleGoogleLogin}
-            disabled={isProcessingLogin}
+            disabled={isProcessingClick}
           >
             <GoogleIcon className="mr-2 h-5 w-5" />
-            Continuar con Google
+            {isProcessingClick ? "Redirigiendo..." : "Continuar con Google"}
           </Button>
         </CardContent>
         <CardFooter>
