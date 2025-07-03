@@ -72,8 +72,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setIsLoading(true);
-      setUser(firebaseUser);
+      
       if (firebaseUser) {
+        setUser(firebaseUser);
         // User is logged in, load their data from localStorage
         try {
           const storedData = localStorage.getItem(`userAppData-${firebaseUser.uid}`);
@@ -104,11 +105,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           console.error("Failed to load data from localStorage", error);
         }
       } else {
-        // User is logged out, reset state
-        setUserLocations([]);
-        setSchedules([]);
-        setActiveScheduleId(null);
-        setPeriods([]);
+        // User is logged out, only clear the user object.
+        // The rest of the state will be overwritten on next login.
+        setUser(null);
       }
       setIsLoading(false);
     });
@@ -118,6 +117,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   // Effect for saving user data to localStorage whenever it changes
   useEffect(() => {
+    // Only save data if a user is logged in and the app is not in a loading state.
     if (!isLoading && user) {
       const dataToStore = {
         userLocations,
