@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -46,7 +46,8 @@ export function PeriodsList({ periods }: PeriodsListProps) {
     // State for delete confirmation
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [periodToDelete, setPeriodToDelete] = useState<Period | null>(null);
-
+    
+    const router = useRouter();
     const { setPeriods } = useSettings();
     const { toast } = useToast();
 
@@ -108,26 +109,22 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/dashboard/period/${period.id}`} className="w-full">
-                                                            <ArrowRight className="mr-2 h-4 w-4" />
-                                                            <span>Ver Incidencias</span>
-                                                        </Link>
+                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/period/${period.id}`)} className="cursor-pointer">
+                                                        <ArrowRight className="mr-2 h-4 w-4" />
+                                                        <span>Ver Incidencias</span>
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/dashboard/projections?period=${period.id}`} className="w-full">
-                                                            <BarChart className="mr-2 h-4 w-4" />
-                                                            <span>Realizar Proyección</span>
-                                                        </Link>
+                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/projections?period=${period.id}`)} className="cursor-pointer">
+                                                        <BarChart className="mr-2 h-4 w-4" />
+                                                        <span>Realizar Proyección</span>
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleEditClick(period)}>
+                                                    <DropdownMenuItem onClick={() => handleEditClick(period)} className="cursor-pointer">
                                                         <Pencil className="mr-2 h-4 w-4" />
                                                         <span>Editar</span>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
                                                         onClick={() => handleDeleteTrigger(period)}
-                                                        className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                                                        className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground"
                                                     >
                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                         <span>Eliminar</span>
@@ -178,26 +175,22 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`/dashboard/period/${period.id}`}>
-                                                                <ArrowRight className="mr-2 h-4 w-4" />
-                                                                <span>Ver Incidencias</span>
-                                                            </Link>
+                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/period/${period.id}`)} className="cursor-pointer">
+                                                            <ArrowRight className="mr-2 h-4 w-4" />
+                                                            <span>Ver Incidencias</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem asChild>
-                                                          <Link href={`/dashboard/projections?period=${period.id}`}>
-                                                              <BarChart className="mr-2 h-4 w-4" />
-                                                              <span>Realizar Proyección</span>
-                                                          </Link>
+                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/projections?period=${period.id}`)} className="cursor-pointer">
+                                                            <BarChart className="mr-2 h-4 w-4" />
+                                                            <span>Realizar Proyección</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleEditClick(period)}>
+                                                        <DropdownMenuItem onClick={() => handleEditClick(period)} className="cursor-pointer">
                                                             <Pencil className="mr-2 h-4 w-4" />
                                                             <span>Editar</span>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem
                                                             onClick={() => handleDeleteTrigger(period)}
-                                                            className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                                                            className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground"
                                                         >
                                                             <Trash2 className="mr-2 h-4 w-4" />
                                                             <span>Eliminar</span>
