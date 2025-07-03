@@ -412,7 +412,7 @@ export default function ProjectionsPage() {
                          const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
                          const deviationMessage = checkDeviation(day);
                          return (
-                           <div key={day.date} className={cn("border rounded-lg p-4", day.entry && "bg-green-500/10 border-green-500/20")}>
+                           <div key={day.date} className={cn("border rounded-lg p-4", day.entry && day.exit && "bg-green-500/10 border-green-500/20")}>
                               <div className="flex justify-between items-start mb-4">
                                 <p className="font-medium capitalize">
                                   {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
@@ -480,7 +480,7 @@ export default function ProjectionsPage() {
                             const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
                             const deviationMessage = checkDeviation(day);
                             return (
-                                <TableRow key={day.date} className={cn(day.entry && "bg-green-500/10")}>
+                                <TableRow key={day.date} className={cn(day.entry && day.exit && "bg-green-500/10")}>
                                     <TableCell className="font-medium capitalize whitespace-nowrap">
                                       <div className="flex items-center gap-2">
                                         {format(parseISO(day.date), "EEEE, d", { locale: es })}
