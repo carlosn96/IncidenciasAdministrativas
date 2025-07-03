@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useMemo } from "react";
 import {
   SidebarHeader,
   SidebarMenu,
@@ -26,23 +27,23 @@ import {
   Settings,
   LogOut,
   BarChart,
+  ClipboardList,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useSettings } from "@/context/settings-context";
-
-const links = [
-  { href: "/dashboard", label: "Resumen", icon: LayoutDashboard },
-  { href: "/dashboard/projections", label: "Proyecciones", icon: BarChart },
-  { href: "/dashboard/profile", label: "Perfil", icon: User },
-  { href: "/dashboard/settings", label: "Ajustes", icon: Settings },
-];
+import { isWithinInterval, endOfDay } from "date-fns";
 
 export function Nav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useSettings();
+  const { user, periods } = useSettings();
+
+  const activePeriod = useMemo(() => {
+    const today = new Date();
+    return periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
+  }, [periods]);
 
   const handleSignOut = async () => {
     try {
@@ -68,20 +69,72 @@ export function Nav() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
-          {links.map((link) => (
-            <SidebarMenuItem key={link.href}>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === "/dashboard"}
+              tooltip="Resumen"
+            >
+              <Link href="/dashboard">
+                <LayoutDashboard />
+                <span>Resumen</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          
+          {activePeriod && (
+            <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === link.href}
-                tooltip={link.label}
+                isActive={pathname === `/dashboard/period/${activePeriod.id}`}
+                tooltip="Periodo Actual"
               >
-                <Link href={link.href}>
-                  <link.icon />
-                  <span>{link.label}</span>
+                <Link href={`/dashboard/period/${activePeriod.id}`}>
+                  <ClipboardList />
+                  <span>Periodo Actual</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          ))}
+          )}
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === "/dashboard/projections"}
+              tooltip="Proyecciones"
+            >
+              <Link href="/dashboard/projections">
+                <BarChart />
+                <span>Proyecciones</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === "/dashboard/profile"}
+              tooltip="Perfil"
+            >
+              <Link href="/dashboard/profile">
+                <User />
+                <span>Perfil</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === "/dashboard/settings"}
+              tooltip="Ajustes"
+            >
+              <Link href="/dashboard/settings">
+                <Settings />
+                <span>Ajustes</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
       <SidebarSeparator />
