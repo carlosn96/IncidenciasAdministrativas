@@ -81,6 +81,10 @@ export default function DashboardPage() {
       progressPercentage
     };
   }, [activePeriod]);
+  
+  const showProjectedEntry = !!(todayLaborDay?.projectedEntry && !todayLaborDay.entry);
+  const showProjectedExit = !!todayLaborDay?.projectedExit;
+  const showProjectionCard = (showProjectedEntry || showProjectedExit) && !todayLaborDay?.exit;
 
   return (
     <>
@@ -148,7 +152,7 @@ export default function DashboardPage() {
             </Card>
         )}
         
-        {todayLaborDay?.projectedEntry && !todayLaborDay?.entry && (
+        {showProjectionCard && todayLaborDay && (
           <Card>
             <CardHeader className="flex flex-row items-center gap-4 pb-4">
               <div className="flex items-center justify-center bg-muted text-muted-foreground rounded-full h-10 w-10">
@@ -160,18 +164,20 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="space-y-1">
-                <p className="font-semibold">Entrada Proyectada</p>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>{formatTime12h(todayLaborDay.projectedEntry.time)}</span>
+              {showProjectedEntry && todayLaborDay.projectedEntry && (
+                <div className="space-y-1">
+                  <p className="font-semibold">Entrada Proyectada</p>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>{formatTime12h(todayLaborDay.projectedEntry.time)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{todayLaborDay.projectedEntry.location}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{todayLaborDay.projectedEntry.location}</span>
-                </div>
-              </div>
-              {todayLaborDay.projectedExit && (
+              )}
+              {showProjectedExit && todayLaborDay.projectedExit && (
                 <div className="space-y-1">
                   <p className="font-semibold">Salida Proyectada</p>
                   <div className="flex items-center gap-2 text-muted-foreground">
