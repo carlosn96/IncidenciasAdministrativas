@@ -75,7 +75,7 @@ export function Nav() {
             <AppLogo className="h-6 w-6 shrink-0" />
           </div>
           <span className="text-lg font-semibold text-sidebar-primary duration-200 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0">
-            Incidencias
+            Incidencias Admin.
           </span>
         </Link>
       </SidebarHeader>

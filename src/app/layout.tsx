@@ -13,7 +13,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Incidencias Administrativas",
-  description: "Sistema de Gestión de Incidencias Administrativas",
+  description: "Sistema de Gestión de Incidencias Administrativas para el Centro Universitario UNE A. C.",
 };
 
 export const dynamic = "force-dynamic";

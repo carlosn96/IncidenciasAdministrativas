@@ -69,7 +69,7 @@ export default function LoginPage() {
             <AppLogo className="h-10 w-auto" />
           </div>
           <CardTitle className="text-2xl font-bold font-headline">
-            Sistema de Incidencias
+            Incidencias Administrativas
           </CardTitle>
           <CardDescription>
             Inicia sesión con tu cuenta de Google para continuar.
@@ -95,7 +95,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter>
           <p className="w-full text-center text-xs text-muted-foreground">
-            Desarrollado para la Coordinación Académica
+            Centro Universitario UNE A. C.
           </p>
         </CardFooter>
       </Card>
