@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,9 +35,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { ScheduleEntry, Location } from "@/lib/types";
-import { Pencil } from "lucide-react";
+import { Pencil, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SchedulesSettingsProps {
@@ -48,9 +49,30 @@ interface SchedulesSettingsProps {
 
 export function SchedulesSettings({ userLocations, schedule, setSchedule }: SchedulesSettingsProps) {
     const { toast } = useToast();
+    
+    // State for individual day editing
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingDay, setEditingDay] = useState<ScheduleEntry | null>(null);
     const [dayData, setDayData] = useState<ScheduleEntry | null>(null);
+
+    // State for general schedule creation
+    const [isGeneralDialogOpen, setIsGeneralDialogOpen] = useState(false);
+    const [generalStartTime, setGeneralStartTime] = useState("");
+    const [generalEndTime, setGeneralEndTime] = useState("");
+    const [generalStartLocation, setGeneralStartLocation] = useState("");
+    const [generalEndLocation, setGeneralEndLocation] = useState("");
+    const [applyToSaturday, setApplyToSaturday] = useState(false);
+
+
+    useEffect(() => {
+        if (!isGeneralDialogOpen) {
+            setGeneralStartTime("");
+            setGeneralEndTime("");
+            setGeneralStartLocation("");
+            setGeneralEndLocation("");
+            setApplyToSaturday(false);
+        }
+    }, [isGeneralDialogOpen]);
 
     const handleOpenEditDialog = (day: ScheduleEntry) => {
       setEditingDay(day);
@@ -66,6 +88,14 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
 
     const handleSaveChanges = () => {
       if (dayData) {
+          if (dayData.startTime && dayData.endTime && dayData.startTime > dayData.endTime) {
+            toast({
+              variant: "destructive",
+              title: "Error de validación",
+              description: "La hora de salida no puede ser anterior a la hora de entrada.",
+            });
+            return;
+          }
           setSchedule(prevSchedule =>
               prevSchedule.map(day => (day.day === dayData.day ? dayData : day))
           );
@@ -78,6 +108,47 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
       }
     };
     
+    const handleApplyGeneralSchedule = () => {
+        if (!generalStartTime || !generalEndTime || !generalStartLocation || !generalEndLocation) {
+            toast({
+                variant: "destructive",
+                title: "Campos incompletos",
+                description: "Por favor, completa todos los campos del horario general para continuar.",
+            });
+            return;
+        }
+
+        if (generalStartTime > generalEndTime) {
+            toast({
+                variant: "destructive",
+                title: "Error de validación",
+                description: "La hora de salida no puede ser anterior a la hora de entrada.",
+            });
+            return;
+        }
+
+        const updatedSchedule = schedule.map(day => {
+            const isSaturday = day.day === 'Sábado';
+            if (!isSaturday || (isSaturday && applyToSaturday)) {
+                return {
+                    ...day,
+                    startTime: generalStartTime,
+                    endTime: generalEndTime,
+                    startLocation: generalStartLocation,
+                    endLocation: generalEndLocation,
+                };
+            }
+            return day;
+        });
+
+        setSchedule(updatedSchedule);
+        toast({
+            title: "Horario General Aplicado",
+            description: "El horario semanal ha sido actualizado correctamente.",
+        });
+        setIsGeneralDialogOpen(false);
+    };
+
     const formatTime12h = (timeStr: string) => {
         if (!timeStr) return "---";
         const [hours, minutes] = timeStr.split(":");
@@ -92,10 +163,18 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Horario Semanal por Defecto</CardTitle>
-          <CardDescription>
-          Este es su horario de trabajo semanal predeterminado. Puede ser anulado por incidencias específicas.
-          </CardDescription>
+            <div className="flex justify-between items-start gap-4 flex-wrap">
+                <div>
+                    <CardTitle>Horario Semanal por Defecto</CardTitle>
+                    <CardDescription>
+                    Este es su horario de trabajo semanal predeterminado. Puede ser anulado por incidencias específicas.
+                    </CardDescription>
+                </div>
+                <Button onClick={() => setIsGeneralDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Crear Horario General
+                </Button>
+            </div>
         </CardHeader>
         <CardContent>
             {/* Mobile View */}
@@ -167,6 +246,63 @@ export function SchedulesSettings({ userLocations, schedule, setSchedule }: Sche
             </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isGeneralDialogOpen} onOpenChange={setIsGeneralDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Crear Horario General</DialogTitle>
+                <DialogDescription>
+                    Define un horario de entrada y salida que se aplicará a los días seleccionados.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-6 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="general-start-time">Hora Entrada</Label>
+                        <Input id="general-start-time" type="time" value={generalStartTime} onChange={e => setGeneralStartTime(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="general-end-time">Hora Salida</Label>
+                        <Input id="general-end-time" type="time" value={generalEndTime} onChange={e => setGeneralEndTime(e.target.value)} />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="general-start-location">Lugar Entrada</Label>
+                        <Select value={generalStartLocation} onValueChange={setGeneralStartLocation}>
+                            <SelectTrigger id="general-start-location">
+                                <SelectValue placeholder="Selecciona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {userLocations.map(loc => <SelectItem key={`${loc.id}-gen-start`} value={loc.name}>{loc.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="general-end-location">Lugar Salida</Label>
+                        <Select value={generalEndLocation} onValueChange={setGeneralEndLocation}>
+                            <SelectTrigger id="general-end-location">
+                                <SelectValue placeholder="Selecciona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {userLocations.map(loc => <SelectItem key={`${loc.id}-gen-end`} value={loc.name}>{loc.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox id="apply-to-saturday" checked={applyToSaturday} onCheckedChange={(checked) => setApplyToSaturday(checked === true)} />
+                    <Label htmlFor="apply-to-saturday" className="font-normal text-sm">
+                        Incluir el sábado en este horario general
+                    </Label>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsGeneralDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleApplyGeneralSchedule}>Aplicar a la Semana</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
