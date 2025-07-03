@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { BarChart, Save, PlusCircle } from "lucide-react";
@@ -269,7 +270,90 @@ export default function ProjectionsPage() {
                     </Card>
                 )}
     
-                <div className="border rounded-lg overflow-x-auto">
+                {/* Mobile View */}
+                <div className="md:hidden space-y-4">
+                  {projections.map((day) => {
+                    const entryForCalc = day.entry || day.projectedEntry;
+                    const exitForCalc = day.exit || day.projectedExit;
+                    const projectedMinutes = calculateMinutes(entryForCalc, exitForCalc);
+                    const actualMinutes = calculateMinutes(day.entry, day.exit);
+                    
+                    return (
+                       <div key={day.date} className={cn("border rounded-lg p-4", actualMinutes > 0 && "bg-green-500/10")}>
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="font-medium capitalize">
+                              {format(parseISO(day.date), "EEEE", { locale: es })}
+                              <span className="block text-sm text-muted-foreground font-normal">
+                                {format(parseISO(day.date), "d 'de' LLLL", { locale: es })}
+                              </span>
+                            </div>
+                            <div className="text-right shrink-0 ml-2">
+                              <p className="text-xs text-muted-foreground">Proyectado</p>
+                              <p className="font-mono font-semibold">{formatMinutesToHours(projectedMinutes)}</p>
+                              {actualMinutes > 0 && (
+                                <>
+                                  <p className="text-xs text-muted-foreground mt-1">Real</p>
+                                  <p className="font-mono font-bold text-green-600">{formatMinutesToHours(actualMinutes)}</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-4">
+                              <div className="space-y-2">
+                                  <Label className="text-muted-foreground">Entrada</Label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                      <Input
+                                          type="time"
+                                          value={day.entry?.time || day.projectedEntry?.time || ""}
+                                          onChange={(e) => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)}
+                                          disabled={!!day.entry}
+                                      />
+                                      <Select
+                                          value={day.entry?.location || day.projectedEntry?.location || ""}
+                                          onValueChange={(value) => handleProjectionChange(day.date, 'projectedEntry', 'location', value)}
+                                          disabled={!!day.entry}
+                                      >
+                                          <SelectTrigger>
+                                              <SelectValue placeholder="Lugar..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                              {userLocations.map(loc => <SelectItem key={`${loc.id}-proj-entry-${day.date}`} value={loc.name}>{loc.name}</SelectItem>)}
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
+                              </div>
+                              <div className="space-y-2">
+                                  <Label className="text-muted-foreground">Salida</Label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                      <Input
+                                          type="time"
+                                          value={day.exit?.time || day.projectedExit?.time || ""}
+                                          onChange={(e) => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)}
+                                          disabled={!!day.exit}
+                                      />
+                                      <Select
+                                          value={day.exit?.location || day.projectedExit?.location || ""}
+                                          onValueChange={(value) => handleProjectionChange(day.date, 'projectedExit', 'location', value)}
+                                          disabled={!!day.exit}
+                                      >
+                                          <SelectTrigger>
+                                              <SelectValue placeholder="Lugar..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                              {userLocations.map(loc => <SelectItem key={`${loc.id}-proj-exit-${day.date}`} value={loc.name}>{loc.name}</SelectItem>)}
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
+                              </div>
+                          </div>
+                        </div>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop View */}
+                <div className="hidden md:block border rounded-lg overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -284,7 +368,6 @@ export default function ProjectionsPage() {
                     </TableHeader>
                     <TableBody>
                       {projections.map((day) => {
-                        // For calculating projected hours, prioritize actual times, then projected times
                         const entryForCalc = day.entry || day.projectedEntry;
                         const exitForCalc = day.exit || day.projectedExit;
                         const projectedMinutes = calculateMinutes(entryForCalc, exitForCalc);
@@ -300,7 +383,6 @@ export default function ProjectionsPage() {
                                     type="time"
                                     value={day.entry?.time || day.projectedEntry?.time || ""}
                                     onChange={(e) => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)}
-                                    className="w-32"
                                     disabled={!!day.entry}
                                 />
                                 </TableCell>
@@ -310,7 +392,7 @@ export default function ProjectionsPage() {
                                       onValueChange={(value) => handleProjectionChange(day.date, 'projectedEntry', 'location', value)}
                                       disabled={!!day.entry}
                                   >
-                                      <SelectTrigger className="w-48">
+                                      <SelectTrigger>
                                           <SelectValue placeholder="Selecciona..." />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -323,7 +405,6 @@ export default function ProjectionsPage() {
                                     type="time"
                                     value={day.exit?.time || day.projectedExit?.time || ""}
                                     onChange={(e) => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)}
-                                    className="w-32"
                                     disabled={!!day.exit}
                                 />
                                 </TableCell>
@@ -333,7 +414,7 @@ export default function ProjectionsPage() {
                                       onValueChange={(value) => handleProjectionChange(day.date, 'projectedExit', 'location', value)}
                                       disabled={!!day.exit}
                                   >
-                                      <SelectTrigger className="w-48">
+                                      <SelectTrigger>
                                           <SelectValue placeholder="Selecciona..." />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -353,7 +434,7 @@ export default function ProjectionsPage() {
                     </TableBody>
                   </Table>
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-end pt-6">
                     <Button onClick={handleSaveChanges}>
                         <Save className="mr-2 h-4 w-4"/>
                         Guardar Proyección
