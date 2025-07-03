@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 
 // Helper functions
 const calculateMinutes = (entry?: Incident, exit?: Incident): number => {
-  if (!entry?.time || !exit?.time) return 0;
+  if (!entry?.time || !exit?.time || !entry.location || !exit.location) return 0;
   const [startHour, startMinute] = entry.time.split(":").map(Number);
   const [endHour, endMinute] = exit.time.split(":").map(Number);
   const startDate = new Date(0);
@@ -59,7 +59,7 @@ const formatMinutesToHours = (totalMinutes: number): string => {
 
 export default function ProjectionsPage() {
   const searchParams = useSearchParams();
-  const { periods, setPeriods } = useSettings();
+  const { periods, setPeriods, userLocations } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
   const { toast } = useToast();
@@ -68,6 +68,9 @@ export default function ProjectionsPage() {
     const periodIdFromUrl = searchParams.get("period");
     if (periodIdFromUrl && periods.some(p => p.id === periodIdFromUrl)) {
       setSelectedPeriodId(periodIdFromUrl);
+    } else if (periods.length > 0) {
+      // Select the most recent period by default if none is in URL
+      setSelectedPeriodId(periods[0].id);
     }
   }, [searchParams, periods]);
 
@@ -84,15 +87,20 @@ export default function ProjectionsPage() {
     }
   }, [selectedPeriod]);
 
-  const handleProjectionChange = (date: string, type: 'projectedEntry' | 'projectedExit', time: string) => {
-    setProjections(prevProjections =>
-      prevProjections.map(day => {
+  const handleProjectionChange = (
+    date: string,
+    type: "projectedEntry" | "projectedExit",
+    field: "time" | "location",
+    value: string
+  ) => {
+    setProjections((prevProjections) =>
+      prevProjections.map((day) => {
         if (day.date === date) {
           const updatedDay = { ...day };
           if (!updatedDay[type]) {
-             updatedDay[type] = { time: "", location: "" }; // Initialize if not present
+            updatedDay[type] = { time: "", location: "" };
           }
-          updatedDay[type]!.time = time;
+          updatedDay[type]![field] = value;
           return updatedDay;
         }
         return day;
@@ -105,9 +113,10 @@ export default function ProjectionsPage() {
 
     // Validation logic
     for (const day of projections) {
-      // Use actual time if it exists, otherwise use projected time.
       const entryTime = day.entry?.time || day.projectedEntry?.time;
+      const entryLocation = day.entry?.location || day.projectedEntry?.location;
       const exitTime = day.exit?.time || day.projectedExit?.time;
+      const exitLocation = day.exit?.location || day.projectedExit?.location;
 
       if (entryTime && exitTime && entryTime > exitTime) {
         toast({
@@ -115,14 +124,41 @@ export default function ProjectionsPage() {
           title: "Error de Validación",
           description: `En la fecha ${format(parseISO(day.date), "d 'de' LLLL", { locale: es })}, la hora de entrada no puede ser posterior a la de salida.`,
         });
-        return; // Stop the save process
+        return;
+      }
+      
+      if ((entryTime && !entryLocation) || (!entryTime && entryLocation)) {
+          toast({
+              variant: "destructive",
+              title: "Datos Incompletos",
+              description: `Para la entrada del día ${format(parseISO(day.date), "d 'de' LLLL", { locale: es })}, debe especificar tanto la hora como el lugar.`,
+          });
+          return;
+      }
+      if ((exitTime && !exitLocation) || (!exitTime && exitLocation)) {
+          toast({
+              variant: "destructive",
+              title: "Datos Incompletos",
+              description: `Para la salida del día ${format(parseISO(day.date), "d 'de' LLLL", { locale: es })}, debe especificar tanto la hora como el lugar.`,
+          });
+          return;
       }
     }
 
     setPeriods(prevPeriods =>
       prevPeriods.map(p => {
         if (p.id === selectedPeriodId) {
-          return { ...p, laborDays: projections };
+           const cleanedProjections = projections.map(day => {
+            const cleanedDay = {...day};
+            if (cleanedDay.projectedEntry && (!cleanedDay.projectedEntry.time || !cleanedDay.projectedEntry.location)) {
+              delete cleanedDay.projectedEntry;
+            }
+            if (cleanedDay.projectedExit && (!cleanedDay.projectedExit.time || !cleanedDay.projectedExit.location)) {
+              delete cleanedDay.projectedExit;
+            }
+            return cleanedDay;
+          });
+          return { ...p, laborDays: cleanedProjections };
         }
         return p;
       })
@@ -237,9 +273,11 @@ export default function ProjectionsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Entrada Proyectada</TableHead>
-                        <TableHead>Salida Proyectada</TableHead>
+                        <TableHead className="min-w-[200px]">Fecha</TableHead>
+                        <TableHead>Hora Entrada</TableHead>
+                        <TableHead>Lugar Entrada</TableHead>
+                        <TableHead>Hora Salida</TableHead>
+                        <TableHead>Lugar Salida</TableHead>
                         <TableHead className="text-right">Horas Proyectadas</TableHead>
                         <TableHead className="text-right">Horas Reales</TableHead>
                       </TableRow>
@@ -254,33 +292,61 @@ export default function ProjectionsPage() {
     
                         return (
                             <TableRow key={day.date} className={cn(actualMinutes > 0 && "bg-green-500/10")}>
-                            <TableCell className="font-medium capitalize whitespace-nowrap">
-                              {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="time"
-                                value={day.entry?.time || day.projectedEntry?.time || ""}
-                                onChange={(e) => handleProjectionChange(day.date, 'projectedEntry', e.target.value)}
-                                className="w-32"
-                                disabled={!!day.entry}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="time"
-                                value={day.exit?.time || day.projectedExit?.time || ""}
-                                onChange={(e) => handleProjectionChange(day.date, 'projectedExit', e.target.value)}
-                                className="w-32"
-                                disabled={!!day.exit}
-                              />
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatMinutesToHours(projectedMinutes)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono font-bold">
-                              {formatMinutesToHours(actualMinutes)}
-                            </TableCell>
+                                <TableCell className="font-medium capitalize whitespace-nowrap">
+                                {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                                </TableCell>
+                                <TableCell>
+                                <Input
+                                    type="time"
+                                    value={day.entry?.time || day.projectedEntry?.time || ""}
+                                    onChange={(e) => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)}
+                                    className="w-32"
+                                    disabled={!!day.entry}
+                                />
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                      value={day.entry?.location || day.projectedEntry?.location || ""}
+                                      onValueChange={(value) => handleProjectionChange(day.date, 'projectedEntry', 'location', value)}
+                                      disabled={!!day.entry}
+                                  >
+                                      <SelectTrigger className="w-48">
+                                          <SelectValue placeholder="Selecciona..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          {userLocations.map(loc => <SelectItem key={`${loc.id}-proj-entry`} value={loc.name}>{loc.name}</SelectItem>)}
+                                      </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell>
+                                <Input
+                                    type="time"
+                                    value={day.exit?.time || day.projectedExit?.time || ""}
+                                    onChange={(e) => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)}
+                                    className="w-32"
+                                    disabled={!!day.exit}
+                                />
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                      value={day.exit?.location || day.projectedExit?.location || ""}
+                                      onValueChange={(value) => handleProjectionChange(day.date, 'projectedExit', 'location', value)}
+                                      disabled={!!day.exit}
+                                  >
+                                      <SelectTrigger className="w-48">
+                                          <SelectValue placeholder="Selecciona..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          {userLocations.map(loc => <SelectItem key={`${loc.id}-proj-exit`} value={loc.name}>{loc.name}</SelectItem>)}
+                                      </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                {formatMinutesToHours(projectedMinutes)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-bold">
+                                {formatMinutesToHours(actualMinutes)}
+                                </TableCell>
                           </TableRow>
                         );
                       })}
