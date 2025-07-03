@@ -111,8 +111,8 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-4xl p-0 flex flex-col h-full max-h-[90vh]">
+                <DialogHeader className="p-6 pb-4">
                     <DialogTitle>{isCreating ? 'Crear Nueva Plantilla de Horario' : 'Editar Plantilla de Horario'}</DialogTitle>
                     <DialogDescription>
                         {isCreating 
@@ -121,7 +121,7 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
                     </DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid gap-y-6 overflow-y-auto max-h-[70vh] p-1">
+                <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="template-name">Nombre de la Plantilla</Label>
                         <Input 
@@ -206,7 +206,7 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
                     </div>
                 </div>
 
-                <DialogFooter className="pt-4">
+                <DialogFooter className="p-6 pt-4 border-t">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                     <Button onClick={handleSaveChanges}>Guardar Cambios</Button>
                 </DialogFooter>
