@@ -53,6 +53,7 @@ export default function ProjectionsPage() {
   const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState("");
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const todayString = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
   const activeSchedule = useMemo(() => {
     return schedules.find((s) => s.id === activeScheduleId);
@@ -411,15 +412,22 @@ export default function ProjectionsPage() {
                       {projections.map((day) => {
                          const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
                          const deviationMessage = checkDeviation(day);
+                         const isToday = day.date === todayString;
                          return (
                            <div key={day.date} className={cn("border rounded-lg p-4", day.entry && day.exit && "bg-green-500/10 border-green-500/20")}>
                               <div className="flex justify-between items-start mb-4">
-                                <p className="font-medium capitalize">
-                                  {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                                <p className="font-medium capitalize flex items-center gap-2.5">
+                                  {isToday && (
+                                    <span className="relative flex h-2.5 w-2.5" title="Hoy">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                    </span>
+                                  )}
+                                  <span>{format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}</span>
                                   {deviationMessage && (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <button className="ml-2 align-middle"><AlertTriangle className="h-4 w-4 text-amber-500" /></button>
+                                        <button className="align-middle"><AlertTriangle className="h-4 w-4 text-amber-500" /></button>
                                       </TooltipTrigger>
                                       <TooltipContent><p>{deviationMessage}</p></TooltipContent>
                                     </Tooltip>
@@ -479,11 +487,18 @@ export default function ProjectionsPage() {
                           {projections.map((day) => {
                             const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
                             const deviationMessage = checkDeviation(day);
+                            const isToday = day.date === todayString;
                             return (
                                 <TableRow key={day.date} className={cn(day.entry && day.exit && "bg-green-500/10")}>
                                     <TableCell className="font-medium capitalize whitespace-nowrap">
-                                      <div className="flex items-center gap-2">
-                                        {format(parseISO(day.date), "EEEE, d", { locale: es })}
+                                      <div className="flex items-center gap-2.5">
+                                        {isToday && (
+                                            <span className="relative flex h-2.5 w-2.5" title="Hoy">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                            </span>
+                                        )}
+                                        <span>{format(parseISO(day.date), "EEEE, d", { locale: es })}</span>
                                         {deviationMessage && (
                                           <Tooltip>
                                             <TooltipTrigger asChild><button><AlertTriangle className="h-4 w-4 text-amber-500" /></button></TooltipTrigger>

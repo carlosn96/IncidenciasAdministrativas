@@ -88,6 +88,7 @@ export default function PeriodDetailPage() {
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
+  const todayString = format(new Date(), 'yyyy-MM-dd');
 
   // State for editing a single day
   const [isEditDayDialogOpen, setIsEditDayDialogOpen] = useState(false);
@@ -379,6 +380,7 @@ export default function PeriodDetailPage() {
                     <div className="border rounded-lg">
                         {laborDays.map((day, index) => {
                             const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+                            const isToday = day.date === todayString;
                             
                             const editButton = isFutureDay ? (
                                 <Tooltip>
@@ -415,8 +417,14 @@ export default function PeriodDetailPage() {
                             return (
                                 <div key={day.date} className={cn("p-4", index < laborDays.length - 1 && "border-b")}>
                                     <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-2">
-                                        <p className="font-medium capitalize">
-                                            {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                                        <p className="font-medium capitalize flex items-center gap-2.5">
+                                            {isToday && (
+                                                <span className="relative flex h-2.5 w-2.5" title="Hoy">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                                </span>
+                                            )}
+                                            <span>{format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}</span>
                                         </p>
                                         <p className="font-mono font-semibold text-right w-full sm:w-auto">
                                             {calculateWorkedHours(day.entry, day.exit)}
@@ -466,6 +474,7 @@ export default function PeriodDetailPage() {
                         {laborDays.length > 0 ? (
                             laborDays.map((day) => {
                                 const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+                                const isToday = day.date === todayString;
 
                                 const editButton = isFutureDay ? (
                                     <Tooltip>
@@ -498,7 +507,15 @@ export default function PeriodDetailPage() {
                                 return (
                                     <TableRow key={day.date}>
                                         <TableCell className="font-medium capitalize whitespace-nowrap">
-                                            {format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}
+                                            <div className="flex items-center gap-2.5">
+                                                {isToday && (
+                                                    <span className="relative flex h-2.5 w-2.5" title="Hoy">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                                    </span>
+                                                )}
+                                                <span>{format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}</span>
+                                            </div>
                                         </TableCell>
                                         <TableCell>{day.entry?.location || '---'}</TableCell>
                                         <TableCell>{formatTime12h(day.entry?.time)}</TableCell>
