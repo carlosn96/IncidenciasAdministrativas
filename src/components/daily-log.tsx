@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { Incident, DaySchedule } from "@/lib/types";
-import { Play, Square, MapPin, Pencil, Trash2, ArrowRight } from "lucide-react";
+import { Play, Square, MapPin, Pencil, Trash2, ArrowRight, Loader2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { format, isWithinInterval, parse, differenceInMinutes, endOfDay } from "date-fns";
@@ -85,6 +85,7 @@ export function DailyLog() {
   const [newTime, setNewTime] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [newManualLocation, setNewManualLocation] = useState("");
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   const activeSchedule = useMemo(() => {
     return schedules.find(s => s.id === activeScheduleId);
@@ -210,6 +211,7 @@ export function DailyLog() {
   };
 
   const handleSaveChanges = () => {
+    setSaveState('saving');
     const locationToSave = newLocation === 'manual' ? newManualLocation.trim() : newLocation;
 
     if (!editingIncident || !activePeriod || !todayLaborDay || !locationToSave) {
@@ -218,6 +220,7 @@ export function DailyLog() {
             title: "Datos incompletos",
             description: "Por favor, completa la hora y la ubicación.",
         });
+        setSaveState('idle');
         return;
     }
   
@@ -229,6 +232,7 @@ export function DailyLog() {
           title: "Hora de salida inválida",
           description: "La hora de salida no puede ser anterior a la hora de entrada.",
         });
+        setSaveState('idle');
         return;
       }
     }
@@ -239,6 +243,7 @@ export function DailyLog() {
           title: "Hora de entrada inválida",
           description: "La hora de entrada no puede ser posterior a la hora de salida.",
         });
+        setSaveState('idle');
         return;
       }
     }
@@ -263,12 +268,12 @@ export function DailyLog() {
     });
   
     setPeriods(updatedPeriods);
-    toast({
-      title: "Registro Actualizado",
-      description: `El registro de ${editingIncident.type.toLowerCase()} se ha actualizado.`,
-    });
-    setIsEditDialogOpen(false);
-    setEditingIncident(null);
+    setSaveState('saved');
+    setTimeout(() => {
+        setIsEditDialogOpen(false);
+        setEditingIncident(null);
+        setSaveState('idle');
+    }, 1500);
   };
 
   const handleDeleteEvent = (type: 'Entrada' | 'Salida') => {
@@ -595,8 +600,12 @@ export function DailyLog() {
                 </div>
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handleSaveChanges}>Guardar Cambios</Button>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={saveState !== 'idle'}>Cancelar</Button>
+                <Button onClick={handleSaveChanges} disabled={saveState !== 'idle'} className="w-[150px]">
+                     {saveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
+                     : saveState === 'saved' ? (<><Check /> Guardado</>)
+                     : 'Guardar Cambios'}
+                </Button>
             </DialogFooter>
         </DialogContent>
         </Dialog>

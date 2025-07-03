@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { DaySchedule, Location, Schedule } from "@/lib/types";
-import { Pencil, PlusCircle, MoreVertical, Trash2, Save } from "lucide-react";
+import { Pencil, PlusCircle, MoreVertical, Trash2, Save, Loader2, Check } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -38,7 +38,7 @@ interface ScheduleEditDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     schedule: Schedule | null; // null for create, object for edit
-    onSave: (schedule: Schedule) => void;
+    onSave: (schedule: Schedule) => boolean; // Returns true on success, false on validation failure
     userLocations: Location[];
 }
 
@@ -47,6 +47,7 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
         // Deep copy to prevent mutating parent state
         return schedule ? JSON.parse(JSON.stringify(schedule)) : JSON.parse(JSON.stringify(BLANK_SCHEDULE));
     });
+    const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
     const [bulkStartTime, setBulkStartTime] = useState("");
     const [bulkEndTime, setBulkEndTime] = useState("");
@@ -69,7 +70,19 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
     };
 
     const handleSaveChanges = () => {
-        onSave(formData);
+        setSaveState('saving');
+        const success = onSave(formData);
+
+        if (success) {
+            setSaveState('saved');
+            setTimeout(() => {
+                onOpenChange(false);
+                // Reset state after closing
+                setTimeout(() => setSaveState('idle'), 150);
+            }, 1000);
+        } else {
+            setSaveState('idle');
+        }
     };
 
     const handleBulkApply = () => {
@@ -217,10 +230,11 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
                 </div>
 
                 <DialogFooter className="p-6 pt-4 border-t">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                    <Button onClick={handleSaveChanges}>
-                        <Save className="mr-2 h-4 w-4" />
-                        Guardar Cambios
+                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saveState !== 'idle'}>Cancelar</Button>
+                    <Button onClick={handleSaveChanges} disabled={saveState !== 'idle'} className="w-[170px]">
+                        {saveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
+                        : saveState === 'saved' ? (<><Check /> Guardado</>)
+                        : (<><Save className="mr-2 h-4 w-4" /> Guardar Cambios</>)}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -267,20 +281,20 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
         }
     }
 
-    const handleSaveSchedule = (scheduleToSave: Schedule) => {
+    const handleSaveSchedule = (scheduleToSave: Schedule): boolean => {
         // Validation
         if (!scheduleToSave.name.trim()) {
             toast({ variant: "destructive", title: "Nombre Requerido", description: "La plantilla debe tener un nombre." });
-            return;
+            return false;
         }
         if (schedules.some(s => s.name.toLowerCase() === scheduleToSave.name.trim().toLowerCase() && s.id !== scheduleToSave.id)) {
             toast({ variant: "destructive", title: "Nombre Duplicado", description: "Ya existe una plantilla con este nombre." });
-            return;
+            return false;
         }
         for (const entry of scheduleToSave.entries) {
             if (entry.startTime && entry.endTime && entry.startTime > entry.endTime) {
                 toast({ variant: "destructive", title: "Error de Horario", description: `En ${entry.day}, la hora de salida no puede ser anterior a la de entrada.` });
-                return;
+                return false;
             }
         }
         
@@ -293,14 +307,11 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
             };
             setSchedules(prev => [...prev, newSchedule]);
             setActiveScheduleId(newSchedule.id);
-            toast({ title: "Plantilla Creada", description: `Se creó la plantilla '${newSchedule.name}'.` });
         } else { // If we're editing an existing one
             setSchedules(prev => prev.map(s => s.id === scheduleToSave.id ? scheduleToSave : s));
-            toast({ title: "Plantilla Actualizada", description: `Se guardaron los cambios en '${scheduleToSave.name}'.` });
         }
         
-        setIsScheduleFormOpen(false);
-        setScheduleToEdit(null);
+        return true;
     };
     
     const handleDeleteTemplate = () => {

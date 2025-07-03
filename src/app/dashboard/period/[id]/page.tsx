@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Clock, Pencil, Download } from "lucide-react";
+import { ArrowLeft, Clock, Pencil, Download, Loader2, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { differenceInMinutes, format, parse, parseISO, getDay, isAfter, startOfDay } from "date-fns";
@@ -50,7 +50,7 @@ const calculateTotalMinutes = (days: LaborDay[]): number => {
     if (!day.entry?.time || !day.exit?.time) return total;
 
     const [startHour, startMinute] = day.entry.time.split(":").map(Number);
-    const [endHour, endMinute] = day.exit.time.split(":").map(Number);
+    const [endHour, endMinute] = exit.time.split(":").map(Number);
 
     const startDate = new Date(0);
     startDate.setHours(startHour, startMinute, 0, 0);
@@ -92,6 +92,7 @@ export default function PeriodDetailPage() {
   // State for editing a single day
   const [isEditDayDialogOpen, setIsEditDayDialogOpen] = useState(false);
   const [dayToEdit, setDayToEdit] = useState<LaborDay | null>(null);
+  const [daySaveState, setDaySaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   // Form state for the day editing dialog
   const [entryTime, setEntryTime] = useState("");
@@ -156,12 +157,15 @@ export default function PeriodDetailPage() {
   const handleSaveDayChanges = () => {
     if (!period || !dayToEdit) return;
 
+    setDaySaveState('saving');
+
     if (entryTime && exitTime && exitTime < entryTime) {
       toast({
         variant: "destructive",
         title: "Error de validación",
         description: "La hora de salida no puede ser anterior a la hora de entrada.",
       });
+      setDaySaveState('idle');
       return;
     }
 
@@ -196,12 +200,12 @@ export default function PeriodDetailPage() {
       prevPeriods.map(p => (p.id === period.id ? updatedPeriod : p))
     );
 
-    toast({
-      title: "Día Actualizado",
-      description: "Los cambios en el día se han guardado correctamente.",
-    });
-    setIsEditDayDialogOpen(false);
-    setDayToEdit(null);
+    setDaySaveState('saved');
+    setTimeout(() => {
+        setIsEditDayDialogOpen(false);
+        setDayToEdit(null);
+        setDaySaveState('idle');
+    }, 1500);
   };
 
   const handleDownloadCSV = () => {
@@ -602,8 +606,12 @@ export default function PeriodDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDayDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveDayChanges}>Guardar Cambios</Button>
+            <Button variant="outline" onClick={() => setIsEditDayDialogOpen(false)} disabled={daySaveState !== 'idle'}>Cancelar</Button>
+            <Button onClick={handleSaveDayChanges} disabled={daySaveState !== 'idle'} className="w-[150px]">
+                {daySaveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
+                : daySaveState === 'saved' ? (<><Check /> Guardado</>)
+                : 'Guardar Cambios'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud } from "lucide-react";
+import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -52,6 +52,7 @@ export default function ProjectionsPage() {
   const { toast } = useToast();
   const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState("");
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const activeSchedule = useMemo(() => {
     return schedules.find((s) => s.id === activeScheduleId);
@@ -174,18 +175,22 @@ export default function ProjectionsPage() {
 
   const handleSaveChanges = () => {
     if (!selectedPeriodId) return;
+    setSaveState('saving');
 
     for (const day of projections) {
         if ((day.projectedEntry?.time && !day.projectedEntry?.location) || (!day.projectedEntry?.time && day.projectedEntry?.location)) {
             toast({ variant: 'destructive', title: 'Datos Incompletos', description: `La entrada proyectada para el ${format(parseISO(day.date), "d MMM", { locale: es })} está incompleta.` });
+            setSaveState('idle');
             return;
         }
         if ((day.projectedExit?.time && !day.projectedExit?.location) || (!day.projectedExit?.time && day.projectedExit?.location)) {
             toast({ variant: 'destructive', title: 'Datos Incompletos', description: `La salida proyectada para el ${format(parseISO(day.date), "d MMM", { locale: es })} está incompleta.` });
+            setSaveState('idle');
             return;
         }
         if (day.projectedEntry?.time && day.projectedExit?.time && day.projectedExit.time < day.projectedEntry.time) {
             toast({ variant: 'destructive', title: 'Error de Horas', description: `La hora de salida no puede ser anterior a la de entrada para el ${format(parseISO(day.date), "d MMM", { locale: es })}.` });
+            setSaveState('idle');
             return;
         }
     }
@@ -208,10 +213,11 @@ export default function ProjectionsPage() {
         return p;
       })
     );
-    toast({
-      title: "Proyecciones Guardadas",
-      description: "Tus cambios en la planificación han sido guardados.",
-    });
+
+    setSaveState('saved');
+    setTimeout(() => {
+        setSaveState('idle');
+    }, 2000);
   };
   
   const handleSaveAsTemplate = () => {
@@ -501,9 +507,10 @@ export default function ProjectionsPage() {
                 </TooltipProvider>
 
                 <div className="flex justify-end pt-6">
-                    <Button onClick={handleSaveChanges} disabled={!selectedPeriod}>
-                        <Save className="mr-2 h-4 w-4"/>
-                        Guardar Proyección
+                    <Button onClick={handleSaveChanges} disabled={!selectedPeriod || saveState !== 'idle'} className="w-[200px]">
+                        {saveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
+                        : saveState === 'saved' ? (<><Check /> Guardado</>)
+                        : (<><Save /> Guardar Proyección</>)}
                     </Button>
                 </div>
               </CardContent>

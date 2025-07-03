@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,22 +14,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
-import { Camera, Save } from "lucide-react";
+import { Camera, Save, Loader2, Check } from "lucide-react";
 import { useSettings } from "@/context/settings-context";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 export default function ProfilePage() {
-    const { toast } = useToast();
     const { user } = useSettings();
+    const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        toast({
-            title: "Perfil Actualizado",
-            description: "Tu información ha sido guardada exitosamente.",
-        });
+        setSaveState('saving');
+        
+        // In a real app, this would be an async operation to save data.
+        // We'll simulate it with a timeout.
+        setTimeout(() => {
+            setSaveState('saved');
+            setTimeout(() => {
+                setSaveState('idle');
+            }, 2000);
+        }, 1500);
     }
 
   return (
@@ -103,10 +111,11 @@ export default function ProfilePage() {
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit">
-                <Save className="mr-2 h-4 w-4" />
-                Guardar Cambios
-              </Button>
+                <Button type="submit" disabled={saveState !== 'idle'} className="w-[180px]">
+                    {saveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
+                    : saveState === 'saved' ? (<><Check /> Guardado</>)
+                    : (<><Save /> Guardar Cambios</>)}
+                </Button>
             </div>
           </form>
         </CardContent>
