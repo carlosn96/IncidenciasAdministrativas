@@ -75,25 +75,33 @@ export default function ProjectionsPage() {
 
     const newProjections = projections.map(day => {
         const newDay = JSON.parse(JSON.stringify(day));
-        if (newDay.entry) return newDay; // Never overwrite a real entry
         
         const dayDate = parseISO(day.date);
         const dayOfWeekIndex = getDay(dayDate);
         const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
         
         const scheduleForDay = activeSchedule.entries.find(e => e.day === dayName);
-        if (!scheduleForDay) return newDay;
+        
+        if (!scheduleForDay) {
+            if (overwrite) {
+                delete newDay.projectedEntry;
+                delete newDay.projectedExit;
+            }
+            return newDay;
+        }
 
+        // Apply schedule to projectedEntry
         if (scheduleForDay.startTime && scheduleForDay.startLocation) {
-            if (!newDay.projectedEntry || overwrite) {
+            if (overwrite || !newDay.projectedEntry) {
                 newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
             }
         } else if (overwrite) {
           delete newDay.projectedEntry;
         }
 
+        // Apply schedule to projectedExit
         if (scheduleForDay.endTime && scheduleForDay.endLocation) {
-             if (!newDay.projectedExit || overwrite) {
+             if (overwrite || !newDay.projectedExit) {
                 newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
             }
         } else if (overwrite) {
@@ -112,7 +120,6 @@ export default function ProjectionsPage() {
     if (selectedPeriod) {
       const initialProjections = selectedPeriod.laborDays.map(day => {
         const newDay = JSON.parse(JSON.stringify(day));
-        if (newDay.entry) return newDay;
         
         if (activeSchedule) {
             const dayDate = parseISO(day.date);
