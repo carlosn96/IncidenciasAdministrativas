@@ -1,21 +1,111 @@
 # Sistema de Gestión de Incidencias Administrativas
 
-Este proyecto es una aplicación web diseñada para ayudar a los coordinadores académicos a registrar y gestionar sus horas de trabajo, planificar sus periodos quincenales y generar reportes de incidencias de manera eficiente. La aplicación está construida con Next.js y se integra profundamente con los servicios de Firebase para la autenticación y el almacenamiento de datos.
+Este proyecto es una aplicación web de alta productividad, diseñada específicamente para coordinadores académicos. Su propósito es simplificar y automatizar el registro de horas de trabajo, facilitar la planificación quincenal y generar reportes de incidencias de manera eficiente e intuitiva.
 
-## Índice
+La aplicación está construida con las últimas tecnologías web y se integra profundamente con los servicios de Google y Firebase para ofrecer una experiencia de usuario segura, rápida y fiable.
 
-1.  [Tecnologías Utilizadas](#tecnologías-utilizadas)
-2.  [Funcionalidades Principales](#funcionalidades-principales)
-    - [Autenticación](#autenticación)
-    - [Panel Principal (Resumen Diario)](#panel-principal-resumen-diario)
-    - [Proyecciones (Planificador)](#proyecciones-planificador)
-    - [Gestión de Periodos](#gestión-de-periodos)
-    - [Detalle y Reporte de Periodo](#detalle-y-reporte-de-periodo)
-    - [Configuración Personalizada](#configuración-personalizada)
-        - [Mis Ubicaciones](#mis-ubicaciones)
-        - [Plantillas de Horario](#plantillas-de-horario)
-    - [Gestión de Perfil](#gestión-de-perfil)
-3.  [Despliegue y Arquitectura](#despliegue-y-arquitectura)
+## Propuesta de Valor: ¿Por Qué Usar Esta Aplicación?
+
+-   **Ahorro de Tiempo:** Automatiza el cálculo de horas y la generación de reportes, liberando tiempo valioso que puedes dedicar a tareas académicas.
+-   **Planificación Inteligente:** El módulo de proyecciones te permite visualizar y ajustar tu quincena para cumplir tus metas de horas sin esfuerzo, evitando sorpresas al final del periodo.
+-   **Cero Errores, Cero Olvidos:** Con un sistema de registro claro y la posibilidad de editar incidencias pasadas, se minimizan los errores humanos y se asegura que cada hora trabajada quede registrada.
+-   **Información Centralizada y Accesible:** Todos tus datos están seguros en la nube y disponibles desde cualquier dispositivo. Se acabó el depender de hojas de cálculo dispersas o notas de papel.
+-   **Totalmente Personalizable:** Adapta la aplicación a tu rutina con plantillas de horario y listas de ubicaciones personalizadas.
+
+---
+
+## Funcionalidades Detalladas
+
+A continuación se detalla el funcionamiento de cada módulo de la aplicación.
+
+### 1. Autenticación Inteligente y Segura
+
+El acceso a la aplicación está restringido y protegido mediante **Firebase Authentication**, usando un método de inicio de sesión moderno y seguro.
+
+-   **Inicio de Sesión con Google (Popup):** Los usuarios acceden utilizando su cuenta de Google a través de una ventana emergente, lo que evita recargas de página y ofrece una experiencia fluida.
+-   **Restricción de Dominio (Opcional):** El sistema está preparado para aceptar únicamente cuentas de un dominio institucional específico (ej. `@une.edu.mx`), asegurando que solo personal autorizado pueda registrarse.
+-   **Sesión Persistente y Rutas Protegidas:** Una vez que inicias sesión, tu sesión se mantiene activa. Todas las páginas del panel están protegidas, y si un usuario no autenticado intenta acceder, es redirigido automáticamente a la página de inicio.
+
+### 2. Panel Principal: Tu Centro de Mando Diario
+
+Esta es la página de bienvenida y el centro de operaciones diario del usuario. Está diseñada para darte toda la información relevante de un vistazo.
+
+-   **Saludo Personalizado y Resumen del Periodo:**
+    -   Un saludo de bienvenida con tu nombre.
+    -   Una **tarjeta de Periodo Activo** que muestra el progreso de tus horas laboradas con una barra de progreso visual. Es un atajo directo a la página de detalle de ese periodo.
+-   **Tarjeta de Proyección del Día:**
+    -   Si has planificado tu jornada, una tarjeta especial mostrará la **hora de entrada y salida proyectadas** para hoy.
+    -   **Comportamiento Dinámico:** La entrada proyectada desaparece en cuanto registras tu entrada real, pero la salida proyectada permanece como recordatorio. La tarjeta completa se oculta una vez que registras tu salida real.
+-   **Registro de Incidencias en Tiempo Real:**
+    -   Un **reloj digital** y la fecha actual siempre visibles.
+    -   Un **selector de ubicación** inteligente que carga tu lista de planteles personalizada y te sugiere automáticamente la ubicación según tu horario activo.
+    -   **Botones de "Registrar Entrada" y "Registrar Salida"** que se habilitan y deshabilitan de forma lógica para prevenir errores.
+-   **Tabla de Eventos del Día:**
+    -   Muestra una lista clara de la entrada y salida registradas, con su hora y ubicación.
+    -   Cada registro se puede **editar** (para corregir la hora o ubicación) o **eliminar** de forma segura.
+
+### 3. Planificador de Proyecciones: Cumple tus Metas sin Estrés
+
+Este módulo es la herramienta clave para la planificación y el cumplimiento de metas de horas.
+
+-   **Selector de Periodo:** Elige cualquier periodo creado para visualizar o modificar su planificación.
+-   **Tarjeta de Estadísticas de Proyección:** Un resumen financiero de tu tiempo.
+    -   **Meta del Periodo:** Total de horas que debes cubrir.
+    -   **Horas Reales:** Suma de las horas ya trabajadas.
+    -   **Total Proyectado:** Suma de las horas reales y las horas planificadas para días futuros.
+    -   **Balanza:** La diferencia entre el total proyectado y la meta, indicando con colores si te sobran (verde) o te faltan (rojo) horas.
+-   **Tabla de Planificación Semanal:**
+    -   Muestra cada día laborable del periodo. Los días ya completados (con entrada y salida real) se marcan con un **sombreado verde** para distinguirlos.
+    -   El **día actual** está marcado con un **punto animado** para encontrarlo fácilmente.
+    -   Puedes introducir la **hora y lugar de entrada/salida proyectadas** para los días futuros. Los campos se deshabilitan inteligentemente a medida que registras tus incidencias reales.
+-   **Automatización de la Planificación:**
+    -   **Cargar Horario por Defecto:** Con un solo clic, rellena toda la proyección con tu plantilla de horario activa.
+    -   **Guardar como Plantilla:** Si creas una planificación que quieres reutilizar, guárdala como una nueva plantilla directamente desde aquí.
+
+### 4. Gestión de Periodos y Reportes
+
+#### Detalle y Reporte del Periodo
+
+Se accede desde la tarjeta del periodo activo en el panel principal o desde el listado de periodos. Ofrece una vista consolidada de un periodo completo.
+
+-   **Resumen de Horas:** Muestra un resumen visual del progreso, incluyendo horas laboradas, restantes y la meta total.
+-   **Descarga de Reporte CSV:** Una función crítica que genera y descarga un archivo `.csv` con el detalle de todas las incidencias del periodo. Este archivo está formateado profesionalmente para su entrega administrativa.
+-   **Tabla de Incidencias del Periodo:**
+    -   Lista cada día del periodo. El **día actual** está resaltado con el mismo punto animado.
+    -   Permite **editar** incidencias de días pasados.
+    -   Para días futuros, el botón de editar está deshabilitado y un mensaje guía al usuario hacia la sección de **Proyecciones**.
+
+#### Listado y Creación de Periodos (`Ajustes > Periodos`)
+
+-   **Creación de Periodos:** Crea nuevos periodos de registro (normalmente quincenales) con nombre, rango de fechas y la opción de incluir sábados en el cálculo de horas.
+-   **Validación de Fechas:** Impide crear periodos con fechas que se solapen para mantener la integridad de los datos.
+-   **Listado de Periodos:** Muestra todos los periodos creados, ordenados del más reciente al más antiguo.
+-   **Menú de Acciones por Periodo:** Cada periodo tiene un menú desplegable profesional que permite:
+    -   Ver Incidencias
+    -   Realizar Proyección
+    -   Editar
+    -   Eliminar (con diálogo de confirmación)
+
+### 5. Configuración Totalmente Personalizable (`Ajustes`)
+
+#### Mis Ubicaciones
+
+-   Gestiona tu lista personal de planteles o lugares de trabajo.
+-   Puedes añadir ubicaciones desde una lista maestra de la institución y eliminarlas cuando ya no las necesites. Esta lista es la que aparece en los selectores de ubicación en toda la aplicación.
+
+#### Plantillas de Horario Flexibles
+
+-   **Múltiples Plantillas:** Crea y guarda varias plantillas de horario (ej. "Horario de Verano", "Horario Regular").
+-   **Horario Activo:** Selecciona una plantilla como tu horario "activo". Este se usará para autocompletar proyecciones y sugerir ubicaciones en el registro diario.
+-   **Editor de Horarios Completo:**
+    -   Un potente formulario para definir el horario de toda la semana (Lunes a Sábado).
+    -   **Función "Horario Rápido":** Define una hora y lugar de entrada/salida y aplícalo a todos los días con un solo clic.
+    -   **Ajuste Individual:** Después de aplicar el horario rápido, puedes modificar cualquier día de forma individual o marcarlo como día libre.
+
+### 6. Gestión de Perfil
+
+-   Permite al usuario ver la información de su cuenta, como su foto de perfil, nombre y correo, obtenidos de Google.
+-   Incluye campos adicionales (actualmente desactivados) para futura información profesional.
 
 ---
 
@@ -30,102 +120,7 @@ Este proyecto es una aplicación web diseñada para ayudar a los coordinadores a
 
 ---
 
-## Funcionalidades Principales
+## Arquitectura y Despliegue
 
-A continuación se detalla el funcionamiento de cada módulo de la aplicación.
-
-### Autenticación
-
-El acceso a la aplicación está restringido y securizado mediante **Firebase Authentication**.
-
--   **Inicio de Sesión con Google**: Los usuarios acceden utilizando su cuenta de Google. El sistema está diseñado para aceptar únicamente cuentas de un dominio institucional específico (ej. `@une.edu.mx`).
--   **Restricción de Dominio**: El dominio permitido se configura a través de variables de entorno, asegurando que solo personal autorizado pueda registrarse.
--   **Rutas Protegidas**: Una vez que el usuario inicia sesión, todas las páginas del panel (como el resumen, proyecciones y ajustes) están protegidas. Si un usuario no autenticado intenta acceder, es redirigido automáticamente a la página de inicio de sesión.
-
-### Panel Principal (Resumen Diario)
-
-Esta es la página de bienvenida y el centro de operaciones diario del usuario.
-
--   **Saludo Personalizado**: La pantalla saluda al usuario por su nombre, extraído de su perfil de Google.
--   **Tarjeta de Periodo Activo**: Muestra el periodo de registro actual. Incluye una barra de progreso que compara las horas laboradas hasta el momento con el total de horas esperadas para ese periodo. Es un enlace directo a la página de detalle de ese periodo.
--   **Plan del Día (Proyección)**: Si el usuario ha planificado su jornada en la sección de "Proyecciones", una tarjeta especial mostrará la hora de entrada y salida proyectadas para el día actual.
-    -   Esta tarjeta se actualiza dinámicamente: una vez que se registra la entrada real, la entrada proyectada desaparece, pero la salida proyectada permanece visible como recordatorio.
-    -   La tarjeta completa desaparece una vez que se registra la salida real del día.
--   **Registro de Incidencias en Tiempo Real**:
-    -   **Reloj y Fecha**: Muestra la hora actual y la fecha completa.
-    -   **Selector de Ubicación**: Permite al usuario elegir el plantel donde está registrando su entrada o salida. La lista de ubicaciones se personaliza en la sección de Ajustes. También incluye una opción para "Otro (especificar)" si el lugar no está en la lista.
-    -   **Botones de Registro**:
-        -   **Registrar Entrada**: Se habilita al inicio del día. Una vez presionado, se deshabilita.
-        -   **Registrar Salida**: Se habilita únicamente después de haber registrado una entrada.
-        -   Ambos botones se deshabilitan si el día laboral ya está completo (entrada y salida registradas).
--   **Tabla de Eventos del Día**: Muestra una lista clara de la entrada y salida registradas, con su hora y ubicación. Cada registro se puede **editar** (para corregir la hora o ubicación) o **eliminar**.
-
-### Proyecciones (Planificador)
-
-Este módulo es una herramienta clave para la planificación y el cumplimiento de metas de horas.
-
--   **Selector de Periodo**: El usuario puede elegir cualquier periodo creado para visualizar o modificar su planificación.
--   **Resumen de Proyección**: Una tarjeta de estadísticas muestra un panorama completo:
-    -   **Meta del Periodo**: Total de horas que se deben cubrir.
-    -   **Horas Reales**: Suma de las horas ya trabajadas y registradas.
-    -   **Total Proyectado**: Suma de las horas reales y las horas planificadas para los días futuros.
-    -   **Balanza**: La diferencia entre el total proyectado y la meta del periodo, indicando si al final del periodo sobrarían o faltarían horas.
--   **Tabla de Planificación Semanal**:
-    -   Muestra cada día laborable del periodo seleccionado.
-    -   El usuario puede introducir la **hora y lugar de entrada/salida proyectadas** para los días futuros.
-    -   Los días que ya tienen un registro real aparecen marcados y no se pueden modificar desde esta pantalla para proteger los datos históricos.
--   **Cargar Horario por Defecto**: Con un solo clic, el usuario puede rellenar toda la proyección con la plantilla de horario que haya marcado como activa, ahorrando tiempo de planificación.
--   **Guardar como Plantilla**: Si el usuario crea una planificación que podría querer reutilizar, puede guardarla como una nueva plantilla de horario directamente desde esta página.
-
-### Gestión de Periodos
-
-Se accede a través de `Ajustes > Periodos`.
-
--   **Creación de Periodos**: Los usuarios pueden crear nuevos periodos de registro (normalmente quincenales) especificando un nombre y un rango de fechas. El sistema calcula automáticamente el total de horas esperadas basándose en los días laborables (lunes a viernes, con opción de incluir sábados).
--   **Validación de Fechas**: El sistema impide crear periodos con fechas que se superpongan para evitar duplicidad de registros.
--   **Listado de Periodos**: Muestra todos los periodos creados, ordenados del más reciente al más antiguo.
--   **Acciones por Periodo**: Cada periodo tiene un menú de acciones que permite:
-    -   **Ver Incidencias**: Navega a la página de detalle del periodo.
-    -   **Realizar Proyección**: Navega a la página de proyecciones con ese periodo ya seleccionado.
-    -   **Editar**: Permite cambiar el nombre y el rango de fechas de un periodo existente.
-    -   **Eliminar**: Borra permanentemente un periodo y todos sus datos asociados.
-
-### Detalle y Reporte de Periodo
-
-Esta página ofrece una vista consolidada de un periodo completo.
-
--   **Resumen de Horas**: Muestra un resumen visual del progreso, incluyendo horas laboradas, horas restantes y la meta total del periodo.
--   **Descarga de Reporte CSV**: Una de las funciones más importantes. Permite descargar un archivo `.csv` con el detalle de todas las incidencias del periodo (fecha, día de la semana, horas y lugares de entrada/salida, y total de horas trabajadas por día). Este archivo es ideal para fines de reporte administrativo.
--   **Tabla de Incidencias**: Lista cada día del periodo.
-    -   Para días pasados, se puede **editar** la hora o ubicación de la entrada/salida para corregir errores.
-    -   Para días futuros, el botón de editar está deshabilitado y un mensaje emergente guía al usuario hacia la sección de **Proyecciones**, con un enlace directo para facilitar la planificación.
-
-### Configuración Personalizada
-
-El menú de `Ajustes` permite al usuario adaptar la aplicación a sus necesidades específicas.
-
-#### Mis Ubicaciones
-
--   El usuario gestiona su lista personal de planteles o lugares de trabajo.
--   Puede añadir ubicaciones desde una lista maestra proporcionada por la institución y eliminarlas de su lista personal cuando ya no las necesite. Esta lista personalizada es la que aparece en los selectores de ubicación en toda la aplicación.
-
-#### Plantillas de Horario
-
--   **Múltiples Plantillas**: El usuario puede crear varias plantillas de horario (ej. "Horario de Verano", "Horario Regular").
--   **Horario Activo**: Se puede seleccionar una plantilla como el "horario por defecto" o activo. Este es el horario que se usará para autocompletar las proyecciones.
--   **Editor de Horarios Completo**:
-    -   Al crear o editar una plantilla, se abre un formulario que permite definir el horario para toda la semana.
-    -   **Función de "Horario Rápido"**: Para agilizar la configuración, el usuario puede definir una hora de entrada/salida, un lugar, y aplicarlo a todos los días de la semana con un solo clic, con la opción de incluir o no los sábados.
-    -   **Ajuste Individual**: Después de aplicar el horario rápido, se puede modificar cualquier día de forma individual.
-
-### Gestión de Perfil
-
--   Permite al usuario ver la información de su cuenta, como su foto de perfil, nombre completo y correo electrónico, obtenidos de su cuenta de Google.
--   Incluye campos adicionales (actualmente desactivados o como placeholders) para futura información profesional.
-
----
-
-## Despliegue y Arquitectura
-
--   **Dependencia de Firebase**: La aplicación está intrínsecamente ligada a los servicios de Firebase (Authentication y Firestore). No puede ser desplegada en un servidor diferente y funcionar de manera autónoma sin una reescritura significativa de la lógica de datos y autenticación.
--   **Portabilidad del Frontend**: A pesar de la dependencia del backend, el código del frontend (Next.js) puede ser alojado en cualquier plataforma compatible (como Vercel, Netlify, etc.), siempre y cuando se configuren las variables de entorno correctas para conectarse al proyecto de Firebase y se autorice el nuevo dominio en la consola de Firebase.
+-   **Dependencia de Firebase**: La aplicación está diseñada para funcionar con los servicios de Firebase (Authentication y Firestore). No puede ser desplegada en un servidor diferente sin una reescritura de la lógica de datos y autenticación.
+-   **Portabilidad del Frontend**: El código del frontend (Next.js) puede ser alojado en cualquier plataforma compatible (como Vercel, Netlify, etc.), siempre que se configuren las variables de entorno correctas para conectarse al proyecto de Firebase y se autorice el nuevo dominio en la consola de Firebase.
