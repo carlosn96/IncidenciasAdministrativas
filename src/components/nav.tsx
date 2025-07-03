@@ -30,8 +30,6 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
 import { useSettings } from "@/context/settings-context";
 import { isWithinInterval, endOfDay } from "date-fns";
 
@@ -45,13 +43,10 @@ export function Nav() {
     return periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
   }, [periods]);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      router.push("/");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-    }
+  const handleSignOut = () => {
+    // In local mode, "signing out" means clearing the stored data and reloading.
+    localStorage.clear();
+    window.location.href = "/"; // Force a full reload to clear all state.
   };
 
 
