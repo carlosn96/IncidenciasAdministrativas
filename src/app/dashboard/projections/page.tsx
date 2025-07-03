@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format, parseISO, differenceInMinutes, getDay } from "date-fns";
+import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -74,12 +74,18 @@ export default function ProjectionsPage() {
     if (!projections.length || !activeSchedule) return;
 
     const newProjections = projections.map(day => {
-        const newDay = JSON.parse(JSON.stringify(day));
+        // Create a deep copy to avoid direct state mutation
+        const newDay = JSON.parse(JSON.stringify(day)); 
         
+        // Skip days that are in the past and already have real entries
+        const isPastOrToday = !isBefore(startOfDay(new Date()), parseISO(day.date));
+        if (isPastOrToday && newDay.entry) {
+            return newDay;
+        }
+
         const dayDate = parseISO(day.date);
         const dayOfWeekIndex = getDay(dayDate);
         const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
-        
         const scheduleForDay = activeSchedule.entries.find(e => e.day === dayName);
         
         if (!scheduleForDay) {
@@ -90,7 +96,7 @@ export default function ProjectionsPage() {
             return newDay;
         }
 
-        // Apply schedule to projectedEntry
+        // Apply schedule to projectedEntry if it's empty or we're overwriting
         if (scheduleForDay.startTime && scheduleForDay.startLocation) {
             if (overwrite || !newDay.projectedEntry) {
                 newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
@@ -99,7 +105,7 @@ export default function ProjectionsPage() {
           delete newDay.projectedEntry;
         }
 
-        // Apply schedule to projectedExit
+        // Apply schedule to projectedExit if it's empty or we're overwriting
         if (scheduleForDay.endTime && scheduleForDay.endLocation) {
              if (overwrite || !newDay.projectedExit) {
                 newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
@@ -107,6 +113,7 @@ export default function ProjectionsPage() {
         } else if (overwrite) {
           delete newDay.projectedExit;
         }
+        
         return newDay;
     });
 
@@ -326,7 +333,7 @@ export default function ProjectionsPage() {
               <div className="flex items-center gap-2">
                  <Button variant="outline" onClick={() => applyScheduleToProjections(true)} disabled={!selectedPeriod || !activeSchedule}>
                    <BrainCircuit className="mr-2 h-4 w-4" />
-                   Cargar Horario
+                   Cargar Horario por Defecto
                  </Button>
                   <Dialog open={isSaveTemplateOpen} onOpenChange={setIsSaveTemplateOpen}>
                     <DialogTrigger asChild>
@@ -515,5 +522,3 @@ export default function ProjectionsPage() {
     </div>
   );
 }
-
-    
