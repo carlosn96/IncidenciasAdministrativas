@@ -220,9 +220,7 @@ export default function PeriodDetailPage() {
       "Lugar Entrada",
       "Lugar Salida",
       "Hora Entrada (24h)",
-      "Hora Entrada (12h)",
       "Hora Salida (24h)",
-      "Hora Salida (12h)",
       "Horas Laboradas",
     ];
 
@@ -232,11 +230,9 @@ export default function PeriodDetailPage() {
         const formattedDate = format(date, "yyyy-MM-dd");
 
         const entryTime24 = day.entry?.time || '---';
-        const entryTime12 = formatTime12h(day.entry?.time);
         const entryLocation = day.entry?.location || '---';
 
         const exitTime24 = day.exit?.time || '---';
-        const exitTime12 = formatTime12h(day.exit?.time);
         const exitLocation = day.exit?.location || '---';
         
         const workedHours = calculateWorkedHours(day.entry, day.exit);
@@ -247,9 +243,7 @@ export default function PeriodDetailPage() {
             entryLocation,
             exitLocation,
             entryTime24,
-            entryTime12,
             exitTime24,
-            exitTime12,
             workedHours
         ];
 
