@@ -120,91 +120,93 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
                             : `Estás editando la plantilla "${schedule?.name}".`}
                     </DialogDescription>
                 </DialogHeader>
+                
+                <div className="grid gap-y-6 overflow-y-auto max-h-[70vh] p-1">
+                    <div className="space-y-2">
+                        <Label htmlFor="template-name">Nombre de la Plantilla</Label>
+                        <Input 
+                            id="template-name" 
+                            placeholder="Ej. Horario de Verano"
+                            value={formData.name}
+                            onChange={handleNameChange}
+                        />
+                    </div>
 
-                <div className="space-y-2 pt-4">
-                    <Label htmlFor="template-name">Nombre de la Plantilla</Label>
-                    <Input 
-                        id="template-name" 
-                        placeholder="Ej. Horario de Verano"
-                        value={formData.name}
-                        onChange={handleNameChange}
-                    />
-                </div>
-
-                <div className="space-y-4 rounded-md border p-4">
-                    <h4 className="font-medium text-sm">Definir Horario Rápido</h4>
-                    <p className="text-sm text-muted-foreground -mt-2">
-                        Aplica el mismo horario a varios días a la vez. Esto modificará la tabla de abajo.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                         <div className="space-y-2">
-                            <Label htmlFor="bulk-start-time">Hora Entrada</Label>
-                            <Input id="bulk-start-time" type="time" value={bulkStartTime} onChange={(e) => setBulkStartTime(e.target.value)} />
+                    <div className="space-y-4 rounded-md border p-4">
+                        <h4 className="font-medium text-sm">Definir Horario Rápido</h4>
+                        <p className="text-sm text-muted-foreground -mt-2">
+                            Aplica el mismo horario a varios días a la vez. Esto modificará la tabla de abajo.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <div className="space-y-2">
+                                <Label htmlFor="bulk-start-time">Hora Entrada</Label>
+                                <Input id="bulk-start-time" type="time" value={bulkStartTime} onChange={(e) => setBulkStartTime(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bulk-start-location">Lugar Entrada</Label>
+                                <Select value={bulkStartLocation} onValueChange={setBulkStartLocation}>
+                                    <SelectTrigger id="bulk-start-location"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                    <SelectContent>{userLocations.map(loc => (<SelectItem key={`${loc.id}-bulk-start`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bulk-end-time">Hora Salida</Label>
+                                <Input id="bulk-end-time" type="time" value={bulkEndTime} onChange={(e) => setBulkEndTime(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bulk-end-location">Lugar Salida</Label>
+                                <Select value={bulkEndLocation} onValueChange={setBulkEndLocation}>
+                                    <SelectTrigger id="bulk-end-location"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                    <SelectContent>{userLocations.map(loc => (<SelectItem key={`${loc.id}-bulk-end`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="bulk-start-location">Lugar Entrada</Label>
-                            <Select value={bulkStartLocation} onValueChange={setBulkStartLocation}>
-                                <SelectTrigger id="bulk-start-location"><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                <SelectContent>{userLocations.map(loc => (<SelectItem key={`${loc.id}-bulk-start`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="bulk-end-time">Hora Salida</Label>
-                            <Input id="bulk-end-time" type="time" value={bulkEndTime} onChange={(e) => setBulkEndTime(e.target.value)} />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="bulk-end-location">Lugar Salida</Label>
-                            <Select value={bulkEndLocation} onValueChange={setBulkEndLocation}>
-                                <SelectTrigger id="bulk-end-location"><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                <SelectContent>{userLocations.map(loc => (<SelectItem key={`${loc.id}-bulk-end`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
-                            </Select>
+                        <div className="flex items-center justify-between pt-2">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox id="bulk-saturdays" checked={bulkIncludeSaturdays} onCheckedChange={(checked) => setBulkIncludeSaturdays(checked === true)} />
+                                <Label htmlFor="bulk-saturdays" className="font-normal text-sm">Incluir sábados</Label>
+                            </div>
+                            <Button type="button" variant="secondary" onClick={handleBulkApply}>Aplicar a Días</Button>
                         </div>
                     </div>
-                    <div className="flex items-center justify-between pt-2">
-                        <div className="flex items-center space-x-2">
-                            <Checkbox id="bulk-saturdays" checked={bulkIncludeSaturdays} onCheckedChange={(checked) => setBulkIncludeSaturdays(checked === true)} />
-                            <Label htmlFor="bulk-saturdays" className="font-normal text-sm">Incluir sábados</Label>
-                        </div>
-                        <Button type="button" variant="secondary" onClick={handleBulkApply}>Aplicar a Días</Button>
-                    </div>
-                </div>
 
-                <div className="border rounded-lg overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[120px]">Día</TableHead>
-                                <TableHead>Hora Entrada</TableHead>
-                                <TableHead>Lugar Entrada</TableHead>
-                                <TableHead>Hora Salida</TableHead>
-                                <TableHead>Lugar Salida</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {formData.entries.map(entry => (
-                                <TableRow key={entry.day}>
-                                    <TableCell className="font-medium">{entry.day}</TableCell>
-                                    <TableCell><Input className="min-w-[100px]" type="time" value={entry.startTime} onChange={e => handleEntryChange(entry.day, 'startTime', e.target.value)} /></TableCell>
-                                    <TableCell>
-                                        <Select value={entry.startLocation || "no-location"} onValueChange={value => handleEntryChange(entry.day, 'startLocation', value === "no-location" ? "" : value)}>
-                                            <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                            <SelectContent><SelectItem value="no-location">Día Libre</SelectItem>{userLocations.map(loc => (<SelectItem key={`${loc.id}-${entry.day}-start`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
-                                        </Select>
-                                    </TableCell>
-                                    <TableCell><Input className="min-w-[100px]" type="time" value={entry.endTime} onChange={e => handleEntryChange(entry.day, 'endTime', e.target.value)} /></TableCell>
-                                    <TableCell>
-                                        <Select value={entry.endLocation || "no-location"} onValueChange={value => handleEntryChange(entry.day, 'endLocation', value === "no-location" ? "" : value)}>
-                                            <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                            <SelectContent><SelectItem value="no-location">Día Libre</SelectItem>{userLocations.map(loc => (<SelectItem key={`${loc.id}-${entry.day}-end`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
-                                        </Select>
-                                    </TableCell>
+                    <div className="border rounded-lg overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[120px]">Día</TableHead>
+                                    <TableHead>Hora Entrada</TableHead>
+                                    <TableHead>Lugar Entrada</TableHead>
+                                    <TableHead>Hora Salida</TableHead>
+                                    <TableHead>Lugar Salida</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {formData.entries.map(entry => (
+                                    <TableRow key={entry.day}>
+                                        <TableCell className="font-medium">{entry.day}</TableCell>
+                                        <TableCell><Input className="min-w-[100px]" type="time" value={entry.startTime} onChange={e => handleEntryChange(entry.day, 'startTime', e.target.value)} /></TableCell>
+                                        <TableCell>
+                                            <Select value={entry.startLocation || "no-location"} onValueChange={value => handleEntryChange(entry.day, 'startLocation', value === "no-location" ? "" : value)}>
+                                                <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                                <SelectContent><SelectItem value="no-location">Día Libre</SelectItem>{userLocations.map(loc => (<SelectItem key={`${loc.id}-${entry.day}-start`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell><Input className="min-w-[100px]" type="time" value={entry.endTime} onChange={e => handleEntryChange(entry.day, 'endTime', e.target.value)} /></TableCell>
+                                        <TableCell>
+                                            <Select value={entry.endLocation || "no-location"} onValueChange={value => handleEntryChange(entry.day, 'endLocation', value === "no-location" ? "" : value)}>
+                                                <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                                <SelectContent><SelectItem value="no-location">Día Libre</SelectItem>{userLocations.map(loc => (<SelectItem key={`${loc.id}-${entry.day}-end`} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="pt-4">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                     <Button onClick={handleSaveChanges}>Guardar Cambios</Button>
                 </DialogFooter>
