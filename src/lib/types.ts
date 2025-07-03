@@ -7,12 +7,18 @@ export type User = {
   coordinatedCourses: string[];
 };
 
-export type ScheduleEntry = {
+export type DaySchedule = {
   day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
   startTime: string;
   endTime: string;
   startLocation: string;
   endLocation: string;
+};
+
+export type Schedule = {
+  id: string;
+  name: string;
+  entries: DaySchedule[];
 };
 
 export type Location = {

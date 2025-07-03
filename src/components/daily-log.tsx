@@ -40,7 +40,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { Incident, ScheduleEntry } from "@/lib/types";
+import type { Incident, DaySchedule } from "@/lib/types";
 import { Play, Square, MapPin, Pencil, Trash2, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
@@ -73,7 +73,7 @@ const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
   };
 
 export function DailyLog() {
-  const { periods, setPeriods, userLocations, schedule } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId } = useSettings();
   const [currentTime, setCurrentTime] = useState<string | null>(null);
   const [currentDay, setCurrentDay] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
@@ -85,6 +85,10 @@ export function DailyLog() {
   const [newTime, setNewTime] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [newManualLocation, setNewManualLocation] = useState("");
+  
+  const activeSchedule = useMemo(() => {
+    return schedules.find(s => s.id === activeScheduleId);
+  }, [schedules, activeScheduleId]);
 
   const { activePeriod, todayLaborDay } = useMemo(() => {
     const today = new Date();
@@ -116,12 +120,13 @@ export function DailyLog() {
 
   useEffect(() => {
     if (hasEntrada && hasSalida) return; // Don't change location if day is complete
+    if (!activeSchedule) return;
 
     const daysOfWeek = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const dayIndex = new Date().getDay();
-    const todaySpanish = daysOfWeek[dayIndex] as ScheduleEntry['day'];
+    const todaySpanish = daysOfWeek[dayIndex] as DaySchedule['day'];
 
-    const todaySchedule = schedule.find(s => s.day === todaySpanish);
+    const todaySchedule = activeSchedule.entries.find(s => s.day === todaySpanish);
     
     const nextEventType = hasEntrada ? 'Salida' : 'Entrada';
 
@@ -136,7 +141,7 @@ export function DailyLog() {
     } else {
       setSelectedLocation("");
     }
-  }, [hasEntrada, hasSalida, schedule, userLocations]);
+  }, [hasEntrada, hasSalida, activeSchedule, userLocations]);
 
   const handleRegisterEvent = (type: 'Entrada' | 'Salida') => {
     const locationToRegister = selectedLocation === 'manual' ? manualLocation.trim() : selectedLocation;

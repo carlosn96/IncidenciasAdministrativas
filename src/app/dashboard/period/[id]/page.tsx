@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { differenceInMinutes, format, parse, parseISO, getDay, isAfter, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import type { LaborDay, Incident, ScheduleEntry } from "@/lib/types";
+import type { LaborDay, Incident, DaySchedule } from "@/lib/types";
 import { useSettings } from "@/context/settings-context";
 import { cn } from "@/lib/utils";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
@@ -50,7 +50,7 @@ const calculateTotalMinutes = (days: LaborDay[]): number => {
     if (!day.entry?.time || !day.exit?.time) return total;
 
     const [startHour, startMinute] = day.entry.time.split(":").map(Number);
-    const [endHour, endMinute] = day.exit.time.split(":").map(Number);
+    const [endHour, endMinute] = exit.time.split(":").map(Number);
 
     const startDate = new Date(0);
     startDate.setHours(startHour, startMinute, 0, 0);
@@ -82,8 +82,10 @@ const formatTime12h = (timeStr?: string): string => {
 
 export default function PeriodDetailPage() {
   const params = useParams<{ id: string }>();
-  const { periods, setPeriods, userLocations, schedule } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId } = useSettings();
   const period = periods.find(p => p.id === params.id);
+  const activeSchedule = schedules.find(s => s.id === activeScheduleId);
+
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -116,15 +118,15 @@ export default function PeriodDetailPage() {
         setExitLocation(isExitManual ? "manual" : exitLoc);
         setManualExitLocation(isExitManual ? exitLoc : "");
 
-      } else {
+      } else if (activeSchedule) {
         // If the day is empty, load from default schedule.
         const dayDate = parseISO(dayToEdit.date);
         const dayOfWeekIndex = getDay(dayDate); // 0=Sun, 1=Mon, ..., 6=Sat
 
         const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-        const dayName = daysOfWeekSpanish[dayOfWeekIndex] as ScheduleEntry['day'];
+        const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
         
-        const defaultDaySchedule = schedule.find(s => s.day === dayName);
+        const defaultDaySchedule = activeSchedule.entries.find(s => s.day === dayName);
 
         if (defaultDaySchedule) {
           setEntryTime(defaultDaySchedule.startTime || "");
@@ -143,7 +145,7 @@ export default function PeriodDetailPage() {
         setManualExitLocation("");
       }
     }
-  }, [dayToEdit, schedule, userLocations]);
+  }, [dayToEdit, activeSchedule, userLocations]);
 
 
   const handleOpenEditDayDialog = (day: LaborDay) => {
@@ -591,7 +593,7 @@ export default function PeriodDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <EditPeriodDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} period={period} />
+      {period && <EditPeriodDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} period={period} />}
     </>
   );
 }

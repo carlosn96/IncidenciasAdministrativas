@@ -20,8 +20,10 @@ export default function SettingsPage() {
     userLocations, 
     setUserLocations, 
     allLocations, 
-    schedule, 
-    setSchedule,
+    schedules,
+    setSchedules,
+    activeScheduleId,
+    setActiveScheduleId,
     periods
   } = useSettings();
 
@@ -68,8 +70,10 @@ export default function SettingsPage() {
         <TabsContent value="schedules">
             <SchedulesSettings
               userLocations={userLocations}
-              schedule={schedule}
-              setSchedule={setSchedule}
+              schedules={schedules}
+              setSchedules={setSchedules}
+              activeScheduleId={activeScheduleId}
+              setActiveScheduleId={setActiveScheduleId}
             />
         </TabsContent>
         <TabsContent value="periods">
