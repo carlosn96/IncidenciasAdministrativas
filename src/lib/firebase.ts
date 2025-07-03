@@ -20,6 +20,7 @@ const missingConfigKeys = Object.entries(firebaseConfig)
 
 if (missingConfigKeys.length > 0) {
   const errorMessage = `Firebase configuration is incomplete. The following environment variables are missing: ${missingConfigKeys.join(", ")}. Please make sure all NEXT_PUBLIC_FIREBASE_* variables are set in your deployment environment.`;
+  console.error(errorMessage); // Log the error clearly in the console.
   throw new Error(errorMessage);
 }
 

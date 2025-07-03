@@ -18,7 +18,7 @@ import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, AuthError } 
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/context/settings-context";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isLoading: isAuthLoading } = useSettings();
@@ -33,19 +33,15 @@ export default function LoginPage() {
 
   // Effect to process the result of a sign-in redirect.
   useEffect(() => {
+    // This effect should only run once on component mount.
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
-          // A user has successfully signed in via redirect.
-          // The onAuthStateChanged listener in SettingsProvider will handle
-          // setting the user state and triggering the redirect to dashboard.
           toast({
             title: `¡Bienvenido, ${result.user.displayName}!`,
             description: "Cargando tu panel de control...",
           });
-          // The other useEffect will handle the redirect once `user` is set.
         } else {
-          // No redirect result, which is the normal case on a fresh page load.
           setIsProcessingLogin(false);
         }
       })
@@ -67,6 +63,7 @@ export default function LoginPage() {
         });
         setIsProcessingLogin(false);
       });
+  // The empty dependency array is crucial to make this run only once.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -80,43 +77,53 @@ export default function LoginPage() {
     signInWithRedirect(auth, provider);
   };
 
-  // Show a full-page loading screen if the initial auth check is happening,
-  // or if we are processing a login redirect. This prevents any UI flicker.
   if (isAuthLoading || isProcessingLogin || user) {
     return <LoadingScreen />;
   }
 
   return (
+    <Card className="w-full max-w-sm">
+      <CardHeader className="text-center">
+        <div className="mb-4 flex justify-center">
+          <AppLogo className="h-12 w-12" />
+        </div>
+        <CardTitle className="text-2xl font-headline">
+          Incidencias Administrativas
+        </CardTitle>
+        <CardDescription>
+          Accede a tu panel con tu cuenta institucional
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          variant="outline"
+          className="w-full h-12 text-base"
+          onClick={handleGoogleLogin}
+          disabled={isAuthLoading || isProcessingLogin}
+        >
+          <GoogleIcon className="mr-2 h-5 w-5" />
+          Continuar con Google
+        </Button>
+      </CardContent>
+      <CardFooter>
+        <p className="text-xs text-muted-foreground text-center w-full">
+          Utiliza tu cuenta de Google proporcionada por la institución para acceder.
+        </p>
+      </CardFooter>
+    </Card>
+  );
+}
+
+export default function LoginPage() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-secondary/40 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mb-4 flex justify-center">
-            <AppLogo className="h-12 w-12" />
-          </div>
-          <CardTitle className="text-2xl font-headline">
-            Incidencias Administrativas
-          </CardTitle>
-          <CardDescription>
-            Accede a tu panel con tu cuenta institucional
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="outline"
-            className="w-full h-12 text-base"
-            onClick={handleGoogleLogin}
-            disabled={isAuthLoading || isProcessingLogin}
-          >
-            <GoogleIcon className="mr-2 h-5 w-5" />
-            Continuar con Google
-          </Button>
-        </CardContent>
-        <CardFooter>
-          <p className="text-xs text-muted-foreground text-center w-full">
-            Utiliza tu cuenta de Google proporcionada por la institución para acceder.
-          </p>
-        </CardFooter>
-      </Card>
+      {isClient ? <LoginPageContent /> : <LoadingScreen />}
     </main>
   );
 }
