@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,36 +21,34 @@ import { useSettings } from "@/context/settings-context";
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  // We rely *only* on the global state from our context.
   const { user, isLoading } = useSettings();
-  const [isProcessingLogin, setIsProcessingLogin] = useState(false);
 
-  // This effect will run whenever the user or loading state changes.
-  // It is the single source of truth for navigation.
+  // Effect to handle redirecting once a user is detected
   useEffect(() => {
-    // If the initial auth check is done and we have a user, redirect.
     if (!isLoading && user) {
       router.replace("/dashboard");
     }
   }, [user, isLoading, router]);
 
-  // This effect handles the result of the redirect from Google.
-  // It runs only once when the page loads.
+  // Effect to process the result of a sign-in redirect.
+  // This should only run once on component mount.
   useEffect(() => {
+    // getRedirectResult should be called every time the page loads.
+    // It returns the user credential on a successful redirect or null otherwise.
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
-          // User has successfully signed in.
-          // The `onAuthStateChanged` listener in SettingsProvider will handle
-          // setting the user state and triggering the redirect.
+          // Login was successful. The onAuthStateChanged listener in
+          // SettingsProvider is already handling setting the user state.
+          // We can just show a welcome message.
           toast({
             title: `¡Bienvenido, ${result.user.displayName}!`,
-            description: "Redirigiendo a tu panel...",
+            description: "Cargando tu panel...",
           });
         }
       })
       .catch((error) => {
-        // Handle Errors here.
+        // Handle common errors.
         const authError = error as AuthError;
         console.error("Error during Google redirect:", authError);
         toast({
@@ -58,43 +56,26 @@ export default function LoginPage() {
           title: "Error de inicio de sesión",
           description: `Hubo un problema al verificar tus credenciales. (${authError.code})`,
         });
-      })
-      .finally(() => {
-        setIsProcessingLogin(false);
       });
   }, [toast]);
 
-
   const handleGoogleLogin = () => {
-    setIsProcessingLogin(true); // Disable button to prevent multiple clicks
     const provider = new GoogleAuthProvider();
     const institutionDomain = process.env.NEXT_PUBLIC_INSTITUTION_DOMAIN;
-
     if (institutionDomain) {
       provider.setCustomParameters({ hd: institutionDomain });
     }
-
-    // signInWithRedirect will navigate away, so we don't need complex error handling here.
-    signInWithRedirect(auth, provider).catch((error) => {
-      const authError = error as AuthError;
-      console.error("Error initiating redirect login:", authError);
-      toast({
-        variant: "destructive",
-        title: "Error de Autenticación",
-        description: "No se pudo iniciar el proceso de inicio de sesión. Por favor, inténtalo de nuevo.",
-      });
-      setIsProcessingLogin(false); // Re-enable button on failure
-    });
+    // signInWithRedirect navigates away. Errors are caught by getRedirectResult on the return.
+    signInWithRedirect(auth, provider);
   };
 
-  // While the auth state is being determined, or if the user is already
-  // logged in (and we're about to redirect), show a loading screen.
-  // This prevents a "flash" of the login page.
+  // Show a loading screen while Firebase is initializing OR if a user
+  // is already detected and we are about to redirect. This prevents any UI flicker.
   if (isLoading || user) {
     return <LoadingScreen />;
   }
 
-  // If we're not loading and there's no user, show the login page.
+  // If we're done loading and there's no user, show the login page.
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-secondary/40 p-4">
       <Card className="w-full max-w-sm">
@@ -114,10 +95,11 @@ export default function LoginPage() {
             variant="outline"
             className="w-full h-12 text-base"
             onClick={handleGoogleLogin}
-            disabled={isProcessingLogin}
+            // Disable the button while the initial auth check is happening.
+            disabled={isLoading}
           >
             <GoogleIcon className="mr-2 h-5 w-5" />
-            {isProcessingLogin ? "Redirigiendo..." : "Continuar con Google"}
+            {isLoading ? "Cargando..." : "Continuar con Google"}
           </Button>
         </CardContent>
         <CardFooter>
