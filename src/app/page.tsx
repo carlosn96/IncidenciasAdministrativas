@@ -15,7 +15,7 @@ import {
 import { AppLogo, GoogleIcon } from "@/components/icons";
 import { LoadingScreen } from "@/components/loading-screen";
 import { auth } from "@/lib/firebase";
-import { GoogleAuthProvider, signInWithPopup, AuthError } from "firebase/auth";
+import { GoogleAuthProvider, signInWithRedirect, AuthError } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
@@ -24,52 +24,37 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
+    setIsLoading(true); // Show loading spinner before redirecting
     const provider = new GoogleAuthProvider();
     const institutionDomain = process.env.NEXT_PUBLIC_INSTITUTION_DOMAIN;
 
     if (!institutionDomain) {
-      console.error("El dominio de la institución no está configurado en las variables de entorno.");
-      toast({
-        variant: "destructive",
-        title: "Error de Configuración",
-        description: "El administrador no ha configurado el dominio de la institución.",
-      });
-      setIsLoading(false);
-      return;
+        console.error("El dominio de la institución no está configurado en las variables de entorno.");
+        toast({
+            variant: "destructive",
+            title: "Error de Configuración",
+            description: "El administrador no ha configurado el dominio de la institución.",
+        });
+        setIsLoading(false);
+        return;
     }
 
     provider.setCustomParameters({ hd: institutionDomain });
 
     try {
-      await signInWithPopup(auth, provider);
-      router.push("/dashboard");
+        await signInWithRedirect(auth, provider);
+        // The browser will now redirect to Google's sign-in page.
+        // The user will be redirected back to this page after signing in,
+        // and the AuthGuard will handle routing to the dashboard.
     } catch (error) {
-      const authError = error as AuthError;
-      console.error("Error de autenticación:", authError.code, authError.message);
-      
-      let description = "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.";
-      if (authError.code === 'auth/popup-closed-by-user') {
-        if (window.location.hostname.endsWith('cloudworkstations.dev')) {
-            description = `El dominio ${window.location.hostname} debe estar en la lista de "Dominios autorizados" en tu consola de Firebase Authentication.`;
-        } else {
-            description = "Has cerrado la ventana de inicio de sesión. Por favor, inténtalo de nuevo.";
-        }
-      } else if (authError.code === 'auth/cancelled-popup-request') {
-        description = "Se ha cancelado el inicio de sesión.";
-      } else if (authError.code === 'auth/operation-not-allowed') {
-         description = "El inicio de sesión con Google no está habilitado. Contacta al administrador.";
-      } else {
-        description = `Por favor, utiliza una cuenta de correo con el dominio @${institutionDomain}.`;
-      }
-
-      toast({
-        variant: "destructive",
-        title: "Inicio de Sesión Fallido",
-        description: description,
-      });
-    } finally {
-      setIsLoading(false);
+        const authError = error as AuthError;
+        console.error("Error al iniciar el inicio de sesión con redirección:", authError.code, authError.message);
+        toast({
+            variant: "destructive",
+            title: "Error de Autenticación",
+            description: "No se pudo iniciar el proceso de inicio de sesión. Por favor, inténtalo de nuevo.",
+        });
+        setIsLoading(false); // Stop loading if the redirect fails to initiate
     }
   };
 
