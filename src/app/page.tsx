@@ -21,68 +21,80 @@ import { useSettings } from "@/context/settings-context";
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  // We rely *only* on the global state from our context.
   const { user, isLoading } = useSettings();
-  const [isProcessingClick, setIsProcessingClick] = useState(false);
+  const [isProcessingLogin, setIsProcessingLogin] = useState(false);
 
+  // This effect will run whenever the user or loading state changes.
+  // It is the single source of truth for navigation.
   useEffect(() => {
-    // Process the redirect result on page load.
-    // The onAuthStateChanged listener in SettingsProvider will handle the user state.
-    // We just need to handle potential errors here.
-    getRedirectResult(auth).catch((error) => {
-      const authError = error as AuthError;
-      console.error("Error processing redirect result:", authError);
-      toast({
-        variant: "destructive",
-        title: "Error de inicio de sesión",
-        description: `Hubo un problema al verificar tus credenciales. (${authError.code})`,
-      });
-    });
-  }, [toast]);
-
-  useEffect(() => {
-    // This effect handles redirecting the user to the dashboard once they are logged in.
+    // If the initial auth check is done and we have a user, redirect.
     if (!isLoading && user) {
       router.replace("/dashboard");
     }
   }, [user, isLoading, router]);
 
-  const handleGoogleLogin = async () => {
-    setIsProcessingClick(true);
+  // This effect handles the result of the redirect from Google.
+  // It runs only once when the page loads.
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // User has successfully signed in.
+          // The `onAuthStateChanged` listener in SettingsProvider will handle
+          // setting the user state and triggering the redirect.
+          toast({
+            title: `¡Bienvenido, ${result.user.displayName}!`,
+            description: "Redirigiendo a tu panel...",
+          });
+        }
+      })
+      .catch((error) => {
+        // Handle Errors here.
+        const authError = error as AuthError;
+        console.error("Error during Google redirect:", authError);
+        toast({
+          variant: "destructive",
+          title: "Error de inicio de sesión",
+          description: `Hubo un problema al verificar tus credenciales. (${authError.code})`,
+        });
+      })
+      .finally(() => {
+        setIsProcessingLogin(false);
+      });
+  }, [toast]);
+
+
+  const handleGoogleLogin = () => {
+    setIsProcessingLogin(true); // Disable button to prevent multiple clicks
     const provider = new GoogleAuthProvider();
     const institutionDomain = process.env.NEXT_PUBLIC_INSTITUTION_DOMAIN;
 
     if (institutionDomain) {
       provider.setCustomParameters({ hd: institutionDomain });
-    } else {
-      console.warn("ADVERTENCIA: No se ha configurado un dominio institucional (NEXT_PUBLIC_INSTITUTION_DOMAIN). Se permitirá el acceso desde cualquier cuenta de Google. Esto es inseguro para producción.");
-      toast({
-          title: "Advertencia de Configuración",
-          description: "No se ha configurado un dominio institucional. Se permitirá cualquier cuenta.",
-      });
     }
 
-    try {
-      await signInWithRedirect(auth, provider);
-      // The browser will now redirect to Google's sign-in page.
-      // After login, the page will reload, and the useEffects above will handle the result.
-    } catch (error) {
+    // signInWithRedirect will navigate away, so we don't need complex error handling here.
+    signInWithRedirect(auth, provider).catch((error) => {
       const authError = error as AuthError;
-      console.error("Error al iniciar el inicio de sesión con redirección:", authError.code, authError.message);
+      console.error("Error initiating redirect login:", authError);
       toast({
         variant: "destructive",
         title: "Error de Autenticación",
         description: "No se pudo iniciar el proceso de inicio de sesión. Por favor, inténtalo de nuevo.",
       });
-      setIsProcessingClick(false);
-    }
+      setIsProcessingLogin(false); // Re-enable button on failure
+    });
   };
 
-  // Show a loading screen while we wait for the auth state to be resolved
-  // or if the user is already logged in (in which case we're about to redirect).
+  // While the auth state is being determined, or if the user is already
+  // logged in (and we're about to redirect), show a loading screen.
+  // This prevents a "flash" of the login page.
   if (isLoading || user) {
     return <LoadingScreen />;
   }
 
+  // If we're not loading and there's no user, show the login page.
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-secondary/40 p-4">
       <Card className="w-full max-w-sm">
@@ -102,10 +114,10 @@ export default function LoginPage() {
             variant="outline"
             className="w-full h-12 text-base"
             onClick={handleGoogleLogin}
-            disabled={isProcessingClick}
+            disabled={isProcessingLogin}
           >
             <GoogleIcon className="mr-2 h-5 w-5" />
-            {isProcessingClick ? "Redirigiendo..." : "Continuar con Google"}
+            {isProcessingLogin ? "Redirigiendo..." : "Continuar con Google"}
           </Button>
         </CardContent>
         <CardFooter>

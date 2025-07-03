@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -62,7 +61,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Start as true, set to false once auth check is complete
 
   // State for user-specific data
   const [userLocations, setUserLocations] = useState<Location[]>(getInitialUserLocations());
@@ -73,42 +72,35 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // Effect for handling authentication state changes and loading user data from Firestore
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+      setUser(currentUser); // First, set the user object (or null)
 
       if (currentUser) {
-        setIsLoading(true);
+        // If user exists, load their data from Firestore
         const docRef = doc(db, "users", currentUser.uid);
         try {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
+            // User has existing data
             const data = docSnap.data();
             setUserLocations(data.userLocations || getInitialUserLocations());
             
-            // Migration logic for old schedule format
-            if (data.schedule && !data.schedules) {
-                const migratedSchedule: Schedule = { id: uuidv4(), name: 'Horario Principal', entries: data.schedule };
-                setSchedules([migratedSchedule]);
-                setActiveScheduleId(migratedSchedule.id);
-            } else {
-                const loadedSchedules = data.schedules || getInitialSchedules();
-                setSchedules(loadedSchedules);
-                setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
-            }
+            const loadedSchedules = data.schedules || getInitialSchedules();
+            setSchedules(loadedSchedules);
+            setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
 
-            // Important: Re-hydrate date objects from Firestore Timestamps
             const rehydratedPeriods = (data.periods || []).map((p: any) => ({
               ...p,
               startDate: p.startDate?.toDate ? p.startDate.toDate() : new Date(p.startDate),
               endDate: p.endDate?.toDate ? p.endDate.toDate() : new Date(p.endDate),
             })).sort((a: Period, b: Period) => b.startDate.getTime() - a.startDate.getTime());
             
-            setPeriods(rehydratedPeriods || getInitialPeriods());
+            setPeriods(rehydratedPeriods);
           } else {
-            // New user, use initial state. Data will be saved on first change.
+            // This is a new user, set initial default data
             const initialSchedules = getInitialSchedules();
             setUserLocations(getInitialUserLocations());
             setSchedules(initialSchedules);
-            setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
+            setActiveScheduleId(initialSchedules[0].id);
             setPeriods(getInitialPeriods());
           }
         } catch (e) {
@@ -117,20 +109,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const initialSchedules = getInitialSchedules();
           setUserLocations(getInitialUserLocations());
           setSchedules(initialSchedules);
-          setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
+          setActiveScheduleId(initialSchedules[0].id);
           setPeriods(getInitialPeriods());
-        } finally {
-          setIsLoading(false);
         }
       } else {
-        // User is signed out, clear all user-specific data
+        // User is signed out, reset all user-specific data to initial state
         const initialSchedules = getInitialSchedules();
         setUserLocations(getInitialUserLocations());
         setSchedules(initialSchedules);
         setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
         setPeriods(getInitialPeriods());
-        setIsLoading(false);
       }
+
+      // Finally, set loading to false. This happens only once after the initial auth check is complete.
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -149,8 +141,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           periods // Firestore handles JS Date to Timestamp conversion automatically
         };
         try {
-          // The `schedule` field is intentionally omitted to remove it on save.
-          await setDoc(docRef, dataToStore);
+          await setDoc(docRef, dataToStore, { merge: true });
         } catch (error) {
           console.error("Error saving data to Firestore:", error);
         }
