@@ -2,9 +2,9 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import type { Location, Period, Schedule } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -56,7 +56,6 @@ interface SettingsContextType {
   setActiveScheduleId: React.Dispatch<React.SetStateAction<string | null>>;
   periods: Period[];
   setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
-  simulateLogin: (uid: string) => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -71,71 +70,70 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
   const [periods, setPeriods] = useState<Period[]>([]);
   
-  const simulateLogin = async (uid: string) => {
-    setIsLoading(true);
-
-    const mockUser = {
-      uid,
-      displayName: 'Usuario Simulado',
-      email: 'simulado@une.edu.mx',
-      photoURL: `https://placehold.co/100x100.png`,
-    } as FirebaseUser;
-
-    setUser(mockUser);
-    const userDocRef = doc(db, 'users', uid);
-
-    try {
-      const docSnap = await getDoc(userDocRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        
-        const loadedSchedules = data.schedules || getInitialSchedules();
-        const rehydratedPeriods = (data.periods || []).map((p: any) => ({
-          ...p,
-          startDate: p.startDate.toDate(),
-          endDate: p.endDate.toDate(),
-        })).sort((a: Period, b: Period) => b.startDate.getTime() - a.startDate.getTime());
-
-        setUserLocations(data.userLocations || getInitialUserLocations());
-        setSchedules(loadedSchedules);
-        setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
-        setPeriods(rehydratedPeriods);
-      } else {
-        // New user: set initial data in state and Firestore
-        const initialLocations = getInitialUserLocations();
-        const initialSchedules = getInitialSchedules();
-        const initialPeriods = getInitialPeriods();
-        const initialActiveScheduleId = initialSchedules.length > 0 ? initialSchedules[0].id : null;
-
-        setUserLocations(initialLocations);
-        setSchedules(initialSchedules);
-        setActiveScheduleId(initialActiveScheduleId);
-        setPeriods(initialPeriods);
-        
-        await setDoc(userDocRef, {
-          userLocations: initialLocations,
-          schedules: initialSchedules,
-          activeScheduleId: initialActiveScheduleId,
-          periods: initialPeriods,
-        });
-      }
-    } catch (error) {
-      console.error("Error handling user data in Firestore:", error);
-      // Fallback to local initial state if firestore fails
-      setUserLocations(getInitialUserLocations());
-      const initialSchedules = getInitialSchedules();
-      setSchedules(initialSchedules);
-      setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
-      setPeriods(getInitialPeriods());
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   // Effect for handling Firebase auth state change
   useEffect(() => {
-    // Real auth is disabled for simulation. The app will start in a logged-out state.
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setIsLoading(true);
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        
+        try {
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            const loadedSchedules = data.schedules || getInitialSchedules();
+            const rehydratedPeriods = (data.periods || []).map((p: any) => ({
+              ...p,
+              startDate: p.startDate.toDate(),
+              endDate: p.endDate.toDate(),
+            })).sort((a: Period, b: Period) => b.startDate.getTime() - a.startDate.getTime());
+
+            setUserLocations(data.userLocations || getInitialUserLocations());
+            setSchedules(loadedSchedules);
+            setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
+            setPeriods(rehydratedPeriods);
+          } else {
+            // New user: set initial data in state and Firestore
+            const initialLocations = getInitialUserLocations();
+            const initialSchedules = getInitialSchedules();
+            const initialPeriods = getInitialPeriods();
+            const initialActiveScheduleId = initialSchedules.length > 0 ? initialSchedules[0].id : null;
+
+            setUserLocations(initialLocations);
+            setSchedules(initialSchedules);
+            setActiveScheduleId(initialActiveScheduleId);
+            setPeriods(initialPeriods);
+            
+            await setDoc(userDocRef, {
+              userLocations: initialLocations,
+              schedules: initialSchedules,
+              activeScheduleId: initialActiveScheduleId,
+              periods: initialPeriods,
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching user data from Firestore:", error);
+          // Fallback to local initial state if firestore fails
+          setUserLocations(getInitialUserLocations());
+          const initialSchedules = getInitialSchedules();
+          setSchedules(initialSchedules);
+          setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
+          setPeriods(getInitialPeriods());
+        }
+      } else {
+        setUser(null);
+        // Clear user-specific data on logout
+        setUserLocations([]);
+        setSchedules([]);
+        setActiveScheduleId(null);
+        setPeriods([]);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Effect for saving user data to Firestore whenever it changes
@@ -168,7 +166,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setActiveScheduleId,
     periods,
     setPeriods,
-    simulateLogin,
   };
 
   return (

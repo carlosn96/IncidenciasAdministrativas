@@ -3,6 +3,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { signInWithPopup, signOut } from "firebase/auth";
+import { auth, provider } from "@/lib/firebase";
 import { LoadingScreen } from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
 import { AppLogo, GoogleIcon } from "@/components/icons";
@@ -12,9 +14,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 
+const ALLOWED_DOMAIN = "universidad-une.com";
+
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isLoading: isSettingsLoading, simulateLogin } = useSettings();
+  const { user, isLoading: isSettingsLoading } = useSettings();
   const { toast } = useToast();
 
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -30,26 +34,44 @@ export default function LoginPage() {
     setIsSigningIn(true);
     setAuthError(null);
     try {
-      // Call the simulation function with the specified UID
-      await simulateLogin('v44ZzprjCGeDbhl3vVG5Zc4z8eo2');
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user.email;
+
+      if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+        await signOut(auth); // Sign out the user immediately
+        setAuthError({
+          title: "Dominio no Autorizado",
+          message: `El acceso está restringido a cuentas del dominio @${ALLOWED_DOMAIN}. Por favor, utiliza tu cuenta institucional.`
+        });
+        setIsSigningIn(false);
+        return;
+      }
       
       toast({
-        title: "¡Bienvenido de nuevo!",
-        description: `Has iniciado sesión como Usuario Simulado.`,
+        title: `¡Bienvenido de nuevo, ${result.user.displayName?.split(" ")[0]}!`,
+        description: `Has iniciado sesión correctamente.`,
       });
-    } catch (error) {
-      // This catch is for potential errors in the simulation/data fetching itself
-      console.error("Simulation error:", error);
-      setAuthError({
-        title: "Error de simulación",
-        message: "Ocurrió un error al cargar los datos del usuario simulado."
-      });
+      // The onAuthStateChanged listener in the context will handle redirect.
+      
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        setAuthError({
+          title: 'Proceso de inicio de sesión cancelado',
+          message: 'No se pudo completar el inicio de sesión. Esto puede ocurrir si cierras la ventana o si hay un problema con la cuenta de Google seleccionada. Por favor, inténtalo de nuevo.'
+        });
+      } else {
+        console.error("Authentication error:", error);
+        setAuthError({
+          title: "Error de Autenticación",
+          message: "Ocurrió un error inesperado al intentar iniciar sesión. Por favor, revisa la consola para más detalles."
+        });
+      }
     } finally {
       setIsSigningIn(false);
     }
   };
 
-  if (isSettingsLoading && !user) {
+  if (isSettingsLoading) {
     return <LoadingScreen />;
   }
   
