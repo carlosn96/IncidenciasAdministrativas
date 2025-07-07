@@ -23,7 +23,7 @@ A continuación se detalla el funcionamiento de cada módulo de la aplicación.
 El acceso a la aplicación está restringido y protegido mediante **Firebase Authentication**, usando un método de inicio de sesión moderno y seguro.
 
 -   **Inicio de Sesión con Google (Popup):** Los usuarios acceden utilizando su cuenta de Google a través de una ventana emergente, lo que evita recargas de página y ofrece una experiencia fluida.
--   **Restricción de Dominio (Opcional):** El sistema está preparado para aceptar únicamente cuentas de un dominio institucional específico (ej. `@une.edu.mx`), asegurando que solo personal autorizado pueda registrarse.
+-   **Restricción de Dominio:** El sistema está configurado para aceptar únicamente cuentas de un dominio institucional específico (ej. `@une.edu.mx` o `@universidad-une.com`), asegurando que solo personal autorizado pueda registrarse.
 -   **Sesión Persistente y Rutas Protegidas:** Una vez que inicias sesión, tu sesión se mantiene activa. Todas las páginas del panel están protegidas, y si un usuario no autenticado intenta acceder, es redirigido automáticamente a la página de inicio.
 
 ### 2. Panel Principal: Tu Centro de Mando Diario
@@ -48,7 +48,7 @@ Esta es la página de bienvenida y el centro de operaciones diario del usuario. 
 
 Este módulo es la herramienta clave para la planificación y el cumplimiento de metas de horas.
 
--   **Selector de Periodo:** Elige cualquier periodo creado para visualizar o modificar su planificación.
+-   **Selector de Periodo:** Elige cualquier periodo creado para visualizar o modificar su planificación. Por defecto, mostrará el periodo activo actual.
 -   **Tarjeta de Estadísticas de Proyección:** Un resumen financiero de tu tiempo.
     -   **Meta del Periodo:** Total de horas que debes cubrir.
     -   **Horas Reales:** Suma de las horas ya trabajadas.
@@ -57,7 +57,7 @@ Este módulo es la herramienta clave para la planificación y el cumplimiento de
 -   **Tabla de Planificación Semanal:**
     -   Muestra cada día laborable del periodo. Los días ya completados (con entrada y salida real) se marcan con un **sombreado verde** para distinguirlos.
     -   El **día actual** está marcado con un **punto animado** para encontrarlo fácilmente.
-    -   Puedes introducir la **hora y lugar de entrada/salida proyectadas** para los días futuros. Los campos se deshabilitan inteligentemente a medida que registras tus incidencias reales.
+    -   Puedes introducir la **hora y lugar de entrada/salida proyectadas** para los días futuros. Los campos se deshabilitan inteligentemente a medida que registras tus incidencias reales, mostrando siempre el dato real si existe.
 -   **Automatización de la Planificación:**
     -   **Cargar Horario por Defecto:** Con un solo clic, rellena toda la proyección con tu plantilla de horario activa.
     -   **Guardar como Plantilla:** Si creas una planificación que quieres reutilizar, guárdala como una nueva plantilla directamente desde aquí.
@@ -77,7 +77,7 @@ Se accede desde la tarjeta del periodo activo en el panel principal o desde el l
 
 #### Listado y Creación de Periodos (`Ajustes > Periodos`)
 
--   **Creación de Periodos:** Crea nuevos periodos de registro (normalmente quincenales) con nombre, rango de fechas y la opción de incluir sábados en el cálculo de horas.
+-   **Creación de Periodos:** Crea nuevos periodos de registro (normalmente quincenales) con nombre, rango de fechas y la opción de incluir o no los sábados en el cálculo de horas.
 -   **Validación de Fechas:** Impide crear periodos con fechas que se solapen para mantener la integridad de los datos.
 -   **Listado de Periodos:** Muestra todos los periodos creados, ordenados del más reciente al más antiguo.
 -   **Menú de Acciones por Periodo:** Cada periodo tiene un menú desplegable profesional que permite:
@@ -127,11 +127,9 @@ Es **crucial** entender que esta aplicación está diseñada con una **arquitect
 ### ¿Por qué esta dependencia?
 
 *   **Seguridad y Simplicidad:** Usamos **Firebase Authentication** para gestionar las sesiones de usuario de forma segura y sin complicaciones.
-*   **Persistencia de Datos por Usuario:** La base de datos, **Cloud Firestore**, está estructurada para que cada pieza de información (tus periodos, horarios, ubicaciones, etc.) se guarde en un "documento" que pertenece exclusivamente a tu usuario. Tu ID de usuario de Firebase es la llave que abre acceso a tus datos.
+*   **Persistencia de Datos por Usuario:** La base de datos, **Cloud Firestore**, está estructurada para que cada pieza de información (tus periodos, horarios, ubicaciones, etc.) se guarde en un "documento" que pertenece exclusivamente a tu usuario. Tu ID de usuario de Firebase (`uid`) es la llave que abre acceso a tus datos.
 
 ### Componentes Clave con Dependencia Directa:
-
-Intentar desplegar la aplicación en otro servidor **omitiendo Firebase** no es posible sin una reescritura significativa de los siguientes componentes clave:
 
 1.  **`src/context/settings-context.tsx` (El Cerebro de la App):**
     *   Este archivo es el componente más crítico. Gestiona el estado global de la aplicación.
@@ -145,13 +143,23 @@ Intentar desplegar la aplicación en otro servidor **omitiendo Firebase** no es 
 3.  **`src/app/page.tsx` (La Puerta de Entrada):**
     *   Implementa la lógica de `signInWithPopup` de Firebase para el inicio de sesión con tu cuenta de Google.
 
-### ¿Puedo Desplegarla en Otro Servidor?
+### ¿Puedo Desplegarla en Otro Servidor (ej. Vercel)?
 
-*   **Sí, pero conectada a Firebase.** Puedes alojar el *frontend* (el código de Next.js) en cualquier plataforma moderna como Vercel, Netlify o tu propio servidor. Sin embargo, esta instancia **siempre deberá conectarse a tu proyecto de Firebase** para funcionar. Deberás configurar las variables de entorno (`NEXT_PUBLIC_FIREBASE_*`) y autorizar el nuevo dominio de tu servidor en la consola de Firebase.
+*   **Sí, pero siempre conectada a Firebase.** Puedes alojar el *frontend* (el código de Next.js) en cualquier plataforma moderna como Vercel, Netlify o tu propio servidor. Sin embargo, esta instancia **siempre deberá conectarse a tu proyecto de Firebase** para funcionar. Para ello, necesitas dos cosas:
+    1.  **Configurar las Variables de Entorno:** En la configuración de tu servidor (ej. en Vercel), debes añadir las mismas variables de entorno `NEXT_PUBLIC_FIREBASE_*` que usas en desarrollo.
+    2.  **Autorizar el Dominio:** En la Consola de Firebase, dentro de la sección de "Authentication", debes añadir el dominio que tu proveedor de hosting (ej. Vercel) le asigne a tu aplicación en la lista de "Dominios autorizados".
 
-*   **No, si quieres omitir Firebase.** "Omitir Firebase" implicaría reemplazar su funcionalidad, lo que requeriría:
-    1.  **Implementar un nuevo sistema de autenticación** (ej. con tokens JWT, otro proveedor OAuth, etc.).
-    2.  **Configurar y gestionar una nueva base de datos** (ej. PostgreSQL, MongoDB).
-    3.  **Reescribir por completo** el `settings-context.tsx` para que se comunique con tu nueva base de datos a través de una API que tendrías que construir.
+### ¿Qué se puede hacer con la autenticación?
 
-En resumen, la aplicación en su estado actual es un cliente de Firebase, no una aplicación monolítica tradicional. Los problemas que a veces puedan surgir con la autenticación de Firebase son parte integral del diseño actual, elegido por su rapidez de desarrollo y seguridad.
+Si el sistema de autenticación de Firebase genera problemas, existen varias alternativas, de la más simple a la más compleja:
+
+1.  **Optimizar la Configuración Actual (Recomendado):** Muchos problemas de autenticación se deben a configuraciones en la Consola de Firebase (como dominios no autorizados). Revisar y ajustar estas configuraciones suele ser la solución más rápida. La app ya está preparada para restringir el login a un dominio específico (ej. `@universidad-une.com`), lo cual es una práctica de seguridad robusta.
+
+2.  **Añadir otros Proveedores de Firebase:** Si el problema es la dependencia exclusiva de Google, Firebase facilita añadir otros métodos de inicio de sesión (Correo/Contraseña, Microsoft, etc.). Esto requeriría cambios en la interfaz de login, pero no alteraría la arquitectura central, ya que la gestión de datos seguiría dependiendo del `uid` de Firebase.
+
+3.  **Reemplazar Firebase Authentication por Completo (Alta Complejidad):** Esta es una **modificación arquitectónica mayor**. Implicaría:
+    *   **Elegir un nuevo proveedor** (ej. Auth0, Clerk) o construir un sistema propio con JWT.
+    *   **Reescribir por completo la lógica de acceso a datos** en `src/context/settings-context.tsx`. Dado que todos los datos en Firestore están ligados al `uid` de Firebase, habría que idear una estrategia para migrar o mapear los datos a los nuevos identificadores de usuario.
+    *   **Implementar una nueva interfaz de usuario** para el registro e inicio de sesión.
+
+En resumen, aunque "omitir Firebase" no es una opción sin una reescritura significativa, la aplicación es flexible. Se puede desplegar en cualquier servidor moderno y se puede adaptar a diferentes métodos de autenticación si es necesario, aunque la ruta más sencilla suele ser optimizar la configuración existente.
