@@ -3,8 +3,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth, provider } from "@/lib/firebase";
 import { LoadingScreen } from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
 import { AppLogo, GoogleIcon } from "@/components/icons";
@@ -14,11 +12,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 
-const ALLOWED_DOMAIN = "universidad-une.com";
-
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isLoading: isSettingsLoading } = useSettings();
+  const { user, isLoading: isSettingsLoading, simulateLogin } = useSettings();
   const { toast } = useToast();
 
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -34,58 +30,26 @@ export default function LoginPage() {
     setIsSigningIn(true);
     setAuthError(null);
     try {
-      const result = await signInWithPopup(auth, provider);
-      const authenticatedUser = result.user;
-
-      // Robust domain validation after successful authentication
-      if (!authenticatedUser.email || !authenticatedUser.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-        // Immediately sign out the user if their domain is not allowed
-        await auth.signOut();
-        setAuthError({
-            title: "Dominio no Autorizado",
-            message: `El acceso está restringido a cuentas del dominio @${ALLOWED_DOMAIN}. Por favor, inténtalo de nuevo con tu cuenta institucional.`
-        });
-        setIsSigningIn(false);
-        return; // Stop further execution
-      }
-
-      // The onAuthStateChanged listener in SettingsProvider will handle the redirect.
-      // We can show a toast here.
+      // Call the simulation function with the specified UID
+      await simulateLogin('v44ZzprjCGeDbhl3vVG5Zc4z8eo2');
+      
       toast({
         title: "¡Bienvenido de nuevo!",
-        description: `Has iniciado sesión como ${authenticatedUser.displayName}.`,
+        description: `Has iniciado sesión como Usuario Simulado.`,
       });
-    } catch (error: any) {
-        let title = "Error de Autenticación";
-        let message = "Ocurrió un error desconocido. Por favor, intenta de nuevo.";
-        
-        switch (error.code) {
-            case 'auth/popup-closed-by-user':
-            case 'auth/cancelled-popup-request':
-                title = "Proceso de inicio de sesión cancelado";
-                message = "No se pudo completar el inicio de sesión. Esto puede ocurrir si cierras la ventana o si hay un problema con la cuenta de Google seleccionada. Por favor, inténtalo de nuevo.";
-                break;
-            case 'auth/popup-blocked':
-                title = "Ventana emergente bloqueada";
-                message = "Tu navegador bloqueó la ventana de inicio de sesión. Por favor, permite las ventanas emergentes para este sitio e inténtalo de nuevo.";
-                break;
-            case 'auth/account-exists-with-different-credential':
-                title = "Cuenta ya existente";
-                message = "Ya existe una cuenta con este correo, pero con un método de acceso diferente. Contacta a soporte técnico.";
-                break;
-            default:
-                console.error("Firebase auth error:", error);
-                message = "Ocurrió un error inesperado. Por favor, inténtalo de nuevo más tarde."
-                break;
-        }
-
-        setAuthError({ title, message });
+    } catch (error) {
+      // This catch is for potential errors in the simulation/data fetching itself
+      console.error("Simulation error:", error);
+      setAuthError({
+        title: "Error de simulación",
+        message: "Ocurrió un error al cargar los datos del usuario simulado."
+      });
     } finally {
-        setIsSigningIn(false);
+      setIsSigningIn(false);
     }
   };
 
-  if (isSettingsLoading) {
+  if (isSettingsLoading && !user) {
     return <LoadingScreen />;
   }
   
