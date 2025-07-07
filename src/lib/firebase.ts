@@ -12,18 +12,15 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Check for missing configuration keys.
-const missingConfigKeys = Object.entries(firebaseConfig)
-  .filter(([, value]) => !value)
-  .map(([key]) => key);
+const configValues = Object.values(firebaseConfig);
+const isFirebaseConfigured = configValues.every(Boolean);
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
 let provider: GoogleAuthProvider | undefined;
 
-// Initialize Firebase only if all keys are present.
-if (missingConfigKeys.length === 0) {
+if (isFirebaseConfigured) {
   try {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
@@ -33,16 +30,14 @@ if (missingConfigKeys.length === 0) {
       prompt: 'select_account',
     });
 
-    // We only try to enable persistence on the client-side.
     if (typeof window !== 'undefined') {
-      enableIndexedDbPersistence(db)
-        .catch((err) => {
-          if (err.code === 'failed-precondition') {
-            console.warn("Firestore persistence failed to enable. This can happen if multiple tabs are open.");
-          } else if (err.code === 'unimplemented') {
-            console.warn("Firestore persistence is not supported in this browser.");
-          }
-        });
+      enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn("Firestore persistence failed to enable due to multiple tabs.");
+        } else if (err.code === 'unimplemented') {
+          console.warn("Firestore persistence is not supported in this browser.");
+        }
+      });
     }
   } catch (error) {
     console.error("Error initializing Firebase:", error);
@@ -52,19 +47,6 @@ if (missingConfigKeys.length === 0) {
     db = undefined;
     provider = undefined;
   }
-} else {
-  // If keys are missing, log a warning for developers.
-  // This will be visible in the server console during development.
-  if (process.env.NODE_ENV === 'development') {
-    console.warn(`
-********************************************************************************
-Firebase configuration is INCOMPLETE.
-The application will run, but authentication and database features are disabled.
-Please add your Firebase project credentials to the .env file to enable them.
-Missing keys: ${missingConfigKeys.join(", ")}
-********************************************************************************
-    `);
-  }
 }
 
-export { app, auth, db, provider };
+export { app, auth, db, provider, isFirebaseConfigured };
