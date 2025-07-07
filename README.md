@@ -120,7 +120,38 @@ Se accede desde la tarjeta del periodo activo en el panel principal o desde el l
 
 ---
 
-## Arquitectura y Despliegue
+## Arquitectura y Dependencia Crítica de Firebase
 
--   **Dependencia de Firebase**: La aplicación está diseñada para funcionar con los servicios de Firebase (Authentication y Firestore). No puede ser desplegada en un servidor diferente sin una reescritura de la lógica de datos y autenticación.
--   **Portabilidad del Frontend**: El código del frontend (Next.js) puede ser alojado en cualquier plataforma compatible (como Vercel, Netlify, etc.), siempre que se configuren las variables de entorno correctas para conectarse al proyecto de Firebase y se autorice el nuevo dominio en la consola de Firebase.
+Es **crucial** entender que esta aplicación está diseñada con una **arquitectura profundamente integrada con los servicios de Google Firebase**. No es una aplicación que simplemente *usa* Firebase para autenticarse; su núcleo funcional depende de ello.
+
+### ¿Por qué esta dependencia?
+
+*   **Seguridad y Simplicidad:** Usamos **Firebase Authentication** para gestionar las sesiones de usuario de forma segura y sin complicaciones.
+*   **Persistencia de Datos por Usuario:** La base de datos, **Cloud Firestore**, está estructurada para que cada pieza de información (tus periodos, horarios, ubicaciones, etc.) se guarde en un "documento" que pertenece exclusivamente a tu usuario. Tu ID de usuario de Firebase es la llave que abre acceso a tus datos.
+
+### Componentes Clave con Dependencia Directa:
+
+Intentar desplegar la aplicación en otro servidor **omitiendo Firebase** no es posible sin una reescritura significativa de los siguientes componentes clave:
+
+1.  **`src/context/settings-context.tsx` (El Cerebro de la App):**
+    *   Este archivo es el componente más crítico. Gestiona el estado global de la aplicación.
+    *   Utiliza `onAuthStateChanged` de Firebase para saber quién eres y si has iniciado sesión.
+    *   Todas las operaciones de **lectura y escritura** de datos (tus periodos, horarios, etc.) se realizan directamente contra la base de datos Firestore, usando tu ID de usuario (`uid`) para encontrar tus datos específicos.
+
+2.  **`src/components/auth-guard.tsx` (El Guardián):**
+    *   Este componente envuelve todas las páginas del panel principal.
+    *   Su única función es verificar si tienes una sesión activa en Firebase. Si no la tienes, te redirige a la página de inicio. Sin Firebase, no hay cómo proteger las rutas.
+
+3.  **`src/app/page.tsx` (La Puerta de Entrada):**
+    *   Implementa la lógica de `signInWithPopup` de Firebase para el inicio de sesión con tu cuenta de Google.
+
+### ¿Puedo Desplegarla en Otro Servidor?
+
+*   **Sí, pero conectada a Firebase.** Puedes alojar el *frontend* (el código de Next.js) en cualquier plataforma moderna como Vercel, Netlify o tu propio servidor. Sin embargo, esta instancia **siempre deberá conectarse a tu proyecto de Firebase** para funcionar. Deberás configurar las variables de entorno (`NEXT_PUBLIC_FIREBASE_*`) y autorizar el nuevo dominio de tu servidor en la consola de Firebase.
+
+*   **No, si quieres omitir Firebase.** "Omitir Firebase" implicaría reemplazar su funcionalidad, lo que requeriría:
+    1.  **Implementar un nuevo sistema de autenticación** (ej. con tokens JWT, otro proveedor OAuth, etc.).
+    2.  **Configurar y gestionar una nueva base de datos** (ej. PostgreSQL, MongoDB).
+    3.  **Reescribir por completo** el `settings-context.tsx` para que se comunique con tu nueva base de datos a través de una API que tendrías que construir.
+
+En resumen, la aplicación en su estado actual es un cliente de Firebase, no una aplicación monolítica tradicional. Los problemas que a veces puedan surgir con la autenticación de Firebase son parte integral del diseño actual, elegido por su rapidez de desarrollo y seguridad.
