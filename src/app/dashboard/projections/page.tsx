@@ -429,7 +429,7 @@ export default function ProjectionsPage() {
                          const deviationMessage = checkDeviation(day);
                          const isToday = day.date === todayString;
                          return (
-                           <div key={day.date} className={cn("border rounded-lg p-4", day.entry && day.exit && "bg-green-500/10 border-green-500/20")}>
+                           <div key={day.date} className={cn("border rounded-lg p-4", day.entry && "bg-green-500/10 border-green-500/20")}>
                               <div className="flex justify-between items-start mb-4">
                                 <p className="font-medium capitalize flex items-center gap-2.5">
                                   {isToday && (
@@ -453,16 +453,16 @@ export default function ProjectionsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Entrada Proyectada</Label>
-                                  <Input type="time" value={day.projectedEntry?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedEntry", "time", e.target.value)} disabled={!!day.entry} />
-                                  <Select value={day.projectedEntry?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedEntry", "location", value)} disabled={!!day.entry}>
+                                  <Input type="time" value={(day.entry?.time || day.projectedEntry?.time) ?? ""} onChange={(e) => handleProjectionChange(day.date, "projectedEntry", "time", e.target.value)} disabled={!!day.entry} />
+                                  <Select value={(day.entry?.location || day.projectedEntry?.location) ?? ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedEntry", "location", value)} disabled={!!day.entry}>
                                     <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                     <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Salida Proyectada</Label>
-                                  <Input type="time" value={day.projectedExit?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedExit", "time", e.target.value)} disabled={!!day.exit} />
-                                  <Select value={day.projectedExit?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedExit", "location", value)} disabled={!!day.exit}>
+                                  <Input type="time" value={(day.exit?.time || day.projectedExit?.time) ?? ""} onChange={(e) => handleProjectionChange(day.date, "projectedExit", "time", e.target.value)} disabled={!!day.exit} />
+                                  <Select value={(day.exit?.location || day.projectedExit?.location) ?? ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedExit", "location", value)} disabled={!!day.exit}>
                                     <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                     <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
                                   </Select>
@@ -503,7 +503,7 @@ export default function ProjectionsPage() {
                             const deviationMessage = checkDeviation(day);
                             const isToday = day.date === todayString;
                             return (
-                                <TableRow key={day.date} className={cn(day.entry && day.exit && "bg-green-500/10")}>
+                                <TableRow key={day.date} className={cn(day.entry && "bg-green-500/10")}>
                                     <TableCell className="font-medium capitalize whitespace-nowrap">
                                       <div className="flex items-center gap-2.5">
                                         {isToday && (
@@ -521,16 +521,16 @@ export default function ProjectionsPage() {
                                         )}
                                       </div>
                                     </TableCell>
-                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedEntry?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} /></TableCell>
+                                    <TableCell><Input type="time" className="min-w-[100px]" value={(day.entry?.time || day.projectedEntry?.time) ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} /></TableCell>
                                     <TableCell>
-                                      <Select value={day.projectedEntry?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v)} disabled={!!day.entry}>
+                                      <Select value={(day.entry?.location || day.projectedEntry?.location) ?? ""} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v)} disabled={!!day.entry}>
                                         <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                         <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
                                       </Select>
                                     </TableCell>
-                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedExit?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} /></TableCell>
+                                    <TableCell><Input type="time" className="min-w-[100px]" value={(day.exit?.time || day.projectedExit?.time) ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} /></TableCell>
                                     <TableCell>
-                                       <Select value={day.projectedExit?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v)} disabled={!!day.exit}>
+                                       <Select value={(day.exit?.location || day.projectedExit?.location) ?? ""} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v)} disabled={!!day.exit}>
                                         <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                         <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
                                       </Select>
