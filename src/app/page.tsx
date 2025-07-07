@@ -19,7 +19,7 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<{ title: string, message: string } | null>(null);
 
   useEffect(() => {
     if (!isSettingsLoading && user) {
@@ -39,13 +39,30 @@ export default function LoginPage() {
         description: `Has iniciado sesión como ${result.user.displayName}.`,
       });
     } catch (error: any) {
-      let errorMessage = "Ocurrió un error desconocido al iniciar sesión.";
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "El inicio de sesión fue cancelado.";
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
-        errorMessage = "Ya existe una cuenta con este correo electrónico pero con un método de inicio de sesión diferente.";
-      }
-      setAuthError(errorMessage);
+        let title = "Error de Autenticación";
+        let message = "Ocurrió un error desconocido. Por favor, intenta de nuevo.";
+        
+        switch (error.code) {
+            case 'auth/popup-closed-by-user':
+            case 'auth/cancelled-popup-request':
+                title = "Inicio de sesión cancelado";
+                message = "La ventana de inicio de sesión fue cerrada. Asegúrate de usar una cuenta de Google del dominio institucional (@universidad-une.com).";
+                break;
+            case 'auth/popup-blocked':
+                title = "Ventana emergente bloqueada";
+                message = "Tu navegador bloqueó la ventana de inicio de sesión. Por favor, permite las ventanas emergentes para este sitio e inténtalo de nuevo.";
+                break;
+            case 'auth/account-exists-with-different-credential':
+                title = "Cuenta ya existente";
+                message = "Ya existe una cuenta con este correo, pero con un método de acceso diferente. Contacta a soporte técnico.";
+                break;
+            default:
+                console.error("Firebase auth error:", error);
+                message = "Ocurrió un error inesperado. Por favor, inténtalo de nuevo más tarde."
+                break;
+        }
+
+        setAuthError({ title, message });
     } finally {
         setIsSigningIn(false);
     }
@@ -79,8 +96,8 @@ export default function LoginPage() {
           {authError && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Error de Autenticación</AlertTitle>
-              <AlertDescription>{authError}</AlertDescription>
+              <AlertTitle>{authError.title}</AlertTitle>
+              <AlertDescription>{authError.message}</AlertDescription>
             </Alert>
           )}
           <Button
