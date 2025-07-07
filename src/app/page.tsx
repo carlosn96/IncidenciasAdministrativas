@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { AlertTriangle } from "lucide-react";
 
 const ALLOWED_DOMAIN = "universidad-une.com";
+const NO_AUTH_MODE = process.env.NEXT_PUBLIC_NO_AUTH_MODE === 'true';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [authError, setAuthError] = useState<{ title: string, message: string } | null>(null);
 
   useEffect(() => {
+    // If a user object exists (real or mocked), redirect to the dashboard.
     if (!isSettingsLoading && user) {
       router.replace("/dashboard");
     }
@@ -70,15 +72,11 @@ export default function LoginPage() {
       setIsSigningIn(false);
     }
   };
-
-  if (isSettingsLoading) {
-    return <LoadingScreen />;
-  }
   
-  // If user is logged in, useEffect will redirect.
-  // We render null to avoid a flash of the login page.
-  if(user) {
-      return null;
+  // In No-Auth mode, the context will provide a mock user, and the useEffect above
+  // will handle the redirect. We show a loading screen while this happens.
+  if (NO_AUTH_MODE || isSettingsLoading || user) {
+    return <LoadingScreen />;
   }
 
   return (

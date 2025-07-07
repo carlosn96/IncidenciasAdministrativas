@@ -9,6 +9,12 @@ import type { Location, Period, Schedule } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
 
+// --- Development/No-Auth Mode ---
+// To enable, set NEXT_PUBLIC_NO_AUTH_MODE to "true" in your .env file
+const NO_AUTH_MODE = process.env.NEXT_PUBLIC_NO_AUTH_MODE === 'true';
+const DEV_USER_ID = 'v44ZzprjCGeDbhl3vVG5Zc4z8eo2';
+// ---
+
 // Master list of all possible locations
 const ALL_UNE_LOCATIONS: Location[] = [
   { id: "loc1", name: "PLANTEL CENTRO", campus: "Centro Universitario UNE", address: "N/A" },
@@ -72,12 +78,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   
   // Effect for handling Firebase auth state change
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setIsLoading(true);
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        
+    const fetchUserData = async (userId: string) => {
+        const userDocRef = doc(db, 'users', userId);
         try {
           const docSnap = await getDoc(userDocRef);
           if (docSnap.exists()) {
@@ -122,6 +124,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
           setPeriods(getInitialPeriods());
         }
+    };
+
+    if (NO_AUTH_MODE) {
+      console.log("App running in No-Auth mode for development.");
+      const mockUser = {
+        uid: DEV_USER_ID,
+        displayName: "Usuario de Prueba",
+        email: "dev@une.com",
+        photoURL: `https://placehold.co/100x100.png`,
+      } as FirebaseUser;
+      
+      setUser(mockUser);
+      fetchUserData(DEV_USER_ID).finally(() => setIsLoading(false));
+      
+      // No need to listen to auth changes
+      return;
+    }
+
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setIsLoading(true);
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        await fetchUserData(firebaseUser.uid);
       } else {
         setUser(null);
         // Clear user-specific data on logout
