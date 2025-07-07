@@ -1,22 +1,32 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // WARNING: DEVELOPMENT ONLY RULES
-    // These rules are insecure and are intended only for local development
-    // while using the "No Authentication" mode. They allow anyone to read and
-    // write to the database.
+    
+    // =====================================================================
+    // DEVELOPMENT RULES - WARNING
+    // These rules are insecure and are for development purposes only.
+    // They allow any client to read and write to the database, which is
+    // necessary for the "No-Auth Mode" to work with a simulated user.
     //
-    // BEFORE DEPLOYING TO PRODUCTION:
-    // You MUST replace these rules with secure ones that verify user
-    // authentication, like the example below.
-    //
-    // match /users/{userId}/{document=**} {
-    //   allow read, write: if request.auth != null && request.auth.uid == userId;
-    // }
+    // BEFORE DEPLOYING TO PRODUCTION, YOU MUST REPLACE THESE RULES
+    // WITH THE SECURE PRODUCTION RULES BELOW.
+    // =====================================================================
     match /{document=**} {
       allow read, write: if true;
     }
+
+    // =====================================================================
+    // PRODUCTION RULES (Secure)
+    // To enable, comment out or delete the development rules above and
+    // uncomment the rules below.
+    // =====================================================================
+    /*
+    match /users/{userId} {
+      // Users can only read and write their own data.
+      // The `request.auth.uid` comes from a real Firebase Authentication session.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    */
   }
 }
