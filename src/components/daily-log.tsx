@@ -368,7 +368,6 @@ export function DailyLog() {
                                         disabled={hasEntrada && hasSalida}
                                     >
                                         <SelectTrigger id="location-select">
-                                            <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
                                             <SelectValue placeholder="Selecciona una ubicación..." />
                                         </SelectTrigger>
                                         <SelectContent>
