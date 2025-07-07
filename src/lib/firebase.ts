@@ -35,7 +35,8 @@ const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({
   prompt: 'select_account',
-  hd: 'universidad-une.com', // Restrict to a specific domain if needed
+  // REMOVED: hd parameter.
+  // We will perform domain validation manually after login for better error handling.
 });
 
 

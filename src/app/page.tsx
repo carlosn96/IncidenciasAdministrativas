@@ -13,6 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 
+const ALLOWED_DOMAIN = "universidad-une.com";
+
 export default function LoginPage() {
   const router = useRouter();
   const { user, isLoading: isSettingsLoading } = useSettings();
@@ -32,11 +34,25 @@ export default function LoginPage() {
     setAuthError(null);
     try {
       const result = await signInWithPopup(auth, provider);
+      const authenticatedUser = result.user;
+
+      // Robust domain validation after successful authentication
+      if (!authenticatedUser.email || !authenticatedUser.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+        // Immediately sign out the user if their domain is not allowed
+        await auth.signOut();
+        setAuthError({
+            title: "Dominio no Autorizado",
+            message: `El acceso está restringido a cuentas del dominio @${ALLOWED_DOMAIN}. Por favor, inténtalo de nuevo con tu cuenta institucional.`
+        });
+        setIsSigningIn(false);
+        return; // Stop further execution
+      }
+
       // The onAuthStateChanged listener in SettingsProvider will handle the redirect.
       // We can show a toast here.
       toast({
         title: "¡Bienvenido de nuevo!",
-        description: `Has iniciado sesión como ${result.user.displayName}.`,
+        description: `Has iniciado sesión como ${authenticatedUser.displayName}.`,
       });
     } catch (error: any) {
         let title = "Error de Autenticación";
@@ -45,8 +61,9 @@ export default function LoginPage() {
         switch (error.code) {
             case 'auth/popup-closed-by-user':
             case 'auth/cancelled-popup-request':
+                // This error is now less likely to be about domain, more about user action
                 title = "Inicio de sesión cancelado";
-                message = "El proceso fue cancelado. Esto puede ocurrir si seleccionas una cuenta no autorizada. Asegúrate de usar una cuenta de Google del dominio institucional (@universidad-une.com).";
+                message = "La ventana de inicio de sesión fue cerrada antes de completar el proceso.";
                 break;
             case 'auth/popup-blocked':
                 title = "Ventana emergente bloqueada";
