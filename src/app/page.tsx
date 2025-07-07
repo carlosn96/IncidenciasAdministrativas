@@ -15,35 +15,27 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { AlertTriangle } from "lucide-react";
 
 const ALLOWED_DOMAIN = "universidad-une.com";
-const NO_AUTH_MODE = process.env.NEXT_PUBLIC_NO_AUTH_MODE === 'true';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isLoading: isSettingsLoading } = useSettings();
+  const { user, isLoading: isSettingsLoading, isFirebaseConfigured } = useSettings();
   const { toast } = useToast();
 
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<{ title: string, message: string } | null>(null);
 
   useEffect(() => {
-    // If a user object exists (real or mocked), redirect to the dashboard.
+    // If a user object exists, redirect to the dashboard.
     if (!isSettingsLoading && user) {
       router.replace("/dashboard");
     }
   }, [user, isSettingsLoading, router]);
 
   const handleSignIn = async () => {
+    if (!auth || !provider) return;
+
     setIsSigningIn(true);
     setAuthError(null);
-
-    if (!auth || !provider) {
-      setAuthError({
-        title: "Firebase no configurado",
-        message: "Las credenciales de Firebase no están en el archivo .env. No se puede iniciar sesión."
-      });
-      setIsSigningIn(false);
-      return;
-    }
 
     try {
       const result = await signInWithPopup(auth, provider);
@@ -63,7 +55,7 @@ export default function LoginPage() {
         title: `¡Bienvenido de nuevo, ${result.user.displayName?.split(" ")[0]}!`,
         description: `Has iniciado sesión correctamente.`,
       });
-      // The onAuthStateChanged listener in the context will handle redirect.
+      // The onAuthStateChanged listener in the context will handle the redirect.
       
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
@@ -83,9 +75,7 @@ export default function LoginPage() {
     }
   };
   
-  // In No-Auth mode, the context will provide a mock user, and the useEffect above
-  // will handle the redirect. We show a loading screen while this happens.
-  if (NO_AUTH_MODE || isSettingsLoading || user) {
+  if (isSettingsLoading || user) {
     return <LoadingScreen />;
   }
 
@@ -100,26 +90,39 @@ export default function LoginPage() {
             Incidencias Administrativas
           </CardTitle>
           <CardDescription>
-            Inicia sesión con tu cuenta de Google para continuar.
+            {isFirebaseConfigured ? "Inicia sesión con tu cuenta de Google para continuar." : "Configuración Requerida"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {authError && (
+          {!isFirebaseConfigured ? (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>{authError.title}</AlertTitle>
-              <AlertDescription>{authError.message}</AlertDescription>
+              <AlertTitle>Firebase no está configurado</AlertTitle>
+              <AlertDescription>
+                <p>La aplicación no puede conectarse a la base de datos.</p>
+                <p className="mt-2">Por favor, añade tus credenciales de proyecto de Firebase al archivo <strong>.env</strong> en la raíz del proyecto para continuar.</p>
+              </AlertDescription>
             </Alert>
+          ) : (
+            <>
+              {authError && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>{authError.title}</AlertTitle>
+                  <AlertDescription>{authError.message}</AlertDescription>
+                </Alert>
+              )}
+              <Button
+                onClick={handleSignIn}
+                size="lg"
+                className="w-full h-12 text-base"
+                disabled={isSigningIn}
+              >
+                <GoogleIcon className="mr-3 h-5 w-5" />
+                {isSigningIn ? 'Iniciando sesión...' : 'Entrar con Google'}
+              </Button>
+            </>
           )}
-          <Button
-            onClick={handleSignIn}
-            size="lg"
-            className="w-full h-12 text-base"
-            disabled={isSigningIn}
-          >
-            <GoogleIcon className="mr-3 h-5 w-5" />
-            {isSigningIn ? 'Iniciando sesión...' : 'Entrar con Google'}
-          </Button>
         </CardContent>
         <CardFooter>
           <p className="w-full text-center text-xs text-muted-foreground">

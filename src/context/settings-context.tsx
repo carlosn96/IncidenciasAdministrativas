@@ -9,11 +9,6 @@ import type { Location, Period, Schedule } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
 
-// --- Development/No-Auth Mode ---
-const NO_AUTH_MODE = process.env.NEXT_PUBLIC_NO_AUTH_MODE === 'true';
-const DEV_USER_ID = 'v44ZzprjCGeDbhl3vVG5Zc4z8eo2';
-// ---
-
 // Master list of all possible locations
 const ALL_UNE_LOCATIONS: Location[] = [
   { id: "loc1", name: "PLANTEL CENTRO", campus: "Centro Universitario UNE", address: "N/A" },
@@ -52,6 +47,7 @@ const getInitialPeriods = (): Period[] => [];
 interface SettingsContextType {
   user: FirebaseUser | null;
   isLoading: boolean;
+  isFirebaseConfigured: boolean;
   allLocations: Location[];
   userLocations: Location[];
   setUserLocations: React.Dispatch<React.SetStateAction<Location[]>>;
@@ -68,6 +64,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(!!auth && !!db);
 
   // State for user-specific data
   const [userLocations, setUserLocations] = useState<Location[]>([]);
@@ -77,25 +74,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   
   // Effect for handling auth and data loading
   useEffect(() => {
+    // If Firebase is not configured, we don't need to do anything else.
+    // The UI will show a message based on `isFirebaseConfigured`.
+    if (!isFirebaseConfigured) {
+      setIsLoading(false);
+      return;
+    }
+
     const loadInitialLocalData = () => {
-        const initialLocations = getInitialUserLocations();
         const initialSchedules = getInitialSchedules();
-        const initialActiveScheduleId = initialSchedules.length > 0 ? initialSchedules[0].id : null;
-        
-        setUserLocations(initialLocations);
+        setUserLocations(getInitialUserLocations());
         setSchedules(initialSchedules);
-        setActiveScheduleId(initialActiveScheduleId);
+        setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
         setPeriods(getInitialPeriods());
     }
 
     const fetchUserData = async (userId: string) => {
-        if (!db) {
-            console.warn("Firestore is not configured. Loading initial placeholder data locally. To connect to your database and see real data, add your Firebase keys to the .env file.");
-            loadInitialLocalData();
-            return;
-        }
-
-        const userDocRef = doc(db, 'users', userId);
+        const userDocRef = doc(db!, 'users', userId);
         try {
           const docSnap = await getDoc(userDocRef);
           if (docSnap.exists()) {
@@ -131,54 +126,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           loadInitialLocalData(); // Fallback to local data on firestore error
         }
     };
-
-    if (NO_AUTH_MODE) {
-      console.log(`App running in No-Auth mode. User ID: ${DEV_USER_ID}`);
-      const mockUser = {
-        uid: DEV_USER_ID,
-        displayName: "Usuario de Prueba",
-        email: "dev@une.com",
-        photoURL: `https://placehold.co/100x100.png`,
-      } as FirebaseUser;
-      
-      setUser(mockUser);
-      
-      const loadDevData = async () => {
-        setIsLoading(true);
-        await fetchUserData(DEV_USER_ID);
-        setIsLoading(false);
-      }
-      loadDevData();
-      return;
-    }
-
-    // Normal authentication flow
-    if (!auth) {
-        setIsLoading(false);
-        // Firebase is not configured, so we can't use auth.
-        // The app will behave as if the user is logged out.
-        return;
-    }
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    
+    // auth is guaranteed to be defined here because of the `isFirebaseConfigured` check.
+    const unsubscribe = onAuthStateChanged(auth!, async (firebaseUser) => {
       setIsLoading(true);
       if (firebaseUser) {
         setUser(firebaseUser);
         await fetchUserData(firebaseUser.uid);
       } else {
         setUser(null);
+        // Clear all user data when logged out
         loadInitialLocalData();
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isFirebaseConfigured]);
 
   // Effect for saving user data to Firestore whenever it changes
   useEffect(() => {
-    // Avoid writing initial empty state or during loading, or if db is not configured.
-    if (!isLoading && user && db) {
-      const userDocRef = doc(db, 'users', user.uid);
+    // Avoid writing if firebase isn't set up, not loading, and user is present
+    if (isFirebaseConfigured && !isLoading && user) {
+      const userDocRef = doc(db!, 'users', user.uid);
       const dataToStore = {
         userLocations,
         schedules,
@@ -189,12 +159,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         console.error("Failed to save data to Firestore:", error);
       });
     }
-  }, [isLoading, user, userLocations, schedules, activeScheduleId, periods]);
+  }, [isFirebaseConfigured, isLoading, user, userLocations, schedules, activeScheduleId, periods]);
 
 
   const value = {
     user,
     isLoading,
+    isFirebaseConfigured,
     allLocations: ALL_UNE_LOCATIONS,
     userLocations,
     setUserLocations,
