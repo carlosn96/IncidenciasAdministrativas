@@ -83,7 +83,12 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
         const allDays = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
         
         const newLaborDays: LaborDay[] = allDays
-            .filter(day => getDay(day) !== 0) // Exclude Sundays
+            .filter(day => {
+                const dayOfWeek = getDay(day);
+                if (dayOfWeek === 0) return false; // Exclude Sundays
+                if (!includeSaturdays && dayOfWeek === 6) return false; // Exclude Saturdays if not included
+                return true;
+            })
             .map(day => {
                 const dateStr = format(day, "yyyy-MM-dd");
                 const existingDay = period.laborDays.find(ld => ld.date === dateStr);
@@ -96,15 +101,7 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
                 return { date: dateStr };
             });
 
-        const workingDaysForCalc = newLaborDays.filter(day => {
-            const dayOfWeek = getDay(parseISO(day.date));
-            if (includeSaturdays) {
-                return dayOfWeek !== 0; // Mon-Sat
-            }
-            return dayOfWeek !== 0 && dayOfWeek !== 6; // Mon-Fri
-        });
-
-        const workingDaysCount = workingDaysForCalc.length;
+        const workingDaysCount = newLaborDays.length;
         const totalDurationMinutes = workingDaysCount * 8 * 60;
 
         const updatedPeriod: Period = {
