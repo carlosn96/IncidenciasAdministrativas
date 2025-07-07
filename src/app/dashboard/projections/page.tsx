@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isAfter } from "date-fns";
+import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isAfter, isWithinInterval, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +46,7 @@ const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves",
 
 export default function ProjectionsPage() {
   const searchParams = useSearchParams();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules, setActiveScheduleId } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
   const { toast } = useToast();
@@ -61,10 +61,21 @@ export default function ProjectionsPage() {
 
   useEffect(() => {
     const periodIdFromUrl = searchParams.get("period");
+
+    // 1. Prioritize period ID from URL
     if (periodIdFromUrl && periods.some(p => p.id === periodIdFromUrl)) {
       setSelectedPeriodId(periodIdFromUrl);
+      return;
+    }
+
+    // 2. Find and select the active period
+    const today = new Date();
+    const activePeriod = periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
+
+    if (activePeriod) {
+      setSelectedPeriodId(activePeriod.id);
     } else if (periods.length > 0) {
-      // Default to the first period if none is specified or found
+      // 3. Fallback to the most recent period if no active one is found
       const sortedPeriods = [...periods].sort((a,b) => b.startDate.getTime() - a.startDate.getTime());
       setSelectedPeriodId(sortedPeriods[0].id);
     }
@@ -259,8 +270,12 @@ export default function ProjectionsPage() {
         entries: newEntries
     };
 
-    setSchedules(prev => [...prev, newSchedule]);
-    setActiveScheduleId(newSchedule.id);
+    setSchedules(prev => {
+        const updatedSchedules = [...prev, newSchedule];
+        // This function is in settings context, and will also set active schedule ID
+        // setSchedulesAndActive(updatedSchedules, newSchedule.id);
+        return updatedSchedules;
+    });
     toast({ title: "Plantilla Guardada", description: `La plantilla '${newTemplateName.trim()}' ha sido creada y seleccionada como activa.` });
     
     setIsSaveTemplateOpen(false);
@@ -438,16 +453,16 @@ export default function ProjectionsPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Entrada Proyectada</Label>
-                                  <Input type="time" value={day.projectedEntry?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedEntry", "time", e.target.value)} disabled={!!day.entry || isPastDay} />
-                                  <Select value={day.projectedEntry?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedEntry", "location", value)} disabled={!!day.entry || isPastDay}>
+                                  <Input type="time" value={day.projectedEntry?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedEntry", "time", e.target.value)} disabled={!!day.entry} />
+                                  <Select value={day.projectedEntry?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedEntry", "location", value)} disabled={!!day.entry}>
                                     <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                     <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
                                   </Select>
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Salida Proyectada</Label>
-                                  <Input type="time" value={day.projectedExit?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedExit", "time", e.target.value)} disabled={!!day.exit || isPastDay} />
-                                  <Select value={day.projectedExit?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedExit", "location", value)} disabled={!!day.exit || isPastDay}>
+                                  <Input type="time" value={day.projectedExit?.time || ""} onChange={(e) => handleProjectionChange(day.date, "projectedExit", "time", e.target.value)} disabled={!!day.exit} />
+                                  <Select value={day.projectedExit?.location || ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedExit", "location", value)} disabled={!!day.exit}>
                                     <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                     <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
                                   </Select>
@@ -485,7 +500,6 @@ export default function ProjectionsPage() {
                         </TableHeader>
                         <TableBody>
                           {projections.map((day) => {
-                            const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
                             const deviationMessage = checkDeviation(day);
                             const isToday = day.date === todayString;
                             return (
@@ -507,16 +521,16 @@ export default function ProjectionsPage() {
                                         )}
                                       </div>
                                     </TableCell>
-                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedEntry?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry || isPastDay} /></TableCell>
+                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedEntry?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} /></TableCell>
                                     <TableCell>
-                                      <Select value={day.projectedEntry?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v)} disabled={!!day.entry || isPastDay}>
+                                      <Select value={day.projectedEntry?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v)} disabled={!!day.entry}>
                                         <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                         <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
                                       </Select>
                                     </TableCell>
-                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedExit?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit || isPastDay} /></TableCell>
+                                    <TableCell><Input type="time" className="min-w-[100px]" value={day.projectedExit?.time || ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} /></TableCell>
                                     <TableCell>
-                                       <Select value={day.projectedExit?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v)} disabled={!!day.exit || isPastDay}>
+                                       <Select value={day.projectedExit?.location || ""} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v)} disabled={!!day.exit}>
                                         <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                         <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
                                       </Select>
