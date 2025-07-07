@@ -46,7 +46,7 @@ export default function LoginPage() {
             case 'auth/popup-closed-by-user':
             case 'auth/cancelled-popup-request':
                 title = "Inicio de sesión cancelado";
-                message = "La ventana de inicio de sesión fue cerrada. Asegúrate de usar una cuenta de Google del dominio institucional (@universidad-une.com).";
+                message = "El proceso fue cancelado. Esto puede ocurrir si seleccionas una cuenta no autorizada. Asegúrate de usar una cuenta de Google del dominio institucional (@universidad-une.com).";
                 break;
             case 'auth/popup-blocked':
                 title = "Ventana emergente bloqueada";
