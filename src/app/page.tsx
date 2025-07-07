@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -61,9 +62,8 @@ export default function LoginPage() {
         switch (error.code) {
             case 'auth/popup-closed-by-user':
             case 'auth/cancelled-popup-request':
-                // This error is now less likely to be about domain, more about user action
-                title = "Inicio de sesión cancelado";
-                message = "La ventana de inicio de sesión fue cerrada antes de completar el proceso.";
+                title = "Proceso de inicio de sesión cancelado";
+                message = "No se pudo completar el inicio de sesión. Esto puede ocurrir si cierras la ventana o si hay un problema con la cuenta de Google seleccionada. Por favor, inténtalo de nuevo.";
                 break;
             case 'auth/popup-blocked':
                 title = "Ventana emergente bloqueada";
