@@ -13,16 +13,17 @@ const firebaseConfig = {
 };
 
 const configValues = Object.values(firebaseConfig);
-const isFirebaseConfigured = configValues.every(Boolean);
+export const isFirebaseConfigured = configValues.every(Boolean);
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
 let provider: GoogleAuthProvider | undefined;
 
-if (isFirebaseConfigured) {
+// Initialize Firebase only on the client side to avoid SSR issues.
+if (isFirebaseConfigured && typeof window !== 'undefined') {
   try {
-    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
@@ -30,18 +31,16 @@ if (isFirebaseConfigured) {
       prompt: 'select_account',
     });
 
-    if (typeof window !== 'undefined') {
-      enableIndexedDbPersistence(db).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          console.warn("Firestore persistence failed to enable due to multiple tabs.");
-        } else if (err.code === 'unimplemented') {
-          console.warn("Firestore persistence is not supported in this browser.");
-        }
-      });
-    }
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn("Firestore persistence failed to enable due to multiple tabs.");
+      } else if (err.code === 'unimplemented') {
+        console.warn("Firestore persistence is not supported in this browser.");
+      }
+    });
   } catch (error) {
     console.error("Error initializing Firebase:", error);
-    // If initialization fails, ensure all exports are undefined
+    // If initialization fails, ensure all exports are undefined.
     app = undefined;
     auth = undefined;
     db = undefined;
@@ -49,4 +48,4 @@ if (isFirebaseConfigured) {
   }
 }
 
-export { app, auth, db, provider, isFirebaseConfigured };
+export { app, auth, db, provider };
