@@ -1,13 +1,13 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read and write to their own data, identified by their UID.
-    match /users/{userId} {
-      // Insecure rule for development only to allow no-auth mode.
-      // WARNING: Revert this before deploying to production.
-      // Replace "if true;" with "if request.auth != null && request.auth.uid == userId;"
+    // Dev rule: Allow all reads and writes for easier development.
+    // IMPORTANT: Change this back to secure rules before production.
+    // match /users/{userId}/{document=**} {
+    //   allow read, write: if request.auth != null && request.auth.uid == userId;
+    // }
+    match /{document=**} {
       allow read, write: if true;
     }
   }

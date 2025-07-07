@@ -10,7 +10,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 // --- Development/No-Auth Mode ---
-// To enable, set NEXT_PUBLIC_NO_AUTH_MODE to "true" in your .env file
 const NO_AUTH_MODE = process.env.NEXT_PUBLIC_NO_AUTH_MODE === 'true';
 const DEV_USER_ID = 'v44ZzprjCGeDbhl3vVG5Zc4z8eo2';
 // ---
@@ -78,8 +77,36 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   
   // Effect for handling Firebase auth state change
   useEffect(() => {
+    // If in No-Auth mode, set up mock data and finish.
+    if (NO_AUTH_MODE) {
+      console.log("App running in No-Auth mode. Setting up mock user and initial data.");
+      const mockUser = {
+        uid: DEV_USER_ID,
+        displayName: "Usuario de Prueba",
+        email: "dev@une.com",
+        photoURL: `https://placehold.co/100x100.png`,
+      } as FirebaseUser;
+      
+      const initialSchedules = getInitialSchedules();
+      setUser(mockUser);
+      setUserLocations(getInitialUserLocations());
+      setSchedules(initialSchedules);
+      setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
+      setPeriods(getInitialPeriods());
+      setIsLoading(false);
+      return;
+    }
+
+    // If not in No-Auth mode, proceed with real Firebase auth
+    // This check is crucial. If firebase didn't initialize, auth will be null.
+    if (!auth) {
+      console.error("Firebase Auth is not initialized because NEXT_PUBLIC_NO_AUTH_MODE is false and Firebase keys are missing.");
+      setIsLoading(false);
+      return;
+    }
+
     const fetchUserData = async (userId: string) => {
-        const userDocRef = doc(db, 'users', userId);
+        const userDocRef = doc(db!, 'users', userId);
         try {
           const docSnap = await getDoc(userDocRef);
           if (docSnap.exists()) {
@@ -126,23 +153,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    if (NO_AUTH_MODE) {
-      console.log("App running in No-Auth mode for development.");
-      const mockUser = {
-        uid: DEV_USER_ID,
-        displayName: "Usuario de Prueba",
-        email: "dev@une.com",
-        photoURL: `https://placehold.co/100x100.png`,
-      } as FirebaseUser;
-      
-      setUser(mockUser);
-      fetchUserData(DEV_USER_ID).finally(() => setIsLoading(false));
-      
-      // No need to listen to auth changes
-      return;
-    }
-
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
       if (firebaseUser) {
@@ -164,8 +174,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   // Effect for saving user data to Firestore whenever it changes
   useEffect(() => {
-    // Avoid writing initial empty state or during loading.
-    if (!isLoading && user) {
+    // Avoid writing initial empty state or during loading. Also skip if in No-Auth mode (db will be null)
+    if (!isLoading && user && db) {
       const userDocRef = doc(db, 'users', user.uid);
       const dataToStore = {
         userLocations,
