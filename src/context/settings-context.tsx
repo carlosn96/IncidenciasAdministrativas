@@ -75,38 +75,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
   const [periods, setPeriods] = useState<Period[]>([]);
   
-  // Effect for handling Firebase auth state change
+  // Effect for handling auth and data loading
   useEffect(() => {
-    // If in No-Auth mode, set up mock data and finish.
-    if (NO_AUTH_MODE) {
-      console.log("App running in No-Auth mode. Setting up mock user and initial data.");
-      const mockUser = {
-        uid: DEV_USER_ID,
-        displayName: "Usuario de Prueba",
-        email: "dev@une.com",
-        photoURL: `https://placehold.co/100x100.png`,
-      } as FirebaseUser;
-      
-      const initialSchedules = getInitialSchedules();
-      setUser(mockUser);
-      setUserLocations(getInitialUserLocations());
-      setSchedules(initialSchedules);
-      setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
-      setPeriods(getInitialPeriods());
-      setIsLoading(false);
-      return;
-    }
-
-    // If not in No-Auth mode, proceed with real Firebase auth
-    // This check is crucial. If firebase didn't initialize, auth will be null.
-    if (!auth) {
-      console.error("Firebase Auth is not initialized because NEXT_PUBLIC_NO_AUTH_MODE is false and Firebase keys are missing.");
-      setIsLoading(false);
-      return;
+    const loadInitialLocalData = () => {
+        const initialLocations = getInitialUserLocations();
+        const initialSchedules = getInitialSchedules();
+        const initialActiveScheduleId = initialSchedules.length > 0 ? initialSchedules[0].id : null;
+        
+        setUserLocations(initialLocations);
+        setSchedules(initialSchedules);
+        setActiveScheduleId(initialActiveScheduleId);
+        setPeriods(getInitialPeriods());
     }
 
     const fetchUserData = async (userId: string) => {
-        const userDocRef = doc(db!, 'users', userId);
+        if (!db) {
+            console.warn("Firestore is not configured. Loading initial placeholder data locally. To connect to your database and see real data, add your Firebase keys to the .env file.");
+            loadInitialLocalData();
+            return;
+        }
+
+        const userDocRef = doc(db, 'users', userId);
         try {
           const docSnap = await getDoc(userDocRef);
           if (docSnap.exists()) {
@@ -124,35 +113,52 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
             setPeriods(rehydratedPeriods);
           } else {
-            // New user: set initial data in state and Firestore
-            const initialLocations = getInitialUserLocations();
+            console.log(`Creating new user document for ${userId}`);
             const initialSchedules = getInitialSchedules();
-            const initialPeriods = getInitialPeriods();
             const initialActiveScheduleId = initialSchedules.length > 0 ? initialSchedules[0].id : null;
-
-            setUserLocations(initialLocations);
-            setSchedules(initialSchedules);
-            setActiveScheduleId(initialActiveScheduleId);
-            setPeriods(initialPeriods);
+            loadInitialLocalData(); // Loads local data into state
             
+            // And saves it to Firestore for the new user
             await setDoc(userDocRef, {
-              userLocations: initialLocations,
+              userLocations: getInitialUserLocations(),
               schedules: initialSchedules,
               activeScheduleId: initialActiveScheduleId,
-              periods: initialPeriods,
+              periods: getInitialPeriods(),
             });
           }
         } catch (error) {
           console.error("Error fetching user data from Firestore:", error);
-          // Fallback to local initial state if firestore fails
-          setUserLocations(getInitialUserLocations());
-          const initialSchedules = getInitialSchedules();
-          setSchedules(initialSchedules);
-          setActiveScheduleId(initialSchedules.length > 0 ? initialSchedules[0].id : null);
-          setPeriods(getInitialPeriods());
+          loadInitialLocalData(); // Fallback to local data on firestore error
         }
     };
 
+    if (NO_AUTH_MODE) {
+      console.log(`App running in No-Auth mode. User ID: ${DEV_USER_ID}`);
+      const mockUser = {
+        uid: DEV_USER_ID,
+        displayName: "Usuario de Prueba",
+        email: "dev@une.com",
+        photoURL: `https://placehold.co/100x100.png`,
+      } as FirebaseUser;
+      
+      setUser(mockUser);
+      
+      const loadDevData = async () => {
+        setIsLoading(true);
+        await fetchUserData(DEV_USER_ID);
+        setIsLoading(false);
+      }
+      loadDevData();
+      return;
+    }
+
+    // Normal authentication flow
+    if (!auth) {
+        setIsLoading(false);
+        // Firebase is not configured, so we can't use auth.
+        // The app will behave as if the user is logged out.
+        return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
       if (firebaseUser) {
@@ -160,11 +166,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         await fetchUserData(firebaseUser.uid);
       } else {
         setUser(null);
-        // Clear user-specific data on logout
-        setUserLocations([]);
-        setSchedules([]);
-        setActiveScheduleId(null);
-        setPeriods([]);
+        loadInitialLocalData();
       }
       setIsLoading(false);
     });
@@ -174,7 +176,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   // Effect for saving user data to Firestore whenever it changes
   useEffect(() => {
-    // Avoid writing initial empty state or during loading. Also skip if in No-Auth mode (db will be null)
+    // Avoid writing initial empty state or during loading, or if db is not configured.
     if (!isLoading && user && db) {
       const userDocRef = doc(db, 'users', user.uid);
       const dataToStore = {

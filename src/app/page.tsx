@@ -35,6 +35,16 @@ export default function LoginPage() {
   const handleSignIn = async () => {
     setIsSigningIn(true);
     setAuthError(null);
+
+    if (!auth || !provider) {
+      setAuthError({
+        title: "Firebase no configurado",
+        message: "Las credenciales de Firebase no están en el archivo .env. No se puede iniciar sesión."
+      });
+      setIsSigningIn(false);
+      return;
+    }
+
     try {
       const result = await signInWithPopup(auth, provider);
       const email = result.user.email;

@@ -1,13 +1,17 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Dev rule: Allow all reads and writes for easier development.
-    // IMPORTANT: Change this back to secure rules before production.
-    // match /users/{userId}/{document=**} {
-    //   allow read, write: if request.auth != null && request.auth.uid == userId;
+    // WARNING: These rules are insecure and are for development purposes only,
+    // especially when using the "No Auth Mode". They allow anyone to read and 
+    // write to your database.
+    //
+    // Before deploying to production, you MUST secure your rules. A common
+    // secure pattern for this app would be:
+    // match /users/{userId}/{documents=**} {
+    //   allow read, write: if request.auth.uid == userId;
     // }
-    match /{document=**} {
+    match /users/{userId}/{documents=**} {
       allow read, write: if true;
     }
   }
