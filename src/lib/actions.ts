@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Manages Google Calendar events using a user's OAuth Access Token.
+ * @fileOverview Manages Google Calendar events using a Service Account.
  *
  * - manageCalendarEvent - A function to create, update, or delete Google Calendar events.
  * - CalendarEventInput - The input type for the manageCalendarEvent function.
@@ -12,8 +12,8 @@ import { google } from 'googleapis';
 
 // Use TypeScript types instead of Zod schemas for server actions
 export type CalendarEventInput = {
-  accessToken: string;
   action: 'create' | 'update' | 'delete';
+  calendarId: string; // The email of the target calendar
   eventId?: string;
   summary?: string;
   location?: string;
@@ -29,21 +29,35 @@ export type CalendarEventOutput = {
 
 
 export async function manageCalendarEvent(input: CalendarEventInput): Promise<CalendarEventOutput> {
-    if (!input.accessToken) {
-        const errorMsg = 'Google Access Token is required.';
+    const {
+        GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        GOOGLE_PRIVATE_KEY
+    } = process.env;
+
+    if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
+        const errorMsg = 'Google Service Account credentials are not configured in .env';
+        console.error(errorMsg);
+        return { success: false, error: errorMsg };
+    }
+     if (!input.calendarId) {
+        const errorMsg = 'Calendar ID (user email) is required to sync events.';
         console.error(errorMsg);
         return { success: false, error: errorMsg };
     }
 
     try {
-        const oauth2Client = new google.auth.OAuth2();
-        oauth2Client.setCredentials({ access_token: input.accessToken });
+        const jwtClient = new google.auth.JWT(
+            GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            undefined,
+            GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            ['https://www.googleapis.com/auth/calendar']
+        );
         
-        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-        const { action, eventId, ...eventData } = input;
+        await jwtClient.authorize();
         
-        const calendarId = 'primary';
-
+        const calendar = google.calendar({ version: 'v3', auth: jwtClient });
+        const { action, eventId, calendarId, ...eventData } = input;
+        
         if (action === 'create') {
             if (!eventData.summary || !eventData.start || !eventData.end) {
               throw new Error('Missing required fields for creating an event.');

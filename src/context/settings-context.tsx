@@ -27,6 +27,8 @@ const ALL_UNE_LOCATIONS: Location[] = [
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 const DEV_MODE_USER_ID = process.env.NEXT_PUBLIC_DEV_MODE_USER_ID;
+// The email of the simulated user. Required for calendar sync in dev mode.
+const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
 
 
 const getInitialUserLocations = (): Location[] => [];
@@ -69,7 +71,7 @@ interface SettingsContextType {
   authError: AuthError | null;
   isSigningIn: boolean;
   handleGoogleSignIn: () => Promise<void>;
-  googleAccessToken: string | null;
+  googleCalendarId: string | null;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -79,7 +81,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
-  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [userLocations, setUserLocations] = useState<Location[]>([]);
@@ -132,7 +133,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const clearUserData = () => {
     setUser(null);
-    setGoogleAccessToken(null);
     setUserLocations(getInitialUserLocations());
     setSchedules(getInitialSchedules());
     setPeriods(getInitialPeriods());
@@ -145,8 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         return;
     }
 
-    // If in dev mode, bypass Firebase Auth and simulate user
-    if (DEV_MODE_USER_ID) {
+    if (DEV_MODE_USER_ID && GOOGLE_CALENDAR_ID) {
       console.warn(`DEV MODE ACTIVE: Simulating login for user ${DEV_MODE_USER_ID}`);
       setIsLoading(true);
       setUser({
@@ -155,7 +154,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         email: "dev-user@example.com",
       } as FirebaseUser);
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
-      return; // Skip the real auth listener
+      return; 
     }
 
     const unsubscribe = auth?.onAuthStateChanged(async (firebaseUser) => {
@@ -210,21 +209,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setGoogleAccessToken(credential.accessToken);
-        toast({
-          title: `¡Bienvenido, ${result.user.displayName?.split(" ")[0]}!`,
-          description: `Has iniciado sesión correctamente.`,
-        });
-      } else {
-         setAuthError({
-          title: "Error de Permisos",
-          message: "No se pudo obtener el permiso para acceder a Google Calendar. Por favor, inténtalo de nuevo."
-        });
-        await signOut(auth);
-      }
-      // The onAuthStateChanged listener will handle the user state and data fetching.
+      toast({
+        title: `¡Bienvenido, ${result.user.displayName?.split(" ")[0]}!`,
+        description: `Has iniciado sesión correctamente.`,
+      });
       
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
@@ -260,7 +248,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     authError,
     isSigningIn,
     handleGoogleSignIn,
-    googleAccessToken,
+    googleCalendarId: user?.email || GOOGLE_CALENDAR_ID || null,
   };
 
   return (

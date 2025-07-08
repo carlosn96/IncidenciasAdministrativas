@@ -47,7 +47,7 @@ const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves",
 
 export default function ProjectionsPage() {
   const searchParams = useSearchParams();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules, googleAccessToken } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules, googleCalendarId } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
   const { toast } = useToast();
@@ -200,8 +200,8 @@ export default function ProjectionsPage() {
   };
 
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
-    if (!googleAccessToken) {
-      toast({ variant: 'destructive', title: 'Permiso de Calendario Requerido', description: 'Por favor, vuelve a iniciar sesión para autorizar el acceso a Google Calendar.' });
+    if (!googleCalendarId) {
+      toast({ variant: 'destructive', title: 'ID de Calendario no configurado', description: 'Por favor, configura el ID de tu calendario personal en el archivo .env.' });
       return { success: false, finalProjections: newProjections };
     }
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
@@ -225,8 +225,8 @@ export default function ProjectionsPage() {
                 const startTime = new Date(`${date}T${newIncident.time}`);
                 const endTime = addMinutes(startTime, 30);
                 const result = await manageCalendarEvent({
-                    accessToken: googleAccessToken,
                     action: 'create',
+                    calendarId: googleCalendarId,
                     summary: `${incidentType}: ${newIncident.location}`,
                     location: newIncident.location,
                     start: startTime.toISOString(),
@@ -241,8 +241,8 @@ export default function ProjectionsPage() {
         } else if (isDeleted) {
             syncPromises.push((async () => {
                 const result = await manageCalendarEvent({
-                    accessToken: googleAccessToken,
                     action: 'delete',
+                    calendarId: googleCalendarId,
                     eventId: originalIncident.calendarEventId,
                 });
                 if (!result.success) {
@@ -254,8 +254,8 @@ export default function ProjectionsPage() {
                 const startTime = new Date(`${date}T${newIncident.time}`);
                 const endTime = addMinutes(startTime, 30);
                 const result = await manageCalendarEvent({
-                    accessToken: googleAccessToken,
                     action: 'update',
+                    calendarId: googleCalendarId,
                     eventId: newIncident.calendarEventId,
                     summary: `${incidentType}: ${newIncident.location}`,
                     location: newIncident.location,
@@ -679,7 +679,7 @@ export default function ProjectionsPage() {
                         : saveState === 'saved' ? <><Check /> Guardado</>
                         : <><Save /> Guardar Cambios</>}
                     </Button>
-                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' || !googleAccessToken} className="w-[240px] bg-green-600 hover:bg-green-700">
+                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' || !googleCalendarId} className="w-[240px] bg-green-600 hover:bg-green-700">
                         {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
                         : saveState === 'saved' ? <><Check /> Sincronizado</>
                         : <><CalendarSync /> Guardar y Sincronizar</>}

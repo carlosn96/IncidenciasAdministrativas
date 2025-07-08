@@ -27,8 +27,6 @@ if (isFirebaseConfigured && typeof window !== 'undefined') {
     auth = getAuth(app);
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
-    // Request permission to manage calendar events.
-    provider.addScope('https://www.googleapis.com/auth/calendar.events');
     provider.setCustomParameters({
       prompt: 'select_account',
     });
