@@ -27,7 +27,7 @@ const ALL_UNE_LOCATIONS: Location[] = [
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 const DEV_MODE_USER_ID = process.env.NEXT_PUBLIC_DEV_MODE_USER_ID;
-// The email of the target calendar for sync, used in dev mode.
+// The email of the target calendar for sync.
 const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
 
 
@@ -155,7 +155,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       } as FirebaseUser);
 
       if (!GOOGLE_CALENDAR_ID) {
-        console.error("DEV MODE WARNING: GOOGLE_CALENDAR_ID is not set in .env. Calendar sync will fail.");
+        console.warn("Aviso para desarrolladores: GOOGLE_CALENDAR_ID no está configurado en .env. La sincronización con el calendario no funcionará.");
       }
 
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
