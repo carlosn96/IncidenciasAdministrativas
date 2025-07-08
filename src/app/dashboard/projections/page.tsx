@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSettings } from "@/context/settings-context";
-import type { Period, LaborDay, Incident, Schedule, DaySchedule } from "@/lib/types";
+import type { Period, LaborDay, Incident, Schedule, DaySchedule, Location } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +21,18 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { v4 as uuidv4 } from "uuid";
 import { manageCalendarEvent } from "@/lib/actions";
+
+type CalendarChangeAction = 'create' | 'update' | 'delete';
+type CalendarChange = {
+    action: CalendarChangeAction;
+    date: string;
+    incidentType: 'projectedEntry' | 'projectedExit';
+    eventId?: string; // For update/delete
+    summary?: string; // For create/update
+    location?: string; // For create/update
+    startTime?: Date; // For create/update
+};
+
 
 // Helper functions
 const calculateMinutes = (entry?: Incident, exit?: Incident): number => {
@@ -143,34 +155,16 @@ export default function ProjectionsPage() {
 
   useEffect(() => {
     if (selectedPeriod) {
-        const initialLaborDays = JSON.parse(JSON.stringify(selectedPeriod.laborDays));
+        // Take a "photo" of the initial state for comparison later.
         setOriginalProjectionsForCompare(JSON.parse(JSON.stringify(selectedPeriod.laborDays)));
-
-        const projectionsWithDefaults = initialLaborDays.map((day: LaborDay) => {
-            const newDay = { ...day };
-            if (activeSchedule && !newDay.projectedEntry && !newDay.projectedExit) {
-                const dayDate = parseISO(day.date);
-                const dayOfWeekIndex = getDay(dayDate);
-                const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
-                const scheduleForDay = activeSchedule.entries.find(e => e.day === dayName);
-
-                if (scheduleForDay) {
-                    if (scheduleForDay.startTime && scheduleForDay.startLocation) {
-                        newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
-                    }
-                    if (scheduleForDay.endTime && scheduleForDay.endLocation) {
-                        newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
-                    }
-                }
-            }
-            return newDay;
-        });
-        setProjections(projectionsWithDefaults);
+        
+        // This is the state that will be modified by the user.
+        setProjections(JSON.parse(JSON.stringify(selectedPeriod.laborDays)));
     } else {
         setProjections([]);
         setOriginalProjectionsForCompare([]);
     }
-  }, [selectedPeriod, activeSchedule]);
+  }, [selectedPeriod]);
 
   const handleProjectionChange = (
     date: string,
@@ -205,6 +199,69 @@ export default function ProjectionsPage() {
     );
   };
 
+  const determineChanges = (original: LaborDay[], current: LaborDay[]) => {
+    const changes: CalendarChange[] = [];
+
+    current.forEach((newDay, index) => {
+      const originalDay = original[index];
+      if (!originalDay || originalDay.date !== newDay.date) return;
+
+      const processIncidentType = (type: 'projectedEntry' | 'projectedExit') => {
+        const originalIncident = originalDay[type];
+        const newIncident = newDay[type];
+        const incidentTypeLabel = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
+
+        const hasOriginalData = !!(originalIncident?.time && originalIncident?.location);
+        const hasNewData = !!(newIncident?.time && newIncident?.location);
+        const originalEventId = originalIncident?.calendarEventId;
+
+        // CREATE: Was empty, now has data. Or had data but was never synced.
+        if ((!hasOriginalData && hasNewData) || (hasOriginalData && hasNewData && !originalEventId)) {
+          changes.push({
+            action: 'create',
+            date: newDay.date,
+            incidentType: type,
+            summary: `${incidentTypeLabel}: ${newIncident.location}`,
+            location: newIncident.location,
+            startTime: new Date(`${newDay.date}T${newIncident.time}`),
+          });
+        }
+        // DELETE: Had data (and was synced), now is empty.
+        else if (hasOriginalData && !hasNewData && originalEventId) {
+          changes.push({
+            action: 'delete',
+            date: newDay.date,
+            incidentType: type,
+            eventId: originalEventId,
+          });
+        }
+        // UPDATE: Had data (and was synced), and still has data, and it's different.
+        else if (
+          hasOriginalData &&
+          hasNewData &&
+          originalEventId &&
+          (originalIncident.time !== newIncident.time || originalIncident.location !== newIncident.location)
+        ) {
+          changes.push({
+            action: 'update',
+            date: newDay.date,
+            incidentType: type,
+            eventId: originalEventId,
+            summary: `${incidentTypeLabel}: ${newIncident.location}`,
+            location: newIncident.location,
+            startTime: new Date(`${newDay.date}T${newIncident.time}`),
+          });
+        }
+      };
+
+      processIncidentType('projectedEntry');
+      processIncidentType('projectedExit');
+    });
+
+    return changes;
+  };
+
+
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
     if (!googleCalendarId) {
       toast({
@@ -215,103 +272,45 @@ export default function ProjectionsPage() {
       });
       return { success: false, finalProjections: newProjections };
     }
+    
+    const changesToSync = determineChanges(originalProjections, newProjections);
+    if (changesToSync.length === 0) {
+        return { success: true, finalProjections: newProjections };
+    }
 
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
-    const syncPromises: Promise<void>[] = [];
 
-    const processIncident = (dayIndex: number, type: 'projectedEntry' | 'projectedExit') => {
-      const originalDay = originalProjections[dayIndex];
-      const newDay = updatedProjections[dayIndex];
-
-      if (!originalDay || !newDay) return;
-
-      const originalIncident = originalDay[type];
-      const newIncident = newDay[type];
-      
-      const originalTime = originalIncident?.time || '';
-      const originalLocation = originalIncident?.location || '';
-      const originalEventId = originalIncident?.calendarEventId || null;
-
-      const newTime = newIncident?.time || '';
-      const newLocation = newIncident?.location || '';
-      
-      const wasScheduled = !!originalEventId;
-      const isNowScheduled = !!(newTime && newLocation);
-      const hasChanged = originalTime !== newTime || originalLocation !== newLocation;
-
-      const incidentType = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
-      const date = newDay.date;
-
-      if (!wasScheduled && isNowScheduled) {
-        // ACTION: CREATE
-        syncPromises.push(
-            (async () => {
-              const startTime = new Date(`${date}T${newTime}`);
-              const endTime = addMinutes(startTime, 30);
-              const result = await manageCalendarEvent({
-                action: 'create',
-                calendarId: googleCalendarId,
-                summary: `${incidentType}: ${newLocation}`,
-                location: newLocation,
-                start: startTime.toISOString(),
-                end: endTime.toISOString(),
-              });
-              if (result.success && result.eventId) {
-                if (updatedProjections[dayIndex][type]) {
-                  updatedProjections[dayIndex][type]!.calendarEventId = result.eventId;
+    const syncPromises = changesToSync.map(async (change) => {
+        const startTime = change.startTime;
+        const endTime = startTime ? addMinutes(startTime, 30) : undefined;
+        
+        const result = await manageCalendarEvent({
+            action: change.action,
+            calendarId: googleCalendarId,
+            eventId: change.eventId,
+            summary: change.summary,
+            location: change.location,
+            start: startTime?.toISOString(),
+            end: endTime?.toISOString(),
+        });
+        
+        if (result.success) {
+            const dayIndex = updatedProjections.findIndex((d: LaborDay) => d.date === change.date);
+            if (dayIndex !== -1) {
+                const day = updatedProjections[dayIndex];
+                const incident = day[change.incidentType];
+                if (change.action === 'create' || change.action === 'update') {
+                    if (incident) incident.calendarEventId = result.eventId;
+                } else if (change.action === 'delete') {
+                    if (incident) delete incident.calendarEventId;
                 }
-              } else {
-                toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error, duration: 15000 });
-              }
-            })()
-        );
+            }
+        } else {
+             toast({ variant: 'destructive', title: `Error al ${change.action} evento (${change.date})`, description: result.error, duration: 15000 });
+        }
+    });
 
-      } else if (wasScheduled && !isNowScheduled) {
-          // ACTION: DELETE
-          syncPromises.push(
-              (async () => {
-                const result = await manageCalendarEvent({
-                  action: 'delete',
-                  calendarId: googleCalendarId,
-                  eventId: originalEventId,
-                });
-                if (!result.success) {
-                  toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 15000 });
-                }
-              })()
-          );
-
-      } else if (wasScheduled && isNowScheduled && hasChanged) {
-          // ACTION: UPDATE
-          syncPromises.push(
-              (async () => {
-                const startTime = new Date(`${date}T${newTime}`);
-                const endTime = addMinutes(startTime, 30);
-                const result = await manageCalendarEvent({
-                  action: 'update',
-                  calendarId: googleCalendarId,
-                  eventId: originalEventId,
-                  summary: `${incidentType}: ${newLocation}`,
-                  location: newLocation,
-                  start: startTime.toISOString(),
-                  end: endTime.toISOString(),
-                });
-                if (!result.success) {
-                  toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 15000 });
-                }
-              })()
-          );
-      }
-    };
-
-    for (let i = 0; i < updatedProjections.length; i++) {
-        processIncident(i, 'projectedEntry');
-        processIncident(i, 'projectedExit');
-    }
-    
-    if (syncPromises.length > 0) {
-        await Promise.all(syncPromises);
-    }
+    await Promise.all(syncPromises);
     
     return { success: true, finalProjections: updatedProjections };
   };
@@ -349,8 +348,11 @@ export default function ProjectionsPage() {
         return p;
       })
     );
-
+    
+    // Update the "original" state to match the newly saved state for the next comparison.
+    setOriginalProjectionsForCompare(cleanedProjections);
     setProjections(cleanedProjections);
+
     setSaveState('saved');
     setTimeout(() => {
         setSaveState('idle');
