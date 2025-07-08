@@ -232,10 +232,11 @@ export default function ProjectionsPage() {
                     start: startTime.toISOString(),
                     end: endTime.toISOString(),
                 });
+                console.log(`[Sync Event] Create on ${date}:`, result);
                 if (result.success && result.eventId) {
                     updatedProjections[dayIndex][type]!.calendarEventId = result.eventId;
                 } else {
-                    toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error });
+                    toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error, duration: 10000 });
                 }
             })());
         } else if (isDeleted) {
@@ -245,8 +246,9 @@ export default function ProjectionsPage() {
                     calendarId: googleCalendarId,
                     eventId: originalIncident.calendarEventId,
                 });
+                console.log(`[Sync Event] Delete on ${date}:`, result);
                 if (!result.success) {
-                    toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error });
+                    toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 10000 });
                 }
             })());
         } else if (isUpdated) {
@@ -262,8 +264,9 @@ export default function ProjectionsPage() {
                     start: startTime.toISOString(),
                     end: endTime.toISOString(),
                 });
+                console.log(`[Sync Event] Update on ${date}:`, result);
                 if (!result.success) {
-                    toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error });
+                    toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 10000 });
                 }
             })());
         }
@@ -286,6 +289,7 @@ export default function ProjectionsPage() {
             variant: "destructive",
             title: "Error de Configuración",
             description: "La variable NEXT_PUBLIC_GOOGLE_CALENDAR_ID no se encontró. Por favor, añádela a tu archivo .env y REINICIA el servidor.",
+            duration: 10000,
         });
         return;
     }
