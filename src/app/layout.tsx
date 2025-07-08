@@ -14,6 +14,17 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Incidencias Administrativas",
   description: "Sistema de Gestión de Incidencias Administrativas para el Centro Universitario UNE A. C.",
+  applicationName: "Incidencias Admin",
+  appleWebApp: {
+    capable: true,
+    title: "Incidencias Admin",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  manifest: "/manifest.json",
+  themeColor: "#0F1F6D",
 };
 
 export const dynamic = "force-dynamic";

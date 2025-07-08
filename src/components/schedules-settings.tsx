@@ -13,9 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { DaySchedule, Location, Schedule } from "@/lib/types";
-import { Pencil, PlusCircle, MoreVertical, Trash2, Save, Loader2, Check } from "lucide-react";
+import { Pencil, PlusCircle, MoreVertical, Trash2, Save, Loader2, Check, Clock, MapPin } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
+
 
 // --- ScheduleEditDialog (New Component) ---
 
@@ -378,7 +380,49 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
             </div>
         </CardHeader>
         <CardContent>
-            <div className="border rounded-lg overflow-x-auto">
+            {/* Mobile View */}
+            <div className="md:hidden">
+              {!activeSchedule ? (
+                  <div className="py-16 text-center text-muted-foreground border rounded-lg">
+                      <p>{schedules.length > 0 ? "Selecciona una plantilla para verla." : "No has creado ninguna plantilla."}</p>
+                  </div>
+              ) : (
+                  <div className="border rounded-lg">
+                      {activeSchedule.entries.map((entry, index) => (
+                          <div key={entry.day} className={cn("p-4", index < activeSchedule.entries.length - 1 && "border-b")}>
+                              <p className="font-medium mb-2">{entry.day}</p>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                      <p className="font-semibold text-muted-foreground">Entrada</p>
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                          <Clock className="h-3.5 w-3.5" />
+                                          <span>{entry.startTime ? formatTime12h(entry.startTime) : '---'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                          <MapPin className="h-3.5 w-3.5" />
+                                          <span>{entry.startLocation || '---'}</span>
+                                      </div>
+                                  </div>
+                                  <div>
+                                      <p className="font-semibold text-muted-foreground">Salida</p>
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                          <Clock className="h-3.5 w-3.5" />
+                                          <span>{entry.endTime ? formatTime12h(entry.endTime) : '---'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                          <MapPin className="h-3.5 w-3.5" />
+                                          <span>{entry.endLocation || '---'}</span>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              )}
+            </div>
+            
+            {/* Desktop View */}
+            <div className="hidden md:block border rounded-lg overflow-x-auto">
                 <Table>
                 <TableHeader>
                     <TableRow>

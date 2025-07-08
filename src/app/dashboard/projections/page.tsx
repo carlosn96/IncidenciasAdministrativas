@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isAfter, isWithinInterval, endOfDay, addMinutes } from "date-fns";
+import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isWithinInterval, endOfDay, addMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check, CalendarSync, CalendarCheck } from "lucide-react";
+import { BarChart, Save, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check, CalendarSync, CalendarCheck, Clock, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -27,10 +27,10 @@ type CalendarChange = {
     action: CalendarChangeAction;
     date: string;
     incidentType: 'projectedEntry' | 'projectedExit';
-    eventId?: string; // For update/delete
-    summary?: string; // For create/update
-    location?: string; // For create/update
-    startTime?: Date; // For create/update
+    eventId?: string;
+    summary?: string;
+    location?: string;
+    startTime?: Date;
 };
 
 
@@ -155,10 +155,7 @@ export default function ProjectionsPage() {
 
   useEffect(() => {
     if (selectedPeriod) {
-        // Take a "photo" of the initial state for comparison later.
         setOriginalProjectionsForCompare(JSON.parse(JSON.stringify(selectedPeriod.laborDays)));
-        
-        // This is the state that will be modified by the user.
         setProjections(JSON.parse(JSON.stringify(selectedPeriod.laborDays)));
     } else {
         setProjections([]);
@@ -202,65 +199,48 @@ export default function ProjectionsPage() {
   const determineChanges = (original: LaborDay[], current: LaborDay[]) => {
     const changes: CalendarChange[] = [];
 
-    current.forEach((newDay, index) => {
-      const originalDay = original[index];
-      if (!originalDay || originalDay.date !== newDay.date) return;
+    current.forEach((day) => {
+        const originalDay = original.find(d => d.date === day.date);
 
-      const processIncidentType = (type: 'projectedEntry' | 'projectedExit') => {
-        const originalIncident = originalDay[type];
-        const newIncident = newDay[type];
-        const incidentTypeLabel = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
+        const processIncidentType = (type: 'projectedEntry' | 'projectedExit') => {
+            const originalIncident = originalDay?.[type];
+            const newIncident = day[type];
+            const incidentTypeLabel = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
 
-        const hasOriginalData = !!(originalIncident?.time && originalIncident?.location);
-        const hasNewData = !!(newIncident?.time && newIncident?.location);
-        const originalEventId = originalIncident?.calendarEventId;
+            const hasOriginalData = !!(originalIncident?.time && originalIncident?.location);
+            const hasNewData = !!(newIncident?.time && newIncident?.location);
+            const originalEventId = originalIncident?.calendarEventId;
 
-        // CREATE: Was empty, now has data. Or had data but was never synced.
-        if ((!hasOriginalData && hasNewData) || (hasOriginalData && hasNewData && !originalEventId)) {
-          changes.push({
-            action: 'create',
-            date: newDay.date,
-            incidentType: type,
-            summary: `${incidentTypeLabel}: ${newIncident.location}`,
-            location: newIncident.location,
-            startTime: new Date(`${newDay.date}T${newIncident.time}`),
-          });
-        }
-        // DELETE: Had data (and was synced), now is empty.
-        else if (hasOriginalData && !hasNewData && originalEventId) {
-          changes.push({
-            action: 'delete',
-            date: newDay.date,
-            incidentType: type,
-            eventId: originalEventId,
-          });
-        }
-        // UPDATE: Had data (and was synced), and still has data, and it's different.
-        else if (
-          hasOriginalData &&
-          hasNewData &&
-          originalEventId &&
-          (originalIncident.time !== newIncident.time || originalIncident.location !== newIncident.location)
-        ) {
-          changes.push({
-            action: 'update',
-            date: newDay.date,
-            incidentType: type,
-            eventId: originalEventId,
-            summary: `${incidentTypeLabel}: ${newIncident.location}`,
-            location: newIncident.location,
-            startTime: new Date(`${newDay.date}T${newIncident.time}`),
-          });
-        }
-      };
+            // CREATE
+            if (!hasOriginalData && hasNewData) {
+                changes.push({
+                    action: 'create', date: day.date, incidentType: type,
+                    summary: `${incidentTypeLabel}: ${newIncident.location}`,
+                    location: newIncident.location,
+                    startTime: new Date(`${day.date}T${newIncident.time}`),
+                });
+            }
+            // DELETE
+            else if (hasOriginalData && !hasNewData && originalEventId) {
+                changes.push({ action: 'delete', date: day.date, incidentType: type, eventId: originalEventId });
+            }
+            // UPDATE
+            else if (hasOriginalData && hasNewData && (originalIncident.time !== newIncident.time || originalIncident.location !== newIncident.location)) {
+                changes.push({
+                    action: originalEventId ? 'update' : 'create', date: day.date, incidentType: type, eventId: originalEventId,
+                    summary: `${incidentTypeLabel}: ${newIncident.location}`,
+                    location: newIncident.location,
+                    startTime: new Date(`${day.date}T${newIncident.time}`),
+                });
+            }
+        };
 
-      processIncidentType('projectedEntry');
-      processIncidentType('projectedExit');
+        processIncidentType('projectedEntry');
+        processIncidentType('projectedExit');
     });
 
     return changes;
   };
-
 
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
     if (!googleCalendarId) {
@@ -279,6 +259,8 @@ export default function ProjectionsPage() {
     }
 
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
+    
+    toast({ title: `Sincronizando ${changesToSync.length} cambio(s)...`, description: "Por favor, espera." });
 
     const syncPromises = changesToSync.map(async (change) => {
         const startTime = change.startTime;
@@ -324,7 +306,6 @@ export default function ProjectionsPage() {
     let finalProjections = projections;
 
     if (syncCalendar) {
-        toast({ title: "Sincronizando con Google Calendar...", description: "Por favor, espera un momento." });
         const syncResult = await syncCalendarEvents(originalProjectionsForCompare, projections);
         finalProjections = syncResult.finalProjections;
     }
@@ -349,9 +330,8 @@ export default function ProjectionsPage() {
       })
     );
     
-    // Update the "original" state to match the newly saved state for the next comparison.
-    setOriginalProjectionsForCompare(cleanedProjections);
-    setProjections(cleanedProjections);
+    setOriginalProjectionsForCompare(JSON.parse(JSON.stringify(cleanedProjections)));
+    setProjections(JSON.parse(JSON.stringify(cleanedProjections)));
 
     setSaveState('saved');
     setTimeout(() => {
@@ -464,7 +444,7 @@ export default function ProjectionsPage() {
           </CardContent>
         ) : (
           <>
-            <CardHeader className="flex flex-row flex-wrap justify-between items-center gap-4">
+            <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
               <div className="flex-1 min-w-[200px]">
                 <CardTitle>Selecciona un Periodo</CardTitle>
                 <div className="max-w-sm pt-2">
@@ -478,10 +458,10 @@ export default function ProjectionsPage() {
                   </Select>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                  <Button variant="outline" onClick={() => applyScheduleToProjections(true)} disabled={!selectedPeriod || !activeSchedule}>
                    <BrainCircuit className="mr-2 h-4 w-4" />
-                   Cargar Horario por Defecto
+                   Cargar Horario
                  </Button>
                   <Dialog open={isSaveTemplateOpen} onOpenChange={setIsSaveTemplateOpen}>
                     <DialogTrigger asChild>
@@ -540,6 +520,80 @@ export default function ProjectionsPage() {
                 )}
                 
                 <TooltipProvider>
+                    {/* Mobile View */}
+                    <div className="md:hidden space-y-4">
+                        {projections.map((day) => {
+                             const isToday = day.date === todayString;
+                             const isDayComplete = !!(day.entry && day.exit);
+
+                             const entryTimeValue = (day.entry?.time || day.projectedEntry?.time) ?? "";
+                             const entryLocationValue = day.entry?.location || day.projectedEntry?.location;
+                             const isEntryManual = !!entryLocationValue && !userLocations.some(l => l.name === entryLocationValue);
+                             const entrySelectValue = isEntryManual ? 'manual' : entryLocationValue ?? "";
+ 
+                             const exitTimeValue = (day.exit?.time || day.projectedExit?.time) ?? "";
+                             const exitLocationValue = day.exit?.location || day.projectedExit?.location;
+                             const isExitManual = !!exitLocationValue && !userLocations.some(l => l.name === exitLocationValue);
+                             const exitSelectValue = isExitManual ? 'manual' : exitLocationValue ?? "";
+
+                            return (
+                                <Card key={day.date} className={cn(isDayComplete && "bg-green-500/10")}>
+                                    <CardHeader className="p-4 flex flex-row items-baseline justify-between">
+                                        <div>
+                                            <p className="font-medium capitalize flex items-center gap-2.5">
+                                                {isToday && (
+                                                    <span className="relative flex h-2.5 w-2.5" title="Hoy">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                                    </span>
+                                                )}
+                                                <span>{format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}</span>
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Proyectadas: {formatMinutesToHours(calculateMinutes(day.projectedEntry || day.entry, day.projectedExit || day.exit))} / Reales: <span className="text-green-600 font-semibold">{formatMinutesToHours(calculateMinutes(day.entry, day.exit))}</span>
+                                            </p>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-4 pt-0 space-y-4">
+                                        <div className="space-y-2 p-3 rounded-md border bg-muted/30">
+                                            <h4 className="font-medium text-sm">Entrada</h4>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Input type="time" value={entryTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} />
+                                                <div className="space-y-1">
+                                                    <Select value={entrySelectValue} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v === 'manual' ? '' : v)} disabled={!!day.entry}>
+                                                        <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {userLocations.map(l => <SelectItem key={`${l.id}-proj-entry-m`} value={l.name}>{l.name}</SelectItem>)}
+                                                            <SelectItem value="manual">Otro</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {entrySelectValue === 'manual' && <Input type="text" placeholder="Ubicación" value={entryLocationValue ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'location', e.target.value)} disabled={!!day.entry} />}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2 p-3 rounded-md border bg-muted/30">
+                                            <h4 className="font-medium text-sm">Salida</h4>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Input type="time" value={exitTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} />
+                                                <div className="space-y-1">
+                                                    <Select value={exitSelectValue} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v === 'manual' ? '' : v)} disabled={!!day.exit}>
+                                                        <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {userLocations.map(l => <SelectItem key={`${l.id}-proj-exit-m`} value={l.name}>{l.name}</SelectItem>)}
+                                                            <SelectItem value="manual">Otro</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {exitSelectValue === 'manual' && <Input type="text" placeholder="Ubicación" value={exitLocationValue ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'location', e.target.value)} disabled={!!day.exit} />}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )
+                        })}
+                    </div>
+
+                    {/* Desktop View */}
                     <div className="hidden md:block border rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -617,19 +671,13 @@ export default function ProjectionsPage() {
                                       <div className="space-y-1">
                                         <Select 
                                           value={entrySelectValue} 
-                                          onValueChange={v => {
-                                            if (v === 'manual') {
-                                              if (!isEntryManual) handleProjectionChange(day.date, 'projectedEntry', 'location', '');
-                                            } else {
-                                              handleProjectionChange(day.date, 'projectedEntry', 'location', v);
-                                            }
-                                          }} 
+                                          onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v === 'manual' ? '' : v)} 
                                           disabled={!!day.entry}
                                         >
                                           <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                           <SelectContent>
                                             {userLocations.map(l => <SelectItem key={`${l.id}-proj-entry`} value={l.name}>{l.name}</SelectItem>)}
-                                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                                            <SelectItem value="manual">Otro</SelectItem>
                                           </SelectContent>
                                         </Select>
                                         {entrySelectValue === 'manual' && (
@@ -674,19 +722,13 @@ export default function ProjectionsPage() {
                                        <div className="space-y-1">
                                         <Select 
                                           value={exitSelectValue} 
-                                          onValueChange={v => {
-                                            if (v === 'manual') {
-                                              if (!isExitManual) handleProjectionChange(day.date, 'projectedExit', 'location', '');
-                                            } else {
-                                              handleProjectionChange(day.date, 'projectedExit', 'location', v);
-                                            }
-                                          }} 
+                                          onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v === 'manual' ? '' : v)}
                                           disabled={!!day.exit}
                                         >
                                           <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
                                           <SelectContent>
                                             {userLocations.map(l => <SelectItem key={`${l.id}-proj-exit`} value={l.name}>{l.name}</SelectItem>)}
-                                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                                            <SelectItem value="manual">Otro</SelectItem>
                                           </SelectContent>
                                         </Select>
                                         {exitSelectValue === 'manual' && (
@@ -711,13 +753,13 @@ export default function ProjectionsPage() {
                     </div>
                 </TooltipProvider>
 
-                <div className="flex justify-end pt-6 items-center gap-2">
-                    <Button variant="outline" onClick={() => handleSaveChanges(false)} disabled={!selectedPeriod || saveState !== 'idle'} className="w-[180px]">
+                <div className="flex flex-col sm:flex-row justify-end pt-6 items-center gap-2">
+                    <Button variant="outline" onClick={() => handleSaveChanges(false)} disabled={!selectedPeriod || saveState !== 'idle'} className="w-full sm:w-[180px]">
                         {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Guardando...</>
                         : saveState === 'saved' ? <><Check /> Guardado</>
                         : <><Save /> Guardar Cambios</>}
                     </Button>
-                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' } className="w-[240px] bg-green-600 hover:bg-green-700">
+                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' } className="w-full sm:w-[240px] bg-green-600 hover:bg-green-700">
                         {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
                         : saveState === 'saved' ? <><Check /> Sincronizado</>
                         : <><CalendarSync /> Guardar y Sincronizar</>}
