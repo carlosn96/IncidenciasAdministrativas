@@ -26,6 +26,7 @@ const ALL_UNE_LOCATIONS: Location[] = [
 ];
 
 const ALLOWED_DOMAIN = "universidad-une.com";
+const DEV_MODE_USER_ID = process.env.NEXT_PUBLIC_DEV_MODE_USER_ID;
 
 const getInitialUserLocations = (): Location[] => [];
 
@@ -141,11 +142,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
     
   useEffect(() => {
-    if (!isFirebaseConfigured || !auth) {
+    if (!isFirebaseConfigured) {
         setIsLoading(false);
         return;
     }
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+
+    // If in dev mode, bypass Firebase Auth and simulate user
+    if (DEV_MODE_USER_ID) {
+      console.warn(`DEV MODE ACTIVE: Simulating login for user ${DEV_MODE_USER_ID}`);
+      setIsLoading(true);
+      setUser({
+        uid: DEV_MODE_USER_ID,
+        displayName: "Usuario de Prueba",
+        email: `dev-user@${ALLOWED_DOMAIN}`,
+      } as FirebaseUser);
+      setAccessToken(null); // No real access token in dev mode
+      fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
+      return; // Skip the real auth listener
+    }
+
+    const unsubscribe = auth?.onAuthStateChanged(async (firebaseUser) => {
         setIsLoading(true);
         if (firebaseUser) {
           setUser(firebaseUser);
@@ -159,7 +175,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
         setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => unsubscribe?.();
   }, [fetchUserData]);
 
   useEffect(() => {
@@ -179,6 +195,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const handleGoogleSignIn = async () => {
     if (!auth || !provider) return;
+    if (DEV_MODE_USER_ID) {
+      console.warn("Google Sign-In is disabled in DEV MODE.");
+      return;
+    }
 
     setIsSigningIn(true);
     setAuthError(null);
