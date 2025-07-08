@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isAfter, isWithinInterval, endOfDay, addMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check, CalendarSync } from "lucide-react";
+import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check, CalendarSync, CalendarCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -543,7 +543,30 @@ export default function ProjectionsPage() {
                                       </div>
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
-                                        <Input type="time" className="min-w-[100px]" value={entryTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} />
+                                        <div className="relative flex items-center">
+                                            <Input
+                                                type="time"
+                                                className={cn(
+                                                    "min-w-[100px]",
+                                                    !!day.projectedEntry?.calendarEventId && !day.entry && "pl-8"
+                                                )}
+                                                value={entryTimeValue}
+                                                onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)}
+                                                disabled={!!day.entry}
+                                            />
+                                            {day.projectedEntry?.calendarEventId && !day.entry && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <button className="absolute left-2.5 top-1/2 -translate-y-1/2 text-green-600 cursor-help outline-none ring-ring focus-visible:ring-2 rounded-sm">
+                                                            <CalendarCheck className="h-4 w-4" />
+                                                        </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Evento de entrada sincronizado.</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
                                       <div className="space-y-1">
@@ -577,7 +600,30 @@ export default function ProjectionsPage() {
                                       </div>
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
-                                        <Input type="time" className="min-w-[100px]" value={exitTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} />
+                                        <div className="relative flex items-center">
+                                            <Input
+                                                type="time"
+                                                className={cn(
+                                                    "min-w-[100px]",
+                                                    !!day.projectedExit?.calendarEventId && !day.exit && "pl-8"
+                                                )}
+                                                value={exitTimeValue}
+                                                onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)}
+                                                disabled={!!day.exit}
+                                            />
+                                            {day.projectedExit?.calendarEventId && !day.exit && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <button className="absolute left-2.5 top-1/2 -translate-y-1/2 text-green-600 cursor-help outline-none ring-ring focus-visible:ring-2 rounded-sm">
+                                                            <CalendarCheck className="h-4 w-4" />
+                                                        </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Evento de salida sincronizado.</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
                                        <div className="space-y-1">
