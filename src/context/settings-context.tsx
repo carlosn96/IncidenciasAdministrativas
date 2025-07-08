@@ -27,7 +27,6 @@ const ALL_UNE_LOCATIONS: Location[] = [
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 const DEV_MODE_USER_ID = process.env.NEXT_PUBLIC_DEV_MODE_USER_ID;
-const DEV_MODE_USER_EMAIL = process.env.NEXT_PUBLIC_DEV_MODE_USER_EMAIL;
 
 
 const getInitialUserLocations = (): Location[] => [];
@@ -70,6 +69,7 @@ interface SettingsContextType {
   authError: AuthError | null;
   isSigningIn: boolean;
   handleGoogleSignIn: () => Promise<void>;
+  googleAccessToken: string | null;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -79,6 +79,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [userLocations, setUserLocations] = useState<Location[]>([]);
@@ -131,6 +132,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const clearUserData = () => {
     setUser(null);
+    setGoogleAccessToken(null);
     setUserLocations(getInitialUserLocations());
     setSchedules(getInitialSchedules());
     setPeriods(getInitialPeriods());
@@ -144,20 +146,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
 
     // If in dev mode, bypass Firebase Auth and simulate user
-    if (DEV_MODE_USER_ID && DEV_MODE_USER_EMAIL) {
+    if (DEV_MODE_USER_ID) {
       console.warn(`DEV MODE ACTIVE: Simulating login for user ${DEV_MODE_USER_ID}`);
       setIsLoading(true);
       setUser({
         uid: DEV_MODE_USER_ID,
         displayName: "Usuario de Prueba",
-        email: DEV_MODE_USER_EMAIL,
+        email: "dev-user@example.com",
       } as FirebaseUser);
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
       return; // Skip the real auth listener
-    } else if (DEV_MODE_USER_ID && !DEV_MODE_USER_EMAIL) {
-        console.error("DEV MODE ERROR: NEXT_PUBLIC_DEV_MODE_USER_ID is set, but NEXT_PUBLIC_DEV_MODE_USER_EMAIL is missing. Both are required for dev mode calendar sync.");
     }
-
 
     const unsubscribe = auth?.onAuthStateChanged(async (firebaseUser) => {
         setIsLoading(true);
@@ -211,10 +210,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      toast({
-        title: `¡Bienvenido, ${result.user.displayName?.split(" ")[0]}!`,
-        description: `Has iniciado sesión correctamente.`,
-      });
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setGoogleAccessToken(credential.accessToken);
+        toast({
+          title: `¡Bienvenido, ${result.user.displayName?.split(" ")[0]}!`,
+          description: `Has iniciado sesión correctamente.`,
+        });
+      } else {
+         setAuthError({
+          title: "Error de Permisos",
+          message: "No se pudo obtener el permiso para acceder a Google Calendar. Por favor, inténtalo de nuevo."
+        });
+        await signOut(auth);
+      }
       // The onAuthStateChanged listener will handle the user state and data fetching.
       
     } catch (error: any) {
@@ -251,6 +260,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     authError,
     isSigningIn,
     handleGoogleSignIn,
+    googleAccessToken,
   };
 
   return (

@@ -1,6 +1,7 @@
+
 'use server';
 /**
- * @fileOverview Manages Google Calendar events using a Service Account.
+ * @fileOverview Manages Google Calendar events using a user's OAuth Access Token.
  *
  * - manageCalendarEvent - A function to create, update, or delete Google Calendar events.
  * - CalendarEventInput - The input type for the manageCalendarEvent function.
@@ -11,8 +12,8 @@ import { google } from 'googleapis';
 
 // Use TypeScript types instead of Zod schemas for server actions
 export type CalendarEventInput = {
+  accessToken: string;
   action: 'create' | 'update' | 'delete';
-  calendarId?: string;
   eventId?: string;
   summary?: string;
   location?: string;
@@ -28,32 +29,20 @@ export type CalendarEventOutput = {
 
 
 export async function manageCalendarEvent(input: CalendarEventInput): Promise<CalendarEventOutput> {
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-        const errorMsg = 'Google Service Account credentials are not configured in .env';
+    if (!input.accessToken) {
+        const errorMsg = 'Google Access Token is required.';
         console.error(errorMsg);
         return { success: false, error: errorMsg };
     }
 
     try {
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-                // The private key from .env needs newline characters to be correctly parsed.
-                private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-            },
-            scopes: ['https://www.googleapis.com/auth/calendar'],
-        });
-
-        const calendar = google.calendar({ version: 'v3', auth });
+        const oauth2Client = new google.auth.OAuth2();
+        oauth2Client.setCredentials({ access_token: input.accessToken });
+        
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         const { action, eventId, ...eventData } = input;
         
-        const calendarId = input.calendarId;
-        if (!calendarId) {
-            const errorMsg = 'Calendar ID is required for service account operations. This should be the email of the calendar owner.';
-            console.error(errorMsg);
-            return { success: false, error: errorMsg };
-        }
-
+        const calendarId = 'primary';
 
         if (action === 'create') {
             if (!eventData.summary || !eventData.start || !eventData.end) {
