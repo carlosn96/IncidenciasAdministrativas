@@ -1,43 +1,33 @@
 'use server';
 /**
- * @fileOverview A Genkit flow to manage Google Calendar events using a Service Account.
+ * @fileOverview Manages Google Calendar events using a Service Account.
  *
  * - manageCalendarEvent - A function to create, update, or delete Google Calendar events.
  * - CalendarEventInput - The input type for the manageCalendarEvent function.
  * - CalendarEventOutput - The return type for the manageCalendarEvent function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'zod';
 import { google } from 'googleapis';
 
-const CalendarEventInputSchema = z.object({
-  action: z.enum(['create', 'update', 'delete']).describe('The action to perform.'),
-  calendarId: z.string().default('primary').describe('The calendar to modify.'),
-  eventId: z.string().optional().describe('The ID of the event to update or delete.'),
-  summary: z.string().optional().describe('The title of the event.'),
-  location: z.string().optional().describe('The location of the event.'),
-  start: z.string().datetime().optional().describe('The start time of the event in ISO 8601 format.'),
-  end: z.string().datetime().optional().describe('The end time of the event in ISO 8601 format.'),
-});
-type CalendarEventInput = z.infer<typeof CalendarEventInputSchema>;
+// Use TypeScript types instead of Zod schemas for server actions
+export type CalendarEventInput = {
+  action: 'create' | 'update' | 'delete';
+  calendarId?: string;
+  eventId?: string;
+  summary?: string;
+  location?: string;
+  start?: string; // ISO 8601 datetime string
+  end?: string; // ISO 8601 datetime string
+};
 
-const CalendarEventOutputSchema = z.object({
-  success: z.boolean(),
-  eventId: z.string().optional().describe('The ID of the created or updated event.'),
-  error: z.string().optional().describe('Error message if the action failed.'),
-});
-type CalendarEventOutput = z.infer<typeof CalendarEventOutputSchema>;
+export type CalendarEventOutput = {
+  success: boolean;
+  eventId?: string;
+  error?: string;
+};
 
-// This flow uses the googleapis library with a Service Account for authentication.
-const manageCalendarEventFlow = ai.defineFlow(
-  {
-    name: 'manageCalendarEventFlow',
-    inputSchema: CalendarEventInputSchema,
-    outputSchema: CalendarEventOutputSchema,
-  },
-  async (input: CalendarEventInput): Promise<CalendarEventOutput> => {
-    
+
+export async function manageCalendarEvent(input: CalendarEventInput): Promise<CalendarEventOutput> {
     if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
         const errorMsg = 'Google Service Account credentials are not configured in .env';
         console.error(errorMsg);
@@ -48,13 +38,16 @@ const manageCalendarEventFlow = ai.defineFlow(
         const auth = new google.auth.GoogleAuth({
             credentials: {
                 client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+                // The private key from .env needs newline characters to be correctly parsed.
                 private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
             },
             scopes: ['https://www.googleapis.com/auth/calendar'],
         });
 
         const calendar = google.calendar({ version: 'v3', auth });
-        const { action, calendarId, eventId, ...eventData } = input;
+        const { action, eventId, ...eventData } = input;
+        const calendarId = input.calendarId || 'primary';
+
 
         if (action === 'create') {
             if (!eventData.summary || !eventData.start || !eventData.end) {
@@ -102,9 +95,4 @@ const manageCalendarEventFlow = ai.defineFlow(
         const errorMessage = error.response?.data?.error?.message || error.message || 'An unknown error occurred.';
         return { success: false, error: errorMessage };
     }
-  }
-);
-
-export async function manageCalendarEvent(input: CalendarEventInput): Promise<CalendarEventOutput> {
-  return manageCalendarEventFlow(input);
 }
