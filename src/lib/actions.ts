@@ -13,7 +13,7 @@ import { google } from 'googleapis';
 // Use TypeScript types instead of Zod schemas for server actions
 export type CalendarEventInput = {
   action: 'create' | 'update' | 'delete';
-  calendarId: string; // The email of the target calendar
+  calendarId: string; // The ID of the target calendar (usually the user's email for the primary calendar).
   eventId?: string;
   summary?: string;
   location?: string;
