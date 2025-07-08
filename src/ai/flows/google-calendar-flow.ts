@@ -46,7 +46,15 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
 
         const calendar = google.calendar({ version: 'v3', auth });
         const { action, eventId, ...eventData } = input;
-        const calendarId = input.calendarId || 'primary';
+        
+        // CRITICAL CHANGE: The calendarId must be provided for a service account.
+        // It should be the email of the calendar that the service account has been granted access to.
+        const calendarId = input.calendarId;
+        if (!calendarId) {
+            const errorMsg = 'Calendar ID is required for service account operations. This should be the email of the calendar owner.';
+            console.error(errorMsg);
+            return { success: false, error: errorMsg };
+        }
 
 
         if (action === 'create') {

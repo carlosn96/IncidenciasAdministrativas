@@ -47,7 +47,7 @@ const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves",
 
 export default function ProjectionsPage() {
   const searchParams = useSearchParams();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules, user } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
   const { toast } = useToast();
@@ -200,6 +200,10 @@ export default function ProjectionsPage() {
   };
 
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
+    if (!user?.email) {
+      toast({ variant: 'destructive', title: 'Error de Usuario', description: 'No se pudo identificar tu correo para sincronizar con el calendario.' });
+      return { success: false, finalProjections: newProjections };
+    }
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
     const syncPromises: Promise<void>[] = [];
 
@@ -222,6 +226,7 @@ export default function ProjectionsPage() {
                 const endTime = addMinutes(startTime, 30);
                 const result = await manageCalendarEvent({
                     action: 'create',
+                    calendarId: user.email,
                     summary: `${incidentType}: ${newIncident.location}`,
                     location: newIncident.location,
                     start: startTime.toISOString(),
@@ -237,6 +242,7 @@ export default function ProjectionsPage() {
             syncPromises.push((async () => {
                 const result = await manageCalendarEvent({
                     action: 'delete',
+                    calendarId: user.email,
                     eventId: originalIncident.calendarEventId,
                 });
                 if (!result.success) {
@@ -249,6 +255,7 @@ export default function ProjectionsPage() {
                 const endTime = addMinutes(startTime, 30);
                 const result = await manageCalendarEvent({
                     action: 'update',
+                    calendarId: user.email,
                     eventId: newIncident.calendarEventId,
                     summary: `${incidentType}: ${newIncident.location}`,
                     location: newIncident.location,
