@@ -217,79 +217,93 @@ export default function ProjectionsPage() {
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
     const syncPromises: Promise<void>[] = [];
 
-    const processIncident = (
-        dayIndex: number,
-        type: 'projectedEntry' | 'projectedExit'
-    ) => {
-        const originalIncident = originalProjections[dayIndex]?.[type];
-        const newIncident = updatedProjections[dayIndex]?.[type];
-        const incidentType = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
-        const date = updatedProjections[dayIndex].date;
+    const processIncident = (dayIndex: number, type: 'projectedEntry' | 'projectedExit') => {
+      const originalIncident = originalProjections[dayIndex]?.[type];
+      const newIncident = updatedProjections[dayIndex]?.[type];
+      const incidentType = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
+      const date = updatedProjections[dayIndex].date;
 
-        const isNew = newIncident && newIncident.time && newIncident.location && !newIncident.calendarEventId;
-        const isDeleted = !newIncident && originalIncident?.calendarEventId;
-        const isUpdated = newIncident?.calendarEventId && originalIncident?.calendarEventId && (newIncident.time !== originalIncident.time || newIncident.location !== originalIncident.location);
+      const originalTime = originalIncident?.time || '';
+      const originalLocation = originalIncident?.location || '';
+      const newTime = newIncident?.time || '';
+      const newLocation = newIncident?.location || '';
 
-        if (isNew || isUpdated || isDeleted) {
-            console.log(`[PROJECTIONS PAGE] Processing incident for ${date} - Type: ${type}. Action: ${isNew ? 'CREATE' : isUpdated ? 'UPDATE' : 'DELETE'}`);
+      const hasChanged = originalTime !== newTime || originalLocation !== newLocation;
+
+      if (!hasChanged) {
+        return; // No change, nothing to do
+      }
+
+      const wasSynced = !!originalIncident?.calendarEventId;
+      const hasNewData = !!(newTime && newLocation);
+
+      if (hasNewData) {
+        if (wasSynced) {
+          // UPDATE
+          console.log(`[PROJECTIONS PAGE] Change detected: UPDATE event for ${date} - Type: ${type}`);
+          syncPromises.push(
+            (async () => {
+              const startTime = new Date(`${date}T${newTime}`);
+              const endTime = addMinutes(startTime, 30);
+              const eventToUpdate = {
+                action: 'update' as const,
+                calendarId: googleCalendarId,
+                eventId: originalIncident.calendarEventId!,
+                summary: `${incidentType}: ${newLocation}`,
+                location: newLocation,
+                start: startTime.toISOString(),
+                end: endTime.toISOString(),
+              };
+              const result = await manageCalendarEvent(eventToUpdate);
+              if (!result.success) {
+                toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 15000 });
+              }
+            })()
+          );
+        } else {
+          // CREATE
+          console.log(`[PROJECTIONS PAGE] Change detected: CREATE event for ${date} - Type: ${type}`);
+          syncPromises.push(
+            (async () => {
+              const startTime = new Date(`${date}T${newTime}`);
+              const endTime = addMinutes(startTime, 30);
+              const eventToCreate = {
+                action: 'create' as const,
+                calendarId: googleCalendarId,
+                summary: `${incidentType}: ${newLocation}`,
+                location: newLocation,
+                start: startTime.toISOString(),
+                end: endTime.toISOString(),
+              };
+              const result = await manageCalendarEvent(eventToCreate);
+              if (result.success && result.eventId) {
+                updatedProjections[dayIndex][type]!.calendarEventId = result.eventId;
+              } else {
+                toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error, duration: 15000 });
+              }
+            })()
+          );
         }
-
-        if (isNew) {
-            syncPromises.push((async () => {
-                const startTime = new Date(`${date}T${newIncident.time}`);
-                const endTime = addMinutes(startTime, 30);
-                const eventToCreate = {
-                    action: 'create' as const,
-                    calendarId: googleCalendarId,
-                    summary: `${incidentType}: ${newIncident.location}`,
-                    location: newIncident.location,
-                    start: startTime.toISOString(),
-                    end: endTime.toISOString(),
-                };
-                console.log(`%c[Sync Event Frontend] Sending data to SERVER ACTION:`, 'color: blue; font-weight: bold;', JSON.stringify(eventToCreate, null, 2));
-                const result = await manageCalendarEvent(eventToCreate);
-                console.log(`%c[Sync Event Frontend] Received result from SERVER ACTION:`, 'color: green; font-weight: bold;', result);
-                if (result.success && result.eventId) {
-                    updatedProjections[dayIndex][type]!.calendarEventId = result.eventId;
-                } else {
-                    toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error, duration: 15000 });
-                }
-            })());
-        } else if (isDeleted) {
-            syncPromises.push((async () => {
-                const eventToDelete = {
-                    action: 'delete' as const,
-                    calendarId: googleCalendarId,
-                    eventId: originalIncident.calendarEventId,
-                };
-                console.log(`%c[Sync Event Frontend] Sending data to SERVER ACTION:`, 'color: blue; font-weight: bold;', JSON.stringify(eventToDelete, null, 2));
-                const result = await manageCalendarEvent(eventToDelete);
-                console.log(`%c[Sync Event Frontend] Received result from SERVER ACTION:`, 'color: green; font-weight: bold;', result);
-                if (!result.success) {
-                    toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 15000 });
-                }
-            })());
-        } else if (isUpdated) {
-            syncPromises.push((async () => {
-                const startTime = new Date(`${date}T${newIncident.time}`);
-                const endTime = addMinutes(startTime, 30);
-                const eventToUpdate = {
-                    action: 'update' as const,
-                    calendarId: googleCalendarId,
-                    eventId: newIncident.calendarEventId,
-                    summary: `${incidentType}: ${newIncident.location}`,
-                    location: newIncident.location,
-                    start: startTime.toISOString(),
-                    end: endTime.toISOString(),
-                };
-                console.log(`%c[Sync Event Frontend] Sending data to SERVER ACTION:`, 'color: blue; font-weight: bold;', JSON.stringify(eventToUpdate, null, 2));
-                const result = await manageCalendarEvent(eventToUpdate);
-                console.log(`%c[Sync Event Frontend] Received result from SERVER ACTION:`, 'color: green; font-weight: bold;', result);
-                if (!result.success) {
-                    toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 15000 });
-                }
-            })());
+      } else {
+        // Data was removed from UI
+        if (wasSynced) {
+          // DELETE
+          console.log(`[PROJECTIONS PAGE] Change detected: DELETE event for ${date} - Type: ${type}`);
+          syncPromises.push(
+            (async () => {
+              const eventToDelete = {
+                action: 'delete' as const,
+                calendarId: googleCalendarId,
+                eventId: originalIncident.calendarEventId!,
+              };
+              const result = await manageCalendarEvent(eventToDelete);
+              if (!result.success) {
+                toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 15000 });
+              }
+            })()
+          );
         }
+      }
     };
 
     console.log('[PROJECTIONS PAGE] Starting to process incidents for sync.');
@@ -298,14 +312,11 @@ export default function ProjectionsPage() {
         processIncident(i, 'projectedExit');
     }
     
-    if (syncPromises.length === 0) {
-        console.log('[PROJECTIONS PAGE] No changes detected that require calendar synchronization.');
-        toast({ title: "Sin Cambios", description: "No se detectaron cambios para sincronizar con el calendario." });
-    } else {
-        console.log(`[PROJECTIONS PAGE] Waiting for ${syncPromises.length} sync promises to resolve.`);
+    console.log(`[PROJECTIONS PAGE] Found ${syncPromises.length} changes to sync.`);
+    if (syncPromises.length > 0) {
         await Promise.all(syncPromises);
-        console.log('[PROJECTIONS PAGE] All sync promises resolved.');
     }
+    console.log('[PROJECTIONS PAGE] All sync promises resolved.');
     
     return { success: true, finalProjections: updatedProjections };
   };
@@ -726,7 +737,7 @@ export default function ProjectionsPage() {
                         : saveState === 'saved' ? <><Check /> Guardado</>
                         : <><Save /> Guardar Cambios</>}
                     </Button>
-                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle'} className="w-[240px] bg-green-600 hover:bg-green-700">
+                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' || !googleCalendarId} className="w-[240px] bg-green-600 hover:bg-green-700">
                         {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
                         : saveState === 'saved' ? <><Check /> Sincronizado</>
                         : <><CalendarSync /> Guardar y Sincronizar</>}
