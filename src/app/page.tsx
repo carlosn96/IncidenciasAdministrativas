@@ -2,80 +2,33 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { signInWithPopup, signOut } from "firebase/auth";
-import { auth, provider } from "@/lib/firebase";
+import { useEffect } from "react";
 import { LoadingScreen } from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
 import { AppLogo, GoogleIcon } from "@/components/icons";
 import { useSettings } from "@/context/settings-context";
-import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 
-const ALLOWED_DOMAIN = "universidad-une.com";
-
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isLoading: isSettingsLoading, isFirebaseConfigured } = useSettings();
-  const { toast } = useToast();
-
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [authError, setAuthError] = useState<{ title: string, message: string } | null>(null);
+  const { 
+    user, 
+    isLoading, 
+    isFirebaseConfigured, 
+    authError, 
+    handleGoogleSignIn,
+    isSigningIn,
+  } = useSettings();
 
   useEffect(() => {
-    // If a user object exists, redirect to the dashboard.
-    if (!isSettingsLoading && user) {
+    if (!isLoading && user) {
       router.replace("/dashboard");
     }
-  }, [user, isSettingsLoading, router]);
+  }, [user, isLoading, router]);
 
-  const handleSignIn = async () => {
-    if (!auth || !provider) return;
-
-    setIsSigningIn(true);
-    setAuthError(null);
-
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const email = result.user.email;
-
-      if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-        await signOut(auth); // Sign out the user immediately
-        setAuthError({
-          title: "Dominio no Autorizado",
-          message: `El acceso está restringido a cuentas del dominio @${ALLOWED_DOMAIN}. Por favor, utiliza tu cuenta institucional.`
-        });
-        setIsSigningIn(false);
-        return;
-      }
-      
-      toast({
-        title: `¡Bienvenido de nuevo, ${result.user.displayName?.split(" ")[0]}!`,
-        description: `Has iniciado sesión correctamente.`,
-      });
-      // The onAuthStateChanged listener in the context will handle the redirect.
-      
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        setAuthError({
-          title: 'Proceso de inicio de sesión cancelado',
-          message: 'No se pudo completar el inicio de sesión. Esto puede ocurrir si cierras la ventana o si hay un problema con la cuenta de Google seleccionada. Por favor, inténtalo de nuevo.'
-        });
-      } else {
-        console.error("Authentication error:", error);
-        setAuthError({
-          title: "Error de Autenticación",
-          message: "Ocurrió un error inesperado al intentar iniciar sesión. Por favor, revisa la consola para más detalles."
-        });
-      }
-    } finally {
-      setIsSigningIn(false);
-    }
-  };
-  
-  if (isSettingsLoading || user) {
+  if (isLoading || user) {
     return <LoadingScreen />;
   }
 
@@ -97,7 +50,7 @@ export default function LoginPage() {
           {!isFirebaseConfigured ? (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Firebase no está configurado</AlertTitle>
+              <AlertTitle>Firebase no configurado</AlertTitle>
               <AlertDescription>
                 <p>La aplicación no puede conectarse a la base de datos.</p>
                 <p className="mt-2">Por favor, añade tus credenciales de proyecto de Firebase al archivo <strong>.env</strong> en la raíz del proyecto para continuar.</p>
@@ -113,7 +66,7 @@ export default function LoginPage() {
                 </Alert>
               )}
               <Button
-                onClick={handleSignIn}
+                onClick={handleGoogleSignIn}
                 size="lg"
                 className="w-full h-12 text-base"
                 disabled={isSigningIn}

@@ -31,6 +31,7 @@ export type Location = {
 export type Incident = {
   time: string;
   location: string;
+  calendarEventId?: string;
 };
 
 export type LaborDay = {

@@ -1,17 +1,13 @@
 
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User as FirebaseUser } from 'firebase/auth';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { User as FirebaseUser, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, db, provider, isFirebaseConfigured } from '@/lib/firebase';
 import type { Location, Period, Schedule } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-
-// Constants for No-Auth mode
-const IS_NO_AUTH_MODE = process.env.NEXT_PUBLIC_NO_AUTH_MODE === 'true';
-const DEV_USER_ID = 'v44ZzprjCGeDbhl3vVG5Zc4z8eo2';
-
+import { useToast } from '@/hooks/use-toast';
 
 // Master list of all possible locations
 const ALL_UNE_LOCATIONS: Location[] = [
@@ -29,7 +25,8 @@ const ALL_UNE_LOCATIONS: Location[] = [
   { id: "loc12", name: "Coordinación Académica", campus: "Centro Universitario UNE", address: "N/A" },
 ];
 
-// Default initial data for a NEW user
+const ALLOWED_DOMAIN = "universidad-une.com";
+
 const getInitialUserLocations = (): Location[] => [];
 
 const getInitialSchedules = (): Schedule[] => [{
@@ -48,6 +45,11 @@ const getInitialSchedules = (): Schedule[] => [{
 const getInitialPeriods = (): Period[] => [];
 
 
+interface AuthError {
+  title: string;
+  message: string;
+}
+
 interface SettingsContextType {
   user: FirebaseUser | null;
   isLoading: boolean;
@@ -61,6 +63,11 @@ interface SettingsContextType {
   setActiveScheduleId: React.Dispatch<React.SetStateAction<string | null>>;
   periods: Period[];
   setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
+  // Auth related
+  accessToken: string | null;
+  authError: AuthError | null;
+  isSigningIn: boolean;
+  handleGoogleSignIn: () => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -68,119 +75,87 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [authError, setAuthError] = useState<AuthError | null>(null);
+  const { toast } = useToast();
 
-  // State for user-specific data
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userLocations, setUserLocations] = useState<Location[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
   const [periods, setPeriods] = useState<Period[]>([]);
   
-  // Effect for handling auth and data loading
-  useEffect(() => {
-    const fetchUserData = async (userId: string) => {
-        // This function now requires a valid db connection.
-        if (!db) {
-          console.error("Firestore DB is not configured. Cannot fetch user data.");
-          // Fallback to empty data to avoid crashing the app
+  const fetchUserData = useCallback(async (userId: string) => {
+      if (!db) {
+        console.error("Firestore DB is not configured. Cannot fetch user data.");
+        return;
+      }
+      const userDocRef = doc(db, 'users', userId);
+      try {
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const loadedSchedules = data.schedules || getInitialSchedules();
+          const rehydratedPeriods = (data.periods || []).map((p: any) => ({
+            ...p,
+            startDate: p.startDate.toDate(),
+            endDate: p.endDate.toDate(),
+          })).sort((a: Period, b: Period) => b.startDate.getTime() - a.startDate.getTime());
+
+          setUserLocations(data.userLocations || getInitialUserLocations());
+          setSchedules(loadedSchedules);
+          setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
+          setPeriods(rehydratedPeriods);
+        } else {
+          console.log(`Creating new user document for ${userId}`);
+          const initialSchedules = getInitialSchedules();
+          const initialActiveScheduleId = initialSchedules.length > 0 ? initialSchedules[0].id : null;
+          
           setUserLocations(getInitialUserLocations());
-          setSchedules(getInitialSchedules());
+          setSchedules(initialSchedules);
+          setActiveScheduleId(initialActiveScheduleId);
           setPeriods(getInitialPeriods());
-          setActiveScheduleId(null);
-          return;
+          
+          await setDoc(userDocRef, {
+            userLocations: getInitialUserLocations(),
+            schedules: initialSchedules,
+            activeScheduleId: initialActiveScheduleId,
+            periods: getInitialPeriods(),
+          });
         }
-        const userDocRef = doc(db, 'users', userId);
-        try {
-          const docSnap = await getDoc(userDocRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            
-            const loadedSchedules = data.schedules || getInitialSchedules();
-            const rehydratedPeriods = (data.periods || []).map((p: any) => ({
-              ...p,
-              startDate: p.startDate.toDate(),
-              endDate: p.endDate.toDate(),
-            })).sort((a: Period, b: Period) => b.startDate.getTime() - a.startDate.getTime());
+      } catch (error) {
+        console.error("Error fetching user data from Firestore:", error);
+      }
+  }, []);
 
-            setUserLocations(data.userLocations || getInitialUserLocations());
-            setSchedules(loadedSchedules);
-            setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
-            setPeriods(rehydratedPeriods);
-          } else {
-            console.log(`Creating new user document for ${userId}`);
-            const initialSchedules = getInitialSchedules();
-            const initialActiveScheduleId = initialSchedules.length > 0 ? initialSchedules[0].id : null;
-            
-            // Set state for the new user
-            setUserLocations(getInitialUserLocations());
-            setSchedules(initialSchedules);
-            setActiveScheduleId(initialActiveScheduleId);
-            setPeriods(getInitialPeriods());
-            
-            // And saves it to Firestore for the new user
-            await setDoc(userDocRef, {
-              userLocations: getInitialUserLocations(),
-              schedules: initialSchedules,
-              activeScheduleId: initialActiveScheduleId,
-              periods: getInitialPeriods(),
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching user data from Firestore:", error);
-        }
-    };
+  const clearUserData = () => {
+    setUser(null);
+    setAccessToken(null);
+    setUserLocations(getInitialUserLocations());
+    setSchedules(getInitialSchedules());
+    setPeriods(getInitialPeriods());
+    setActiveScheduleId(null);
+  };
     
-    // --- MAIN AUTH LOGIC ---
-    if (IS_NO_AUTH_MODE) {
-        // --- Development: No-Auth Mode ---
-        console.log("Running in No-Auth mode.");
-        if (!isFirebaseConfigured) {
-            console.warn("Firebase is not configured. Cannot load data from Firestore in No-Auth mode.");
-            setIsLoading(false);
-            return;
-        }
-
-        const devUser: FirebaseUser = {
-            uid: DEV_USER_ID,
-            displayName: 'Desarrollador',
-            email: 'dev@universidad-une.com',
-            photoURL: '',
-        } as FirebaseUser; // Cast to avoid filling all properties
-
-        setUser(devUser);
-        fetchUserData(DEV_USER_ID).finally(() => setIsLoading(false));
-
-    } else {
-        // --- Production: Real Auth Mode ---
-        if (!isFirebaseConfigured || !auth) {
-            console.warn("Firebase not configured for real authentication.");
-            setIsLoading(false);
-            return;
-        }
-        
-        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-            setIsLoading(true);
-            if (firebaseUser) {
-              setUser(firebaseUser);
-              await fetchUserData(firebaseUser.uid);
-            } else {
-              setUser(null);
-              // Clear user data on logout
-              setUserLocations(getInitialUserLocations());
-              setSchedules(getInitialSchedules());
-              setPeriods(getInitialPeriods());
-              setActiveScheduleId(null);
-            }
-            setIsLoading(false);
-        });
-        
-        return () => unsubscribe();
-    }
-  }, []); // Only runs once on mount
-
-  // Effect for saving user data to Firestore whenever it changes
   useEffect(() => {
-    // Save data only if we have a user and a configured DB.
-    // This works for both real and simulated users.
+    if (!isFirebaseConfigured || !auth) {
+        setIsLoading(false);
+        return;
+    }
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+        setIsLoading(true);
+        if (firebaseUser) {
+          setUser(firebaseUser);
+          await fetchUserData(firebaseUser.uid);
+        } else {
+          clearUserData();
+        }
+        setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [fetchUserData]);
+
+  useEffect(() => {
     if (!isLoading && user && db) {
       const userDocRef = doc(db, 'users', user.uid);
       const dataToStore = {
@@ -195,11 +170,61 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoading, user, userLocations, schedules, activeScheduleId, periods]);
 
+  const handleGoogleSignIn = async () => {
+    if (!auth || !provider) return;
+
+    setIsSigningIn(true);
+    setAuthError(null);
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user.email;
+
+      if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+        await signOut(auth);
+        setAuthError({
+          title: "Dominio no Autorizado",
+          message: `El acceso está restringido a cuentas del dominio @${ALLOWED_DOMAIN}. Por favor, utiliza tu cuenta institucional.`
+        });
+        setIsSigningIn(false);
+        return;
+      }
+
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setAccessToken(credential.accessToken);
+      } else {
+        setAuthError({ title: 'Error de Token', message: 'No se pudo obtener el token de acceso de Google Calendar.' });
+      }
+      
+      toast({
+        title: `¡Bienvenido, ${result.user.displayName?.split(" ")[0]}!`,
+        description: `Has iniciado sesión correctamente.`,
+      });
+      // The onAuthStateChanged listener will handle the user state and data fetching.
+      
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        setAuthError({
+          title: 'Proceso cancelado',
+          message: 'El inicio de sesión fue cancelado. Por favor, inténtalo de nuevo.'
+        });
+      } else {
+        console.error("Authentication error:", error);
+        setAuthError({
+          title: "Error de Autenticación",
+          message: "Ocurrió un error inesperado al intentar iniciar sesión."
+        });
+      }
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
 
   const value = {
     user,
     isLoading,
-    isFirebaseConfigured, // Pass this down
+    isFirebaseConfigured,
     allLocations: ALL_UNE_LOCATIONS,
     userLocations,
     setUserLocations,
@@ -209,6 +234,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setActiveScheduleId,
     periods,
     setPeriods,
+    accessToken,
+    authError,
+    isSigningIn,
+    handleGoogleSignIn,
   };
 
   return (

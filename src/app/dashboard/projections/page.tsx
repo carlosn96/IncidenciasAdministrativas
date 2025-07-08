@@ -13,13 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isAfter, isWithinInterval, endOfDay } from "date-fns";
+import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isAfter, isWithinInterval, endOfDay, addMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check } from "lucide-react";
+import { BarChart, Save, PlusCircle, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check, CalendarSync } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { v4 as uuidv4 } from "uuid";
+import { manageCalendarEvent } from "@/ai/flows/google-calendar-flow";
 
 // Helper functions
 const calculateMinutes = (entry?: Incident, exit?: Incident): number => {
@@ -46,7 +47,7 @@ const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves",
 
 export default function ProjectionsPage() {
   const searchParams = useSearchParams();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules, accessToken } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
   const { toast } = useToast();
@@ -62,20 +63,17 @@ export default function ProjectionsPage() {
   useEffect(() => {
     const periodIdFromUrl = searchParams.get("period");
 
-    // 1. Prioritize period ID from URL
     if (periodIdFromUrl && periods.some(p => p.id === periodIdFromUrl)) {
       setSelectedPeriodId(periodIdFromUrl);
       return;
     }
 
-    // 2. Find and select the active period
     const today = new Date();
     const activePeriod = periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
 
     if (activePeriod) {
       setSelectedPeriodId(activePeriod.id);
     } else if (periods.length > 0) {
-      // 3. Fallback to the most recent period if no active one is found
       const sortedPeriods = [...periods].sort((a,b) => b.startDate.getTime() - a.startDate.getTime());
       setSelectedPeriodId(sortedPeriods[0].id);
     }
@@ -101,7 +99,6 @@ export default function ProjectionsPage() {
     const newProjections = projections.map(day => {
         const newDay = JSON.parse(JSON.stringify(day)); 
         
-        // Skip days that are in the past or have real entries
         const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
         if (isPastDay && newDay.entry) {
             return newDay;
@@ -120,7 +117,6 @@ export default function ProjectionsPage() {
             return newDay;
         }
         
-        // Always apply schedule to future days
         if (scheduleForDay.startTime && scheduleForDay.startLocation) {
             newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
         } else {
@@ -142,13 +138,11 @@ export default function ProjectionsPage() {
     }
   }, [projections, activeSchedule, toast]);
 
-  // This effect initializes projections when a period is selected.
   useEffect(() => {
     if (selectedPeriod) {
       const initialProjections = selectedPeriod.laborDays.map(day => {
         const newDay = JSON.parse(JSON.stringify(day));
         
-        // Pre-fill with active schedule only if no projection exists
         if (activeSchedule && !newDay.projectedEntry && !newDay.projectedExit) {
             const dayDate = parseISO(day.date);
             const dayOfWeekIndex = getDay(dayDate);
@@ -186,6 +180,18 @@ export default function ProjectionsPage() {
             updatedDay[type] = { time: "", location: "" };
           }
           updatedDay[type]![field] = value;
+          
+          if(field === 'time' && value === '') {
+            if(updatedDay[type]?.location === '') {
+                delete updatedDay[type];
+            }
+          }
+           if(field === 'location' && value === '') {
+            if(updatedDay[type]?.time === '') {
+                delete updatedDay[type];
+            }
+          }
+
           return updatedDay;
         }
         return day;
@@ -193,51 +199,128 @@ export default function ProjectionsPage() {
     );
   };
 
-  const handleSaveChanges = () => {
-    if (!selectedPeriodId) return;
+  const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
+    if (!accessToken) {
+        toast({ variant: 'destructive', title: 'Error de Autenticación', description: 'No se pudo obtener el token para sincronizar con Google Calendar. Por favor, intenta iniciar sesión de nuevo.' });
+        return { success: false, finalProjections: newProjections };
+    }
+
+    const updatedProjections = JSON.parse(JSON.stringify(newProjections));
+    const syncPromises: Promise<void>[] = [];
+
+    const processIncident = (
+        dayIndex: number,
+        type: 'projectedEntry' | 'projectedExit'
+    ) => {
+        const originalIncident = originalProjections[dayIndex]?.[type];
+        const newIncident = updatedProjections[dayIndex]?.[type];
+        const incidentType = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
+        const date = updatedProjections[dayIndex].date;
+
+        const isNew = newIncident && !newIncident.calendarEventId;
+        const isDeleted = !newIncident && originalIncident?.calendarEventId;
+        const isUpdated = newIncident?.calendarEventId && originalIncident?.calendarEventId && (newIncident.time !== originalIncident.time || newIncident.location !== originalIncident.location);
+
+        if (isNew) {
+            syncPromises.push((async () => {
+                const startTime = new Date(`${date}T${newIncident.time}`);
+                const endTime = addMinutes(startTime, 30);
+                const result = await manageCalendarEvent({
+                    accessToken,
+                    action: 'create',
+                    summary: `${incidentType}: ${newIncident.location}`,
+                    location: newIncident.location,
+                    start: startTime.toISOString(),
+                    end: endTime.toISOString(),
+                });
+                if (result.success && result.eventId) {
+                    updatedProjections[dayIndex][type]!.calendarEventId = result.eventId;
+                } else {
+                    toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error });
+                }
+            })());
+        } else if (isDeleted) {
+            syncPromises.push((async () => {
+                const result = await manageCalendarEvent({
+                    accessToken,
+                    action: 'delete',
+                    eventId: originalIncident.calendarEventId,
+                });
+                if (!result.success) {
+                    toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error });
+                }
+            })());
+        } else if (isUpdated) {
+            syncPromises.push((async () => {
+                const startTime = new Date(`${date}T${newIncident.time}`);
+                const endTime = addMinutes(startTime, 30);
+                const result = await manageCalendarEvent({
+                    accessToken,
+                    action: 'update',
+                    eventId: newIncident.calendarEventId,
+                    summary: `${incidentType}: ${newIncident.location}`,
+                    location: newIncident.location,
+                    start: startTime.toISOString(),
+                    end: endTime.toISOString(),
+                });
+                if (!result.success) {
+                    toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error });
+                }
+            })());
+        }
+    };
+
+    for (let i = 0; i < updatedProjections.length; i++) {
+        processIncident(i, 'projectedEntry');
+        processIncident(i, 'projectedExit');
+    }
+
+    await Promise.all(syncPromises);
+    return { success: true, finalProjections: updatedProjections };
+  };
+
+  const handleSaveChanges = async (syncCalendar: boolean) => {
+    if (!selectedPeriodId || !selectedPeriod) return;
     setSaveState('saving');
 
-    for (const day of projections) {
-        if ((day.projectedEntry?.time && !day.projectedEntry?.location) || (!day.projectedEntry?.time && day.projectedEntry?.location)) {
-            toast({ variant: 'destructive', title: 'Datos Incompletos', description: `La entrada proyectada para el ${format(parseISO(day.date), "d MMM", { locale: es })} está incompleta.` });
+    let finalProjections = projections;
+
+    if (syncCalendar) {
+        toast({ title: "Sincronizando con Google Calendar...", description: "Por favor, espera un momento." });
+        const syncResult = await syncCalendarEvents(selectedPeriod.laborDays, projections);
+        if (!syncResult.success) {
             setSaveState('idle');
             return;
         }
-        if ((day.projectedExit?.time && !day.projectedExit?.location) || (!day.projectedExit?.time && day.projectedExit?.location)) {
-            toast({ variant: 'destructive', title: 'Datos Incompletos', description: `La salida proyectada para el ${format(parseISO(day.date), "d MMM", { locale: es })} está incompleta.` });
-            setSaveState('idle');
-            return;
-        }
-        if (day.projectedEntry?.time && day.projectedExit?.time && day.projectedExit.time < day.projectedEntry.time) {
-            toast({ variant: 'destructive', title: 'Error de Horas', description: `La hora de salida no puede ser anterior a la de entrada para el ${format(parseISO(day.date), "d MMM", { locale: es })}.` });
-            setSaveState('idle');
-            return;
-        }
+        finalProjections = syncResult.finalProjections;
     }
+
+    const cleanedProjections = finalProjections.map(day => {
+        const cleanedDay = {...day};
+        if (cleanedDay.projectedEntry && (!cleanedDay.projectedEntry.time || !cleanedDay.projectedEntry.location)) {
+            delete cleanedDay.projectedEntry;
+        }
+        if (cleanedDay.projectedExit && (!cleanedDay.projectedExit.time || !cleanedDay.projectedExit.location)) {
+            delete cleanedDay.projectedExit;
+        }
+        return cleanedDay;
+    });
 
     setPeriods(prevPeriods =>
       prevPeriods.map(p => {
         if (p.id === selectedPeriodId) {
-           const cleanedProjections = projections.map(day => {
-            const cleanedDay = {...day};
-            if (cleanedDay.projectedEntry && (!cleanedDay.projectedEntry.time || !cleanedDay.projectedEntry.location)) {
-              delete cleanedDay.projectedEntry;
-            }
-            if (cleanedDay.projectedExit && (!cleanedDay.projectedExit.time || !cleanedDay.projectedExit.location)) {
-              delete cleanedDay.projectedExit;
-            }
-            return cleanedDay;
-          });
           return { ...p, laborDays: cleanedProjections };
         }
         return p;
       })
     );
 
+    setProjections(cleanedProjections);
     setSaveState('saved');
     setTimeout(() => {
         setSaveState('idle');
-    }, 2000);
+        toast({ title: "Proyección Guardada", description: "Tus cambios han sido guardados exitosamente." });
+    }, 1500);
   };
   
   const handleSaveAsTemplate = () => {
@@ -272,8 +355,6 @@ export default function ProjectionsPage() {
 
     setSchedules(prev => {
         const updatedSchedules = [...prev, newSchedule];
-        // This function is in settings context, and will also set active schedule ID
-        // setSchedulesAndActive(updatedSchedules, newSchedule.id);
         return updatedSchedules;
     });
     toast({ title: "Plantilla Guardada", description: `La plantilla '${newTemplateName.trim()}' ha sido creada y seleccionada como activa.` });
@@ -422,69 +503,6 @@ export default function ProjectionsPage() {
                 )}
                 
                 <TooltipProvider>
-                    {/* Mobile View */}
-                    <div className="md:hidden space-y-4">
-                      {projections.map((day) => {
-                         const isPastDay = isBefore(parseISO(day.date), startOfDay(new Date()));
-                         const deviationMessage = checkDeviation(day);
-                         const isToday = day.date === todayString;
-                         return (
-                           <div key={day.date} className={cn("border rounded-lg p-4", day.entry && day.exit && "bg-green-500/10 border-green-500/20")}>
-                              <div className="flex justify-between items-start mb-4">
-                                <p className="font-medium capitalize flex items-center gap-2.5">
-                                  {isToday && (
-                                    <span className="relative flex h-2.5 w-2.5" title="Hoy">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
-                                    </span>
-                                  )}
-                                  <span>{format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}</span>
-                                  {deviationMessage && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <button className="align-middle"><AlertTriangle className="h-4 w-4 text-amber-500" /></button>
-                                      </TooltipTrigger>
-                                      <TooltipContent><p>{deviationMessage}</p></TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                </p>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label>Entrada Proyectada</Label>
-                                  <Input type="time" value={(day.entry?.time || day.projectedEntry?.time) ?? ""} onChange={(e) => handleProjectionChange(day.date, "projectedEntry", "time", e.target.value)} disabled={!!day.entry} />
-                                  <Select value={(day.entry?.location || day.projectedEntry?.location) ?? ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedEntry", "location", value)} disabled={!!day.entry}>
-                                    <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                    <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Salida Proyectada</Label>
-                                  <Input type="time" value={(day.exit?.time || day.projectedExit?.time) ?? ""} onChange={(e) => handleProjectionChange(day.date, "projectedExit", "time", e.target.value)} disabled={!!day.exit} />
-                                  <Select value={(day.exit?.location || day.projectedExit?.location) ?? ""} onValueChange={(value) => handleProjectionChange(day.date, "projectedExit", "location", value)} disabled={!!day.exit}>
-                                    <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                    <SelectContent>{userLocations.map(loc => (<SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>))}</SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                               
-                              <div className="flex justify-between mt-4 text-sm pt-4 border-t">
-                                <div>
-                                    <span className="text-muted-foreground">Proyectadas: </span>
-                                    <span className="font-mono font-semibold">{formatMinutesToHours(calculateMinutes(day.projectedEntry || day.entry, day.projectedExit || day.exit))}</span>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Reales: </span>
-                                    <span className="font-mono font-semibold text-green-600">{formatMinutesToHours(calculateMinutes(day.entry, day.exit))}</span>
-                                </div>
-                              </div>
-                           </div>
-                         )
-                      })}
-                    </div>
-
-                    {/* Desktop View */}
                     <div className="hidden md:block border rounded-lg overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -549,12 +567,24 @@ export default function ProjectionsPage() {
                     </div>
                 </TooltipProvider>
 
-                <div className="flex justify-end pt-6">
-                    <Button onClick={handleSaveChanges} disabled={!selectedPeriod || saveState !== 'idle'} className="w-[200px]">
-                        {saveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
-                        : saveState === 'saved' ? (<><Check /> Guardado</>)
-                        : (<><Save /> Guardar Proyección</>)}
+                <div className="flex justify-end pt-6 items-center gap-2">
+                    <Button variant="outline" onClick={() => handleSaveChanges(false)} disabled={!selectedPeriod || saveState !== 'idle'} className="w-[180px]">
+                        {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Guardando...</>
+                        : saveState === 'saved' ? <><Check /> Guardado</>
+                        : <><Save /> Guardar Cambios</>}
                     </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' || !accessToken} className="w-[240px] bg-green-600 hover:bg-green-700">
+                              {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
+                              : saveState === 'saved' ? <><Check /> Sincronizado</>
+                              : <><CalendarSync /> Guardar y Sincronizar</>}
+                          </Button>
+                        </TooltipTrigger>
+                        {!accessToken && <TooltipContent><p>Inicia sesión de nuevo para activar la sincronización con Calendar.</p></TooltipContent>}
+                      </Tooltip>
+                    </TooltipProvider>
                 </div>
               </CardContent>
             ) : (
