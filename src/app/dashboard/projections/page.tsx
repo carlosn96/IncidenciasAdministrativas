@@ -90,7 +90,8 @@ export default function ProjectionsPage() {
         toast({
           variant: 'destructive',
           title: 'Sin Horario Activo',
-          description: 'No tienes una plantilla de horario activa para cargar. Ve a Ajustes > Horarios para seleccionar una.'
+          description: 'No tienes una plantilla de horario activa para cargar. Ve a Ajustes > Horarios para seleccionar una.',
+          duration: 10000,
         });
       }
       return;
@@ -200,9 +201,19 @@ export default function ProjectionsPage() {
   };
 
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
+    console.log('[PROJECTIONS PAGE] Entering syncCalendarEvents function.');
+
     if (!googleCalendarId) {
+      console.error('[PROJECTIONS PAGE] Aborting sync: googleCalendarId is missing inside syncCalendarEvents.');
+      toast({
+          variant: "destructive",
+          title: "Error de Configuración",
+          description: "La variable NEXT_PUBLIC_GOOGLE_CALENDAR_ID no se encontró. Por favor, añádela a tu archivo .env y REINICIA el servidor.",
+          duration: 15000,
+      });
       return { success: false, finalProjections: newProjections };
     }
+
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
     const syncPromises: Promise<void>[] = [];
 
@@ -215,9 +226,13 @@ export default function ProjectionsPage() {
         const incidentType = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
         const date = updatedProjections[dayIndex].date;
 
-        const isNew = newIncident && !newIncident.calendarEventId;
+        const isNew = newIncident && newIncident.time && newIncident.location && !newIncident.calendarEventId;
         const isDeleted = !newIncident && originalIncident?.calendarEventId;
         const isUpdated = newIncident?.calendarEventId && originalIncident?.calendarEventId && (newIncident.time !== originalIncident.time || newIncident.location !== originalIncident.location);
+
+        if (isNew || isUpdated || isDeleted) {
+            console.log(`[PROJECTIONS PAGE] Processing incident for ${date} - Type: ${type}. Action: ${isNew ? 'CREATE' : isUpdated ? 'UPDATE' : 'DELETE'}`);
+        }
 
         if (isNew) {
             syncPromises.push((async () => {
@@ -231,12 +246,13 @@ export default function ProjectionsPage() {
                     start: startTime.toISOString(),
                     end: endTime.toISOString(),
                 };
-                console.log(`[Sync Event Frontend] Sending data for ${date}:`, JSON.stringify(eventToCreate, null, 2));
+                console.log(`%c[Sync Event Frontend] Sending data to SERVER ACTION:`, 'color: blue; font-weight: bold;', JSON.stringify(eventToCreate, null, 2));
                 const result = await manageCalendarEvent(eventToCreate);
+                console.log(`%c[Sync Event Frontend] Received result from SERVER ACTION:`, 'color: green; font-weight: bold;', result);
                 if (result.success && result.eventId) {
                     updatedProjections[dayIndex][type]!.calendarEventId = result.eventId;
                 } else {
-                    toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error, duration: 10000 });
+                    toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error, duration: 15000 });
                 }
             })());
         } else if (isDeleted) {
@@ -246,10 +262,11 @@ export default function ProjectionsPage() {
                     calendarId: googleCalendarId,
                     eventId: originalIncident.calendarEventId,
                 };
-                console.log(`[Sync Event Frontend] Sending data for ${date}:`, JSON.stringify(eventToDelete, null, 2));
+                console.log(`%c[Sync Event Frontend] Sending data to SERVER ACTION:`, 'color: blue; font-weight: bold;', JSON.stringify(eventToDelete, null, 2));
                 const result = await manageCalendarEvent(eventToDelete);
+                console.log(`%c[Sync Event Frontend] Received result from SERVER ACTION:`, 'color: green; font-weight: bold;', result);
                 if (!result.success) {
-                    toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 10000 });
+                    toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 15000 });
                 }
             })());
         } else if (isUpdated) {
@@ -265,33 +282,49 @@ export default function ProjectionsPage() {
                     start: startTime.toISOString(),
                     end: endTime.toISOString(),
                 };
-                console.log(`[Sync Event Frontend] Sending data for ${date}:`, JSON.stringify(eventToUpdate, null, 2));
+                console.log(`%c[Sync Event Frontend] Sending data to SERVER ACTION:`, 'color: blue; font-weight: bold;', JSON.stringify(eventToUpdate, null, 2));
                 const result = await manageCalendarEvent(eventToUpdate);
+                console.log(`%c[Sync Event Frontend] Received result from SERVER ACTION:`, 'color: green; font-weight: bold;', result);
                 if (!result.success) {
-                    toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 10000 });
+                    toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 15000 });
                 }
             })());
         }
     };
 
+    console.log('[PROJECTIONS PAGE] Starting to process incidents for sync.');
     for (let i = 0; i < updatedProjections.length; i++) {
         processIncident(i, 'projectedEntry');
         processIncident(i, 'projectedExit');
     }
-
-    await Promise.all(syncPromises);
+    
+    if (syncPromises.length === 0) {
+        console.log('[PROJECTIONS PAGE] No changes detected that require calendar synchronization.');
+        toast({ title: "Sin Cambios", description: "No se detectaron cambios para sincronizar con el calendario." });
+    } else {
+        console.log(`[PROJECTIONS PAGE] Waiting for ${syncPromises.length} sync promises to resolve.`);
+        await Promise.all(syncPromises);
+        console.log('[PROJECTIONS PAGE] All sync promises resolved.');
+    }
+    
     return { success: true, finalProjections: updatedProjections };
   };
 
   const handleSaveChanges = async (syncCalendar: boolean) => {
-    if (!selectedPeriodId || !selectedPeriod) return;
+    console.log('[PROJECTIONS PAGE] handleSaveChanges called with syncCalendar:', syncCalendar);
+
+    if (!selectedPeriodId || !selectedPeriod) {
+        console.error('[PROJECTIONS PAGE] Aborting save: No selected period.');
+        return;
+    }
     
     if (syncCalendar && !googleCalendarId) {
+        console.error('[PROJECTIONS PAGE] Aborting sync: googleCalendarId is missing.');
         toast({
             variant: "destructive",
             title: "Error de Configuración",
             description: "La variable NEXT_PUBLIC_GOOGLE_CALENDAR_ID no se encontró. Por favor, añádela a tu archivo .env y REINICIA el servidor.",
-            duration: 10000,
+            duration: 15000,
         });
         return;
     }
@@ -300,12 +333,11 @@ export default function ProjectionsPage() {
     let finalProjections = projections;
 
     if (syncCalendar) {
+        console.log('[PROJECTIONS PAGE] Starting calendar sync...');
         toast({ title: "Sincronizando con Google Calendar...", description: "Por favor, espera un momento." });
         const syncResult = await syncCalendarEvents(selectedPeriod.laborDays, projections);
-        if (!syncResult.success) {
-            setSaveState('idle');
-            return;
-        }
+        console.log('[PROJECTIONS PAGE] Calendar sync finished. Result:', syncResult);
+        
         finalProjections = syncResult.finalProjections;
     }
 
@@ -716,3 +748,5 @@ export default function ProjectionsPage() {
     </div>
   );
 }
+
+    
