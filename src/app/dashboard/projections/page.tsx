@@ -679,7 +679,7 @@ export default function ProjectionsPage() {
                         : saveState === 'saved' ? <><Check /> Guardado</>
                         : <><Save /> Guardar Cambios</>}
                     </Button>
-                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle'} className="w-[240px] bg-green-600 hover:bg-green-700">
+                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' || !user?.email} className="w-[240px] bg-green-600 hover:bg-green-700">
                         {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
                         : saveState === 'saved' ? <><Check /> Sincronizado</>
                         : <><CalendarSync /> Guardar y Sincronizar</>}

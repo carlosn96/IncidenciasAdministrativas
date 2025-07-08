@@ -47,7 +47,6 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
         const calendar = google.calendar({ version: 'v3', auth });
         const { action, eventId, ...eventData } = input;
         
-        // CRITICAL CHANGE: The calendarId must be the email of the calendar that the service account has been granted access to.
         const calendarId = input.calendarId;
         if (!calendarId) {
             const errorMsg = 'Calendar ID is required for service account operations. This should be the email of the calendar owner.';
@@ -99,7 +98,8 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
 
     } catch (error: any) {
         console.error('Google Calendar API Error:', error.response?.data?.error || error.message);
+        // Return the detailed error message from Google's API response
         const errorMessage = error.response?.data?.error?.message || error.message || 'An unknown error occurred.';
-        return { success: false, error: errorMessage };
+        return { success: false, error: `Google Calendar: ${errorMessage}` };
     }
 }

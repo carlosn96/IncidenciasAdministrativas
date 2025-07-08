@@ -154,7 +154,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       } as FirebaseUser);
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
       return; // Skip the real auth listener
+    } else if (DEV_MODE_USER_ID && !DEV_MODE_USER_EMAIL) {
+        console.error("DEV MODE ERROR: NEXT_PUBLIC_DEV_MODE_USER_ID is set, but NEXT_PUBLIC_DEV_MODE_USER_EMAIL is missing. Both are required for dev mode calendar sync.");
     }
+
 
     const unsubscribe = auth?.onAuthStateChanged(async (firebaseUser) => {
         setIsLoading(true);
