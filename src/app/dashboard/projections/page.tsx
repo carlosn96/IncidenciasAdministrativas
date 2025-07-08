@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { v4 as uuidv4 } from "uuid";
-import { manageCalendarEvent } from "@/ai/flows/google-calendar-flow";
+import { manageCalendarEvent, type CalendarEventInput, type CalendarEventOutput } from "@/ai/flows/google-calendar-flow";
 
 // Helper functions
 const calculateMinutes = (entry?: Incident, exit?: Incident): number => {
@@ -520,6 +520,17 @@ export default function ProjectionsPage() {
                           {projections.map((day) => {
                             const deviationMessage = checkDeviation(day);
                             const isToday = day.date === todayString;
+
+                            const entryTimeValue = (day.entry?.time || day.projectedEntry?.time) ?? "";
+                            const entryLocationValue = day.entry?.location || day.projectedEntry?.location;
+                            const isEntryManual = !!entryLocationValue && !userLocations.some(l => l.name === entryLocationValue);
+                            const entrySelectValue = isEntryManual ? 'manual' : entryLocationValue ?? "";
+
+                            const exitTimeValue = (day.exit?.time || day.projectedExit?.time) ?? "";
+                            const exitLocationValue = day.exit?.location || day.projectedExit?.location;
+                            const isExitManual = !!exitLocationValue && !userLocations.some(l => l.name === exitLocationValue);
+                            const exitSelectValue = isExitManual ? 'manual' : exitLocationValue ?? "";
+
                             return (
                                 <TableRow key={day.date} className={cn(day.entry && day.exit && "bg-green-500/10")}>
                                     <TableCell className="font-medium capitalize whitespace-nowrap">
@@ -540,22 +551,72 @@ export default function ProjectionsPage() {
                                       </div>
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
-                                        <Input type="time" className="min-w-[100px]" value={(day.entry?.time || day.projectedEntry?.time) ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} />
+                                        <Input type="time" className="min-w-[100px]" value={entryTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} />
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
-                                      <Select value={(day.entry?.location || day.projectedEntry?.location) ?? ""} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v)} disabled={!!day.entry}>
-                                        <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                        <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
-                                      </Select>
+                                      <div className="space-y-1">
+                                        <Select 
+                                          value={entrySelectValue} 
+                                          onValueChange={v => {
+                                            if (v === 'manual') {
+                                              if (!isEntryManual) handleProjectionChange(day.date, 'projectedEntry', 'location', '');
+                                            } else {
+                                              handleProjectionChange(day.date, 'projectedEntry', 'location', v);
+                                            }
+                                          }} 
+                                          disabled={!!day.entry}
+                                        >
+                                          <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                          <SelectContent>
+                                            {userLocations.map(l => <SelectItem key={`${l.id}-proj-entry`} value={l.name}>{l.name}</SelectItem>)}
+                                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        {entrySelectValue === 'manual' && (
+                                          <Input
+                                            type="text"
+                                            className="min-w-[150px]"
+                                            placeholder="Escribe la ubicación"
+                                            value={entryLocationValue ?? ""}
+                                            onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'location', e.target.value)}
+                                            disabled={!!day.entry}
+                                          />
+                                        )}
+                                      </div>
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
-                                        <Input type="time" className="min-w-[100px]" value={(day.exit?.time || day.projectedExit?.time) ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} />
+                                        <Input type="time" className="min-w-[100px]" value={exitTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} />
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
-                                       <Select value={(day.exit?.location || day.projectedExit?.location) ?? ""} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v)} disabled={!!day.exit}>
-                                        <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                        <SelectContent>{userLocations.map(l => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent>
-                                      </Select>
+                                       <div className="space-y-1">
+                                        <Select 
+                                          value={exitSelectValue} 
+                                          onValueChange={v => {
+                                            if (v === 'manual') {
+                                              if (!isExitManual) handleProjectionChange(day.date, 'projectedExit', 'location', '');
+                                            } else {
+                                              handleProjectionChange(day.date, 'projectedExit', 'location', v);
+                                            }
+                                          }} 
+                                          disabled={!!day.exit}
+                                        >
+                                          <SelectTrigger className="min-w-[150px]"><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                          <SelectContent>
+                                            {userLocations.map(l => <SelectItem key={`${l.id}-proj-exit`} value={l.name}>{l.name}</SelectItem>)}
+                                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        {exitSelectValue === 'manual' && (
+                                          <Input
+                                            type="text"
+                                            className="min-w-[150px]"
+                                            placeholder="Escribe la ubicación"
+                                            value={exitLocationValue ?? ""}
+                                            onChange={e => handleProjectionChange(day.date, 'projectedExit', 'location', e.target.value)}
+                                            disabled={!!day.exit}
+                                          />
+                                        )}
+                                       </div>
                                     </TableCell>
                                     <TableCell className="text-right font-mono">{formatMinutesToHours(calculateMinutes(day.projectedEntry || day.entry, day.projectedExit || day.exit))}</TableCell>
                                     <TableCell className="text-right font-mono text-green-600">{formatMinutesToHours(calculateMinutes(day.entry, day.exit))}</TableCell>
@@ -602,3 +663,5 @@ export default function ProjectionsPage() {
     </div>
   );
 }
+
+    
