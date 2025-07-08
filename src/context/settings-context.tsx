@@ -65,7 +65,6 @@ interface SettingsContextType {
   periods: Period[];
   setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
   // Auth related
-  accessToken: string | null;
   authError: AuthError | null;
   isSigningIn: boolean;
   handleGoogleSignIn: () => Promise<void>;
@@ -80,7 +79,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<AuthError | null>(null);
   const { toast } = useToast();
 
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userLocations, setUserLocations] = useState<Location[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
@@ -131,14 +129,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const clearUserData = () => {
     setUser(null);
-    setAccessToken(null);
     setUserLocations(getInitialUserLocations());
     setSchedules(getInitialSchedules());
     setPeriods(getInitialPeriods());
     setActiveScheduleId(null);
-    if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('google_access_token');
-    }
   };
     
   useEffect(() => {
@@ -156,7 +150,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         displayName: "Usuario de Prueba",
         email: `dev-user@${ALLOWED_DOMAIN}`,
       } as FirebaseUser);
-      setAccessToken(null); // No real access token in dev mode
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
       return; // Skip the real auth listener
     }
@@ -165,10 +158,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         if (firebaseUser) {
           setUser(firebaseUser);
-          const storedToken = sessionStorage.getItem('google_access_token');
-          if (storedToken) {
-              setAccessToken(storedToken);
-          }
           await fetchUserData(firebaseUser.uid);
         } else {
           clearUserData();
@@ -216,14 +205,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setIsSigningIn(false);
         return;
       }
-
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setAccessToken(credential.accessToken);
-        sessionStorage.setItem('google_access_token', credential.accessToken);
-      } else {
-        setAuthError({ title: 'Error de Token', message: 'No se pudo obtener el token de acceso de Google Calendar.' });
-      }
       
       toast({
         title: `¡Bienvenido, ${result.user.displayName?.split(" ")[0]}!`,
@@ -262,7 +243,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setActiveScheduleId,
     periods,
     setPeriods,
-    accessToken,
     authError,
     isSigningIn,
     handleGoogleSignIn,

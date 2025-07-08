@@ -47,7 +47,7 @@ const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves",
 
 export default function ProjectionsPage() {
   const searchParams = useSearchParams();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules, accessToken } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
   const { toast } = useToast();
@@ -200,11 +200,6 @@ export default function ProjectionsPage() {
   };
 
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
-    if (!accessToken) {
-        toast({ variant: 'destructive', title: 'Error de Autenticación', description: 'No se pudo obtener el token para sincronizar con Google Calendar. Por favor, intenta iniciar sesión de nuevo.' });
-        return { success: false, finalProjections: newProjections };
-    }
-
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
     const syncPromises: Promise<void>[] = [];
 
@@ -226,7 +221,6 @@ export default function ProjectionsPage() {
                 const startTime = new Date(`${date}T${newIncident.time}`);
                 const endTime = addMinutes(startTime, 30);
                 const result = await manageCalendarEvent({
-                    accessToken,
                     action: 'create',
                     summary: `${incidentType}: ${newIncident.location}`,
                     location: newIncident.location,
@@ -242,7 +236,6 @@ export default function ProjectionsPage() {
         } else if (isDeleted) {
             syncPromises.push((async () => {
                 const result = await manageCalendarEvent({
-                    accessToken,
                     action: 'delete',
                     eventId: originalIncident.calendarEventId,
                 });
@@ -255,7 +248,6 @@ export default function ProjectionsPage() {
                 const startTime = new Date(`${date}T${newIncident.time}`);
                 const endTime = addMinutes(startTime, 30);
                 const result = await manageCalendarEvent({
-                    accessToken,
                     action: 'update',
                     eventId: newIncident.calendarEventId,
                     summary: `${incidentType}: ${newIncident.location}`,
@@ -634,18 +626,11 @@ export default function ProjectionsPage() {
                         : saveState === 'saved' ? <><Check /> Guardado</>
                         : <><Save /> Guardar Cambios</>}
                     </Button>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' || !accessToken} className="w-[240px] bg-green-600 hover:bg-green-700">
-                              {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
-                              : saveState === 'saved' ? <><Check /> Sincronizado</>
-                              : <><CalendarSync /> Guardar y Sincronizar</>}
-                          </Button>
-                        </TooltipTrigger>
-                        {!accessToken && <TooltipContent><p>Inicia sesión de nuevo para activar la sincronización con Calendar.</p></TooltipContent>}
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle'} className="w-[240px] bg-green-600 hover:bg-green-700">
+                        {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
+                        : saveState === 'saved' ? <><Check /> Sincronizado</>
+                        : <><CalendarSync /> Guardar y Sincronizar</>}
+                    </Button>
                 </div>
               </CardContent>
             ) : (

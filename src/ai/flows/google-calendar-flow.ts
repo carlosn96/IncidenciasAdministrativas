@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A Genkit flow to manage Google Calendar events using direct fetch calls.
+ * @fileOverview A Genkit flow to manage Google Calendar events using a Service Account.
  *
  * - manageCalendarEvent - A function to create, update, or delete Google Calendar events.
  * - CalendarEventInput - The input type for the manageCalendarEvent function.
@@ -9,9 +9,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { google } from 'googleapis';
 
 const CalendarEventInputSchema = z.object({
-  accessToken: z.string().describe("The user's Google OAuth2 access token."),
   action: z.enum(['create', 'update', 'delete']).describe('The action to perform.'),
   calendarId: z.string().default('primary').describe('The calendar to modify.'),
   eventId: z.string().optional().describe('The ID of the event to update or delete.'),
@@ -29,7 +29,7 @@ const CalendarEventOutputSchema = z.object({
 });
 type CalendarEventOutput = z.infer<typeof CalendarEventOutputSchema>;
 
-// This flow uses direct fetch calls to the Google Calendar API for robustness.
+// This flow uses the googleapis library with a Service Account for authentication.
 const manageCalendarEventFlow = ai.defineFlow(
   {
     name: 'manageCalendarEventFlow',
@@ -37,74 +37,70 @@ const manageCalendarEventFlow = ai.defineFlow(
     outputSchema: CalendarEventOutputSchema,
   },
   async (input: CalendarEventInput): Promise<CalendarEventOutput> => {
-    const { accessToken, action, calendarId, eventId, ...eventData } = input;
-    const BASE_URL = 'https://www.googleapis.com/calendar/v3/calendars';
-
-    const headers = {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    };
+    
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+        const errorMsg = 'Google Service Account credentials are not configured in .env';
+        console.error(errorMsg);
+        return { success: false, error: errorMsg };
+    }
 
     try {
-      let url = `${BASE_URL}/${calendarId}/events`;
-      let method: 'POST' | 'PUT' | 'DELETE' | 'GET' = 'POST';
-      let body: string | undefined = undefined;
-
-      if (action === 'create') {
-        if (!eventData.summary || !eventData.start || !eventData.end) {
-          throw new Error('Missing required fields for creating an event.');
-        }
-        method = 'POST';
-        body = JSON.stringify({
-          summary: eventData.summary,
-          location: eventData.location,
-          start: { dateTime: eventData.start, timeZone: 'America/Mexico_City' },
-          end: { dateTime: eventData.end, timeZone: 'America/Mexico_City' },
+        const auth = new google.auth.GoogleAuth({
+            credentials: {
+                client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+                private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            },
+            scopes: ['https://www.googleapis.com/auth/calendar'],
         });
-      } else if (action === 'update') {
-        if (!eventId || !eventData.summary || !eventData.start || !eventData.end) {
-          throw new Error('Missing required fields for updating an event.');
+
+        const calendar = google.calendar({ version: 'v3', auth });
+        const { action, calendarId, eventId, ...eventData } = input;
+
+        if (action === 'create') {
+            if (!eventData.summary || !eventData.start || !eventData.end) {
+              throw new Error('Missing required fields for creating an event.');
+            }
+            const event = {
+                summary: eventData.summary,
+                location: eventData.location,
+                start: { dateTime: eventData.start, timeZone: 'America/Mexico_City' },
+                end: { dateTime: eventData.end, timeZone: 'America/Mexico_City' },
+            };
+            const res = await calendar.events.insert({
+                calendarId,
+                requestBody: event,
+            });
+            return { success: true, eventId: res.data.id || undefined };
+        } else if (action === 'update') {
+            if (!eventId || !eventData.summary || !eventData.start || !eventData.end) {
+                throw new Error('Missing required fields for updating an event.');
+            }
+            const event = {
+                summary: eventData.summary,
+                location: eventData.location,
+                start: { dateTime: eventData.start, timeZone: 'America/Mexico_City' },
+                end: { dateTime: eventData.end, timeZone: 'America/Mexico_City' },
+            };
+            const res = await calendar.events.update({
+                calendarId,
+                eventId,
+                requestBody: event,
+            });
+            return { success: true, eventId: res.data.id || undefined };
+        } else if (action === 'delete') {
+            if (!eventId) {
+                throw new Error('Missing eventId for deleting an event.');
+            }
+            await calendar.events.delete({ calendarId, eventId });
+            return { success: true };
+        } else {
+            return { success: false, error: 'Invalid action specified.' };
         }
-        url = `${url}/${eventId}`;
-        method = 'PUT';
-        body = JSON.stringify({
-          summary: eventData.summary,
-          location: eventData.location,
-          start: { dateTime: eventData.start, timeZone: 'America/Mexico_City' },
-          end: { dateTime: eventData.end, timeZone: 'America/Mexico_City' },
-        });
-      } else if (action === 'delete') {
-        if (!eventId) {
-          throw new Error('Missing eventId for deleting an event.');
-        }
-        url = `${url}/${eventId}`;
-        method = 'DELETE';
-      } else {
-        return { success: false, error: 'Invalid action specified.' };
-      }
-
-      const response = await fetch(url, { method, headers, body });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.error?.message || `HTTP error! status: ${response.status}`;
-        console.error('Google Calendar API Error:', errorMessage, errorData);
-        if (response.status === 401) {
-            return { success: false, error: 'Token de acceso expirado o inválido. Por favor, inicia sesión de nuevo.' };
-        }
-        return { success: false, error: errorMessage };
-      }
-
-      if (action === 'delete') {
-        return { success: true };
-      }
-
-      const responseData = await response.json();
-      return { success: true, eventId: responseData.id };
 
     } catch (error: any) {
-      console.error(`Google Calendar Flow Error: ${error.message}`);
-      return { success: false, error: error.message };
+        console.error('Google Calendar API Error:', error.response?.data?.error || error.message);
+        const errorMessage = error.response?.data?.error?.message || error.message || 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
     }
   }
 );
