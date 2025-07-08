@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { v4 as uuidv4 } from "uuid";
-import { manageCalendarEvent } from "@/ai/flows/google-calendar-flow";
+import { manageCalendarEvent } from "@/lib/actions";
 
 // Helper functions
 const calculateMinutes = (entry?: Incident, exit?: Incident): number => {

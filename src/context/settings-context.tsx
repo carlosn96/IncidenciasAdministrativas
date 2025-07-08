@@ -27,6 +27,8 @@ const ALL_UNE_LOCATIONS: Location[] = [
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 const DEV_MODE_USER_ID = process.env.NEXT_PUBLIC_DEV_MODE_USER_ID;
+const DEV_MODE_USER_EMAIL = process.env.NEXT_PUBLIC_DEV_MODE_USER_EMAIL;
+
 
 const getInitialUserLocations = (): Location[] => [];
 
@@ -142,13 +144,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
 
     // If in dev mode, bypass Firebase Auth and simulate user
-    if (DEV_MODE_USER_ID) {
+    if (DEV_MODE_USER_ID && DEV_MODE_USER_EMAIL) {
       console.warn(`DEV MODE ACTIVE: Simulating login for user ${DEV_MODE_USER_ID}`);
       setIsLoading(true);
       setUser({
         uid: DEV_MODE_USER_ID,
         displayName: "Usuario de Prueba",
-        email: `dev-user@${ALLOWED_DOMAIN}`,
+        email: DEV_MODE_USER_EMAIL,
       } as FirebaseUser);
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
       return; // Skip the real auth listener
