@@ -27,7 +27,7 @@ const ALL_UNE_LOCATIONS: Location[] = [
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 const DEV_MODE_USER_ID = process.env.NEXT_PUBLIC_DEV_MODE_USER_ID;
-// The email of the simulated user. Required for calendar sync in dev mode.
+// The email of the target calendar for sync, used in dev mode.
 const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
 
 
@@ -145,16 +145,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         return;
     }
 
-    if (DEV_MODE_USER_ID && GOOGLE_CALENDAR_ID) {
+    if (DEV_MODE_USER_ID) {
       console.warn(`DEV MODE ACTIVE: Simulating login for user ${DEV_MODE_USER_ID}`);
       setIsLoading(true);
       setUser({
         uid: DEV_MODE_USER_ID,
-        displayName: "Usuario de Prueba",
+        displayName: "Usuario de Desarrollo",
         email: "dev-user@example.com",
       } as FirebaseUser);
+
+      if (!GOOGLE_CALENDAR_ID) {
+        console.error("DEV MODE WARNING: GOOGLE_CALENDAR_ID is not set in .env. Calendar sync will fail.");
+      }
+
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
-      return; 
+      return; // IMPORTANT: This prevents the real auth listener from running
     }
 
     const unsubscribe = auth?.onAuthStateChanged(async (firebaseUser) => {
@@ -187,8 +192,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const handleGoogleSignIn = async () => {
     if (!auth || !provider) return;
+    
     if (DEV_MODE_USER_ID) {
-      console.warn("Google Sign-In is disabled in DEV MODE.");
+      toast({
+        variant: "destructive",
+        title: "Modo de Desarrollo Activo",
+        description: "El inicio de sesión manual está deshabilitado. La aplicación ya está usando un usuario simulado."
+      });
+      console.error("Google Sign-In clicked, but DEV MODE is active. This should not happen if redirection works correctly.");
       return;
     }
 
@@ -248,7 +259,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     authError,
     isSigningIn,
     handleGoogleSignIn,
-    googleCalendarId: user?.email || GOOGLE_CALENDAR_ID || null,
+    googleCalendarId: GOOGLE_CALENDAR_ID || null,
   };
 
   return (
