@@ -135,6 +135,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSchedules(getInitialSchedules());
     setPeriods(getInitialPeriods());
     setActiveScheduleId(null);
+    if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('google_access_token');
+    }
   };
     
   useEffect(() => {
@@ -146,6 +149,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         if (firebaseUser) {
           setUser(firebaseUser);
+          const storedToken = sessionStorage.getItem('google_access_token');
+          if (storedToken) {
+              setAccessToken(storedToken);
+          }
           await fetchUserData(firebaseUser.uid);
         } else {
           clearUserData();
@@ -193,6 +200,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         setAccessToken(credential.accessToken);
+        sessionStorage.setItem('google_access_token', credential.accessToken);
       } else {
         setAuthError({ title: 'Error de Token', message: 'No se pudo obtener el token de acceso de Google Calendar.' });
       }
