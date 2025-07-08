@@ -74,10 +74,12 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
                 start: { dateTime: eventData.start, timeZone: 'America/Mexico_City' },
                 end: { dateTime: eventData.end, timeZone: 'America/Mexico_City' },
             };
+            console.log('[Calendar Action] Attempting to insert event with data:', JSON.stringify(event, null, 2));
             const res = await calendar.events.insert({
                 calendarId,
                 requestBody: event,
             });
+            console.log('[Calendar Action] Received response from Google:', JSON.stringify(res, null, 2));
             return { success: true, eventId: res.data.id || undefined };
         } else if (action === 'update') {
             if (!eventId || !eventData.summary || !eventData.start || !eventData.end) {
@@ -89,17 +91,21 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
                 start: { dateTime: eventData.start, timeZone: 'America/Mexico_City' },
                 end: { dateTime: eventData.end, timeZone: 'America/Mexico_City' },
             };
+            console.log('[Calendar Action] Attempting to update event with data:', JSON.stringify(event, null, 2));
             const res = await calendar.events.update({
                 calendarId,
                 eventId,
                 requestBody: event,
             });
+            console.log('[Calendar Action] Received response from Google:', JSON.stringify(res, null, 2));
             return { success: true, eventId: res.data.id || undefined };
         } else if (action === 'delete') {
             if (!eventId) {
                 throw new Error('Missing eventId for deleting an event.');
             }
+            console.log(`[Calendar Action] Attempting to delete event with ID: ${eventId}`);
             await calendar.events.delete({ calendarId, eventId });
+            console.log(`[Calendar Action] Successfully deleted event with ID: ${eventId}`);
             return { success: true };
         } else {
             return { success: false, error: 'Invalid action specified.' };

@@ -201,7 +201,6 @@ export default function ProjectionsPage() {
 
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
     if (!googleCalendarId) {
-      // This case is handled in handleSaveChanges, so this is a fallback.
       return { success: false, finalProjections: newProjections };
     }
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
@@ -224,15 +223,16 @@ export default function ProjectionsPage() {
             syncPromises.push((async () => {
                 const startTime = new Date(`${date}T${newIncident.time}`);
                 const endTime = addMinutes(startTime, 30);
-                const result = await manageCalendarEvent({
-                    action: 'create',
+                const eventToCreate = {
+                    action: 'create' as const,
                     calendarId: googleCalendarId,
                     summary: `${incidentType}: ${newIncident.location}`,
                     location: newIncident.location,
                     start: startTime.toISOString(),
                     end: endTime.toISOString(),
-                });
-                console.log(`[Sync Event] Create on ${date}:`, result);
+                };
+                console.log(`[Sync Event Frontend] Sending data for ${date}:`, JSON.stringify(eventToCreate, null, 2));
+                const result = await manageCalendarEvent(eventToCreate);
                 if (result.success && result.eventId) {
                     updatedProjections[dayIndex][type]!.calendarEventId = result.eventId;
                 } else {
@@ -241,12 +241,13 @@ export default function ProjectionsPage() {
             })());
         } else if (isDeleted) {
             syncPromises.push((async () => {
-                const result = await manageCalendarEvent({
-                    action: 'delete',
+                const eventToDelete = {
+                    action: 'delete' as const,
                     calendarId: googleCalendarId,
                     eventId: originalIncident.calendarEventId,
-                });
-                console.log(`[Sync Event] Delete on ${date}:`, result);
+                };
+                console.log(`[Sync Event Frontend] Sending data for ${date}:`, JSON.stringify(eventToDelete, null, 2));
+                const result = await manageCalendarEvent(eventToDelete);
                 if (!result.success) {
                     toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 10000 });
                 }
@@ -255,16 +256,17 @@ export default function ProjectionsPage() {
             syncPromises.push((async () => {
                 const startTime = new Date(`${date}T${newIncident.time}`);
                 const endTime = addMinutes(startTime, 30);
-                const result = await manageCalendarEvent({
-                    action: 'update',
+                const eventToUpdate = {
+                    action: 'update' as const,
                     calendarId: googleCalendarId,
                     eventId: newIncident.calendarEventId,
                     summary: `${incidentType}: ${newIncident.location}`,
                     location: newIncident.location,
                     start: startTime.toISOString(),
                     end: endTime.toISOString(),
-                });
-                console.log(`[Sync Event] Update on ${date}:`, result);
+                };
+                console.log(`[Sync Event Frontend] Sending data for ${date}:`, JSON.stringify(eventToUpdate, null, 2));
+                const result = await manageCalendarEvent(eventToUpdate);
                 if (!result.success) {
                     toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 10000 });
                 }
