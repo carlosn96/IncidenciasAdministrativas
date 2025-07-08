@@ -25,45 +25,46 @@ export type CalendarEventOutput = {
   success: boolean;
   eventId?: string;
   error?: string;
+  htmlLink?: string;
 };
 
 
 export async function manageCalendarEvent(input: CalendarEventInput): Promise<CalendarEventOutput> {
+    console.log(`[SERVER ACTION] Received request: ${JSON.stringify(input)}`);
+
     const {
         GOOGLE_SERVICE_ACCOUNT_EMAIL,
         GOOGLE_PRIVATE_KEY,
-        NEXT_PUBLIC_GOOGLE_CALENDAR_ID,
     } = process.env;
 
     if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
-        const errorMsg = 'Google Service Account credentials are not configured in .env';
-        console.error(`[Calendar Action Error] ${errorMsg}`);
+        const errorMsg = 'Google Service Account credentials are not configured in .env on the server.';
+        console.error(`[SERVER ACTION ERROR] ${errorMsg}`);
         return { success: false, error: errorMsg };
     }
-     if (!NEXT_PUBLIC_GOOGLE_CALENDAR_ID) {
-        const errorMsg = 'Calendar ID (user email) is not configured in .env as NEXT_PUBLIC_GOOGLE_CALENDAR_ID.';
-        console.error(`[Calendar Action Error] ${errorMsg}`);
+     if (!input.calendarId) {
+        const errorMsg = 'Calendar ID was not provided in the request from the client.';
+        console.error(`[SERVER ACTION ERROR] ${errorMsg}`);
         return { success: false, error: errorMsg };
     }
 
     try {
-        console.log('[Calendar Action] Attempting to authorize with Google...');
-        // The service account authenticates as itself.
-        // It does NOT impersonate the user. It can access the user's calendar
-        // because the user has explicitly shared the calendar with the service account email.
+        console.log('[SERVER ACTION] Creating JWT client for Google Auth...');
         const jwtClient = new google.auth.JWT({
             email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
             key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
             scopes: ['https://www.googleapis.com/auth/calendar'],
         });
         
+        console.log('[SERVER ACTION] Authorizing JWT client...');
         await jwtClient.authorize();
-        console.log('[Calendar Action] Authorization successful.');
+        console.log('[SERVER ACTION] Authorization successful.');
         
         const calendar = google.calendar({ version: 'v3', auth: jwtClient });
         const { action, eventId, calendarId, ...eventData } = input;
         
         if (action === 'create') {
+            console.log(`[SERVER ACTION] Attempting to CREATE event in calendar: ${calendarId}`);
             if (!eventData.summary || !eventData.start || !eventData.end) {
               throw new Error('Missing required fields for creating an event.');
             }
@@ -77,9 +78,10 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
                 calendarId,
                 requestBody: event,
             });
-            console.log(`[Calendar Action] Event created successfully. Link: ${res.data.htmlLink}`);
-            return { success: true, eventId: res.data.id || undefined };
+            console.log(`[SERVER ACTION] Event CREATED successfully. View it here: ${res.data.htmlLink}`);
+            return { success: true, eventId: res.data.id || undefined, htmlLink: res.data.htmlLink || undefined };
         } else if (action === 'update') {
+            console.log(`[SERVER ACTION] Attempting to UPDATE event ${eventId} in calendar: ${calendarId}`);
             if (!eventId || !eventData.summary || !eventData.start || !eventData.end) {
                 throw new Error('Missing required fields for updating an event.');
             }
@@ -94,22 +96,28 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
                 eventId,
                 requestBody: event,
             });
-            console.log(`[Calendar Action] Event updated successfully. Link: ${res.data.htmlLink}`);
-            return { success: true, eventId: res.data.id || undefined };
+            console.log(`[SERVER ACTION] Event UPDATED successfully. View it here: ${res.data.htmlLink}`);
+            return { success: true, eventId: res.data.id || undefined, htmlLink: res.data.htmlLink || undefined };
         } else if (action === 'delete') {
+            console.log(`[SERVER ACTION] Attempting to DELETE event ${eventId} from calendar: ${calendarId}`);
             if (!eventId) {
                 throw new Error('Missing eventId for deleting an event.');
             }
             await calendar.events.delete({ calendarId, eventId });
-            console.log(`[Calendar Action] Event deleted successfully: ${eventId}`);
+            console.log(`[SERVER ACTION] Event DELETED successfully: ${eventId}`);
             return { success: true };
         } else {
             return { success: false, error: 'Invalid action specified.' };
         }
 
     } catch (error: any) {
-        console.error('Google Calendar API Error:', error.response?.data?.error || error.message);
-        const errorMessage = error.response?.data?.error?.message || error.message || 'An unknown error occurred.';
-        return { success: false, error: `Google Calendar: ${errorMessage}` };
+        console.error('--- FULL GOOGLE CALENDAR API ERROR ---');
+        // Log the full structure of the error for detailed diagnosis
+        console.error(JSON.stringify(error, null, 2));
+        console.error('--- END OF ERROR ---');
+        
+        // Extract a user-friendly message
+        const errorMessage = error.response?.data?.error?.message || error.message || 'An unknown error occurred on the server.';
+        return { success: false, error: `Error de Google Calendar: ${errorMessage}` };
     }
 }

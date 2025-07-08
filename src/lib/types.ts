@@ -51,3 +51,4 @@ export type Period = {
   totalDurationMinutes: number; // Expected duration based on 8 hours per working day
   includeSaturdays: boolean;
 };
+
