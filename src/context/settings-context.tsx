@@ -27,8 +27,9 @@ const ALL_UNE_LOCATIONS: Location[] = [
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 const DEV_MODE_USER_ID = process.env.NEXT_PUBLIC_DEV_MODE_USER_ID;
-// The email of the target calendar for sync.
-const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
+// The email of the target calendar for sync. Must be public for the client to read.
+const GOOGLE_CALENDAR_ID = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID;
+const DEV_MODE_USER_EMAIL = process.env.NEXT_PUBLIC_DEV_MODE_USER_EMAIL;
 
 
 const getInitialUserLocations = (): Location[] => [];
@@ -151,11 +152,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setUser({
         uid: DEV_MODE_USER_ID,
         displayName: "Usuario de Desarrollo",
-        email: "dev-user@example.com",
+        email: DEV_MODE_USER_EMAIL || "dev-user@example.com",
       } as FirebaseUser);
 
       if (!GOOGLE_CALENDAR_ID) {
-        console.warn("Aviso para desarrolladores: GOOGLE_CALENDAR_ID no está configurado en .env. La sincronización con el calendario no funcionará.");
+        console.warn("DEV MODE WARNING: NEXT_PUBLIC_GOOGLE_CALENDAR_ID is not set in .env. Calendar sync will fail.");
       }
 
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
