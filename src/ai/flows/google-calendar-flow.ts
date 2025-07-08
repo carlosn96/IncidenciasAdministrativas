@@ -11,7 +11,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { google } from 'googleapis';
 
-export const CalendarEventInputSchema = z.object({
+const CalendarEventInputSchema = z.object({
   accessToken: z.string().describe("The user's Google OAuth2 access token."),
   action: z.enum(['create', 'update', 'delete']).describe('The action to perform.'),
   calendarId: z.string().default('primary').describe('The calendar to modify.'),
@@ -23,7 +23,7 @@ export const CalendarEventInputSchema = z.object({
 });
 export type CalendarEventInput = z.infer<typeof CalendarEventInputSchema>;
 
-export const CalendarEventOutputSchema = z.object({
+const CalendarEventOutputSchema = z.object({
   success: z.boolean(),
   eventId: z.string().optional().describe('The ID of the created or updated event.'),
   error: z.string().optional().describe('Error message if the action failed.'),
