@@ -36,22 +36,28 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
 
     if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
         const errorMsg = 'Google Service Account credentials are not configured in .env';
-        console.error(errorMsg);
+        console.error(`[Calendar Action Error] ${errorMsg}`);
         return { success: false, error: errorMsg };
     }
      if (!input.calendarId) {
         const errorMsg = 'Calendar ID (user email) is required to sync events.';
-        console.error(errorMsg);
+        console.error(`[Calendar Action Error] ${errorMsg}`);
         return { success: false, error: errorMsg };
     }
 
     try {
-        const jwtClient = new google.auth.JWT(
-            GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            undefined,
-            GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-            ['https://www.googleapis.com/auth/calendar']
-        );
+        console.log('[Calendar Action] Received input:', JSON.stringify(input, null, 2));
+
+        // Use the object-based constructor for the JWT client to specify the subject.
+        // This tells Google we are acting ON BEHALF of the user specified in `input.calendarId`.
+        // This is the correct way to handle cross-account access where a calendar has been
+        // shared with the service account.
+        const jwtClient = new google.auth.JWT({
+            email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            scopes: ['https://www.googleapis.com/auth/calendar'],
+            subject: input.calendarId, // Impersonate the user to act on their calendar
+        });
         
         await jwtClient.authorize();
         
@@ -101,7 +107,6 @@ export async function manageCalendarEvent(input: CalendarEventInput): Promise<Ca
 
     } catch (error: any) {
         console.error('Google Calendar API Error:', error.response?.data?.error || error.message);
-        // Return the detailed error message from Google's API response
         const errorMessage = error.response?.data?.error?.message || error.message || 'An unknown error occurred.';
         return { success: false, error: `Google Calendar: ${errorMessage}` };
     }
