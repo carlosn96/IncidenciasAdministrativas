@@ -47,14 +47,16 @@ const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves",
 
 export default function ProjectionsPage() {
   const searchParams = useSearchParams();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules, googleCalendarId } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
+  const [originalProjectionsForCompare, setOriginalProjectionsForCompare] = useState<LaborDay[]>([]);
   const { toast } = useToast();
   const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState("");
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const todayString = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
+  const googleCalendarId = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID;
 
   const activeSchedule = useMemo(() => {
     return schedules.find((s) => s.id === activeScheduleId);
@@ -141,29 +143,32 @@ export default function ProjectionsPage() {
 
   useEffect(() => {
     if (selectedPeriod) {
-      const initialProjections = selectedPeriod.laborDays.map(day => {
-        const newDay = JSON.parse(JSON.stringify(day));
-        
-        if (activeSchedule && !newDay.projectedEntry && !newDay.projectedExit) {
-            const dayDate = parseISO(day.date);
-            const dayOfWeekIndex = getDay(dayDate);
-            const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
-            const scheduleForDay = activeSchedule.entries.find(e => e.day === dayName);
+        const initialLaborDays = JSON.parse(JSON.stringify(selectedPeriod.laborDays));
+        setOriginalProjectionsForCompare(JSON.parse(JSON.stringify(selectedPeriod.laborDays)));
 
-            if (scheduleForDay) {
-                if (scheduleForDay.startTime && scheduleForDay.startLocation) {
-                  newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
-                }
-                if (scheduleForDay.endTime && scheduleForDay.endLocation) {
-                  newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
+        const projectionsWithDefaults = initialLaborDays.map((day: LaborDay) => {
+            const newDay = { ...day };
+            if (activeSchedule && !newDay.projectedEntry && !newDay.projectedExit) {
+                const dayDate = parseISO(day.date);
+                const dayOfWeekIndex = getDay(dayDate);
+                const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
+                const scheduleForDay = activeSchedule.entries.find(e => e.day === dayName);
+
+                if (scheduleForDay) {
+                    if (scheduleForDay.startTime && scheduleForDay.startLocation) {
+                        newDay.projectedEntry = { time: scheduleForDay.startTime, location: scheduleForDay.startLocation };
+                    }
+                    if (scheduleForDay.endTime && scheduleForDay.endLocation) {
+                        newDay.projectedExit = { time: scheduleForDay.endTime, location: scheduleForDay.endLocation };
+                    }
                 }
             }
-        }
-        return newDay;
-      });
-      setProjections(initialProjections);
+            return newDay;
+        });
+        setProjections(projectionsWithDefaults);
     } else {
-      setProjections([]);
+        setProjections([]);
+        setOriginalProjectionsForCompare([]);
     }
   }, [selectedPeriod, activeSchedule]);
 
@@ -201,8 +206,6 @@ export default function ProjectionsPage() {
   };
 
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
-    console.log('[PROJECTIONS PAGE] Entering syncCalendarEvents function.');
-
     if (!googleCalendarId) {
       toast({
           variant: "destructive",
@@ -224,65 +227,35 @@ export default function ProjectionsPage() {
 
       const originalIncident = originalDay[type];
       const newIncident = newDay[type];
-
-      const incidentType = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
-      const date = newDay.date;
-
+      
       const originalTime = originalIncident?.time || '';
       const originalLocation = originalIncident?.location || '';
       const originalEventId = originalIncident?.calendarEventId || null;
 
       const newTime = newIncident?.time || '';
       const newLocation = newIncident?.location || '';
-
-      const needsSync = newTime && newLocation;
-      const wasSynced = !!originalEventId;
-
-      const dataChanged = originalTime !== newTime || originalLocation !== newLocation;
       
-      if (!dataChanged) {
-        return; 
-      }
-      
-      if (needsSync) {
-        if (wasSynced) {
-          console.log(`[PROJECTIONS PAGE] Change detected: UPDATE event for ${date} - Type: ${type}`);
-          syncPromises.push(
+      const wasScheduled = !!originalEventId;
+      const isNowScheduled = !!(newTime && newLocation);
+      const hasChanged = originalTime !== newTime || originalLocation !== newLocation;
+
+      const incidentType = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
+      const date = newDay.date;
+
+      if (!wasScheduled && isNowScheduled) {
+        // ACTION: CREATE
+        syncPromises.push(
             (async () => {
               const startTime = new Date(`${date}T${newTime}`);
               const endTime = addMinutes(startTime, 30);
-              const eventToUpdate = {
-                action: 'update' as const,
-                calendarId: googleCalendarId,
-                eventId: originalEventId,
-                summary: `${incidentType}: ${newLocation}`,
-                location: newLocation,
-                start: startTime.toISOString(),
-                end: endTime.toISOString(),
-              };
-              console.log('[Calendar Action] Sending update request with:', JSON.stringify(eventToUpdate, null, 2));
-              const result = await manageCalendarEvent(eventToUpdate);
-              if (!result.success) {
-                toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 15000 });
-              }
-            })()
-          );
-        } else {
-          console.log(`[PROJECTIONS PAGE] Change detected: CREATE event for ${date} - Type: ${type}`);
-          syncPromises.push(
-            (async () => {
-              const startTime = new Date(`${date}T${newTime}`);
-              const endTime = addMinutes(startTime, 30);
-              const eventToCreate = {
-                action: 'create' as const,
+              const result = await manageCalendarEvent({
+                action: 'create',
                 calendarId: googleCalendarId,
                 summary: `${incidentType}: ${newLocation}`,
                 location: newLocation,
                 start: startTime.toISOString(),
                 end: endTime.toISOString(),
-              };
-              console.log('[Calendar Action] Sending create request with:', JSON.stringify(eventToCreate, null, 2));
-              const result = await manageCalendarEvent(eventToCreate);
+              });
               if (result.success && result.eventId) {
                 if (updatedProjections[dayIndex][type]) {
                   updatedProjections[dayIndex][type]!.calendarEventId = result.eventId;
@@ -291,59 +264,60 @@ export default function ProjectionsPage() {
                 toast({ variant: 'destructive', title: `Error al crear evento (${date})`, description: result.error, duration: 15000 });
               }
             })()
-          );
-        }
-      } else {
-        if (wasSynced) {
-          console.log(`[PROJECTIONS PAGE] Change detected: DELETE event for ${date} - Type: ${type}`);
+        );
+
+      } else if (wasScheduled && !isNowScheduled) {
+          // ACTION: DELETE
           syncPromises.push(
-            (async () => {
-              const eventToDelete = {
-                action: 'delete' as const,
-                calendarId: googleCalendarId,
-                eventId: originalEventId,
-              };
-              console.log('[Calendar Action] Sending delete request with:', JSON.stringify(eventToDelete, null, 2));
-              const result = await manageCalendarEvent(eventToDelete);
-              if (!result.success) {
-                toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 15000 });
-              }
-            })()
+              (async () => {
+                const result = await manageCalendarEvent({
+                  action: 'delete',
+                  calendarId: googleCalendarId,
+                  eventId: originalEventId,
+                });
+                if (!result.success) {
+                  toast({ variant: 'destructive', title: `Error al borrar evento (${date})`, description: result.error, duration: 15000 });
+                }
+              })()
           );
-        }
+
+      } else if (wasScheduled && isNowScheduled && hasChanged) {
+          // ACTION: UPDATE
+          syncPromises.push(
+              (async () => {
+                const startTime = new Date(`${date}T${newTime}`);
+                const endTime = addMinutes(startTime, 30);
+                const result = await manageCalendarEvent({
+                  action: 'update',
+                  calendarId: googleCalendarId,
+                  eventId: originalEventId,
+                  summary: `${incidentType}: ${newLocation}`,
+                  location: newLocation,
+                  start: startTime.toISOString(),
+                  end: endTime.toISOString(),
+                });
+                if (!result.success) {
+                  toast({ variant: 'destructive', title: `Error al actualizar evento (${date})`, description: result.error, duration: 15000 });
+                }
+              })()
+          );
       }
     };
 
-    console.log('[PROJECTIONS PAGE] Starting to process incidents for sync.');
     for (let i = 0; i < updatedProjections.length; i++) {
         processIncident(i, 'projectedEntry');
         processIncident(i, 'projectedExit');
     }
     
-    console.log(`[PROJECTIONS PAGE] Found ${syncPromises.length} changes to sync.`);
     if (syncPromises.length > 0) {
         await Promise.all(syncPromises);
     }
-    console.log('[PROJECTIONS PAGE] All sync promises resolved.');
     
     return { success: true, finalProjections: updatedProjections };
   };
 
   const handleSaveChanges = async (syncCalendar: boolean) => {
-    console.log('[PROJECTIONS PAGE] handleSaveChanges called with syncCalendar:', syncCalendar);
-
     if (!selectedPeriodId || !selectedPeriod) {
-        console.error('[PROJECTIONS PAGE] Aborting save: No selected period.');
-        return;
-    }
-    
-    if (syncCalendar && !googleCalendarId) {
-        toast({
-            variant: "destructive",
-            title: "Error de Configuración",
-            description: "La variable NEXT_PUBLIC_GOOGLE_CALENDAR_ID no se encontró. Por favor, añádela a tu archivo .env y REINICIA el servidor.",
-            duration: 15000,
-        });
         return;
     }
 
@@ -351,11 +325,8 @@ export default function ProjectionsPage() {
     let finalProjections = projections;
 
     if (syncCalendar) {
-        console.log('[PROJECTIONS PAGE] Starting calendar sync...');
         toast({ title: "Sincronizando con Google Calendar...", description: "Por favor, espera un momento." });
-        const syncResult = await syncCalendarEvents(selectedPeriod.laborDays, projections);
-        console.log('[PROJECTIONS PAGE] Calendar sync finished. Result:', JSON.stringify(syncResult, null, 2));
-        
+        const syncResult = await syncCalendarEvents(originalProjectionsForCompare, projections);
         finalProjections = syncResult.finalProjections;
     }
 
@@ -766,6 +737,3 @@ export default function ProjectionsPage() {
     </div>
   );
 }
-
-    
-

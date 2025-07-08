@@ -27,8 +27,6 @@ const ALL_UNE_LOCATIONS: Location[] = [
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 const DEV_MODE_USER_ID = process.env.NEXT_PUBLIC_DEV_MODE_USER_ID;
-// The ID of the target calendar for sync. For a primary calendar, this is the user's full email address.
-const GOOGLE_CALENDAR_ID = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID;
 
 const getInitialUserLocations = (): Location[] => [];
 
@@ -70,7 +68,6 @@ interface SettingsContextType {
   authError: AuthError | null;
   isSigningIn: boolean;
   handleGoogleSignIn: () => Promise<void>;
-  googleCalendarId: string | null;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -150,7 +147,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setUser({
         uid: DEV_MODE_USER_ID,
         displayName: "Usuario de Desarrollo",
-        email: GOOGLE_CALENDAR_ID || "dev-user@example.com",
+        email: "dev-user@example.com",
       } as FirebaseUser);
 
       fetchUserData(DEV_MODE_USER_ID).finally(() => setIsLoading(false));
@@ -253,7 +250,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     authError,
     isSigningIn,
     handleGoogleSignIn,
-    googleCalendarId: GOOGLE_CALENDAR_ID || null,
   };
 
   return (
