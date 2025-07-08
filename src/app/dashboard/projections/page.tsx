@@ -201,7 +201,7 @@ export default function ProjectionsPage() {
 
   const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
     if (!googleCalendarId) {
-      toast({ variant: 'destructive', title: 'ID de Calendario no configurado', description: 'Por favor, configura el ID de tu calendario personal en el archivo .env.' });
+      // This case is handled in handleSaveChanges, so this is a fallback.
       return { success: false, finalProjections: newProjections };
     }
     const updatedProjections = JSON.parse(JSON.stringify(newProjections));
@@ -280,8 +280,17 @@ export default function ProjectionsPage() {
 
   const handleSaveChanges = async (syncCalendar: boolean) => {
     if (!selectedPeriodId || !selectedPeriod) return;
-    setSaveState('saving');
+    
+    if (syncCalendar && !googleCalendarId) {
+        toast({
+            variant: "destructive",
+            title: "Error de Configuración",
+            description: "La variable NEXT_PUBLIC_GOOGLE_CALENDAR_ID no se encontró. Por favor, añádela a tu archivo .env y REINICIA el servidor.",
+        });
+        return;
+    }
 
+    setSaveState('saving');
     let finalProjections = projections;
 
     if (syncCalendar) {
@@ -679,7 +688,7 @@ export default function ProjectionsPage() {
                         : saveState === 'saved' ? <><Check /> Guardado</>
                         : <><Save /> Guardar Cambios</>}
                     </Button>
-                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' || !googleCalendarId} className="w-[240px] bg-green-600 hover:bg-green-700">
+                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle'} className="w-[240px] bg-green-600 hover:bg-green-700">
                         {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
                         : saveState === 'saved' ? <><Check /> Sincronizado</>
                         : <><CalendarSync /> Guardar y Sincronizar</>}
