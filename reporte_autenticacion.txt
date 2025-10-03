@@ -1,0 +1,209 @@
+
+# Reporte de Funcionamiento: Autenticación con Google
+
+Este documento detalla el mecanismo de autenticación de la aplicación, que se basa en Firebase Authentication para ofrecer un inicio de sesión seguro, moderno y restringido a un dominio específico.
+
+---
+
+## 1. Librerías y Dependencias Principales
+
+La funcionalidad de autenticación depende de una única librería principal:
+
+-   **`firebase`**: Es el SDK oficial de Firebase para la web. De este paquete, se utilizan módulos específicos para la autenticación:
+    -   `firebase/app`: Para la inicialización general de la aplicación de Firebase (`initializeApp`).
+    -   `firebase/auth`: Para todas las funcionalidades de autenticación, incluyendo:
+        -   `getAuth`: Obtiene la instancia del servicio de autenticación.
+        -   `GoogleAuthProvider`: El "proveedor" que define la estrategia de inicio de sesión con Google.
+        -   `signInWithPopup`: La función que abre la ventana emergente de inicio de sesión de Google.
+        -   `signOut`: La función para cerrar la sesión del usuario.
+        -   `onAuthStateChanged`: Un "oyente" en tiempo real que detecta cambios en el estado de la sesión (inicio, cierre).
+
+---
+
+## 2. Flujo de Autenticación (Paso a Paso)
+
+El sistema se puede dividir en cuatro etapas lógicas que trabajan en conjunto.
+
+### Etapa 1: Inicialización y Configuración (El Motor)
+
+**Archivo:** `src/lib/firebase.ts`
+
+Este es el punto de partida. Su función es configurar y preparar la conexión con Firebase.
+
+1.  **Lectura de Credenciales:** Lee las variables de entorno (`NEXT_PUBLIC_FIREBASE_*`) de tu archivo `.env`. Estas son las llaves que identifican tu proyecto en la nube de Firebase.
+2.  **Inicialización Segura:** Solo si las credenciales existen y el código se está ejecutando en el navegador (cliente), se llama a la función `initializeApp(firebaseConfig)`. Esto crea la conexión principal con Firebase.
+3.  **Configuración del Proveedor:** Se crea una instancia de `GoogleAuthProvider`. Se le añade una configuración personalizada clave: `prompt: 'select_account'`. Esto fuerza a que Google siempre muestre la ventana de selección de cuenta, lo cual es útil si el usuario tiene varias cuentas de Google y necesita elegir la institucional.
+
+```typescript
+// --- Código relevante de src/lib/firebase.ts ---
+
+import { initializeApp, getApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+
+// ... (configuración de firebaseConfig)
+
+let app;
+let auth;
+let provider;
+
+if (isFirebaseConfigured && typeof window !== 'undefined') {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  auth = getAuth(app);
+  provider = new GoogleAuthProvider();
+  provider.setCustomParameters({
+    prompt: 'select_account',
+  });
+}
+
+export { auth, provider };
+```
+
+### Etapa 2: Gestión de Estado Centralizada (El Cerebro)
+
+**Archivo:** `src/context/settings-context.tsx`
+
+Este componente es el corazón de la aplicación. Mantiene el estado global, incluyendo quién es el usuario y si ha iniciado sesión.
+
+1.  **`onAuthStateChanged` (El Vigilante):**
+    -   Dentro de un `useEffect`, se establece un "oyente" con `auth.onAuthStateChanged`.
+    -   Esta función se ejecuta automáticamente en varios momentos:
+        -   Cuando la aplicación se carga por primera vez, para ver si ya existe una sesión activa.
+        -   Inmediatamente después de que un usuario inicia sesión con éxito.
+        -   Inmediatamente después de que un usuario cierra sesión.
+    -   Si detecta un usuario, lo guarda en el estado global. Si no, limpia el estado.
+
+2.  **`handleGoogleSignIn()` (La Acción de Iniciar Sesión):**
+    -   Esta función asíncrona se llama cuando el usuario hace clic en el botón de login.
+    -   Llama a `signInWithPopup(auth, provider)`, que abre la ventana emergente de Google.
+    -   Espera el resultado. Si tiene éxito, obtiene la información del usuario.
+    -   **Validación de Dominio (Punto Clave de Seguridad):** Inmediatamente después del login, revisa el email del usuario. Si no termina con `@universidad-une.com`, cierra la sesión al instante con `signOut(auth)` y muestra un error. Esto asegura que solo el personal autorizado pueda entrar.
+    -   Si el dominio es correcto, el proceso finaliza. `onAuthStateChanged` ya ha sido notificado del nuevo usuario y se encarga del resto (cargar datos, redirigir).
+
+```typescript
+// --- Código relevante de src/context/settings-context.tsx ---
+
+// ... (imports)
+
+// Dentro del componente SettingsProvider:
+
+useEffect(() => {
+  // ... (código para dev mode)
+  const unsubscribe = auth?.onAuthStateChanged(async (firebaseUser) => {
+      setIsLoading(true);
+      if (firebaseUser) {
+        setUser(firebaseUser); // Guarda el usuario en el estado
+        await fetchUserData(firebaseUser.uid);
+      } else {
+        clearUserData(); // Limpia los datos si no hay usuario
+      }
+      setIsLoading(false);
+  });
+  return () => unsubscribe?.();
+}, [fetchUserData]);
+
+const handleGoogleSignIn = async () => {
+  if (!auth || !provider) return;
+  
+  // ... (código para dev mode y estado de carga)
+
+  try {
+    const result = await signInWithPopup(auth, provider); // Abre el popup
+    const email = result.user.email;
+
+    // Validación de dominio
+    if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+      await signOut(auth); // Cierra sesión si el dominio es incorrecto
+      setAuthError({ /* ... mensaje de error ... */ });
+      return;
+    }
+    
+    // ... (toast de bienvenida)
+    
+  } catch (error: any) {
+    // ... (manejo de errores como popup cerrado)
+  } finally {
+    setIsSigningIn(false);
+  }
+};
+```
+
+### Etapa 3: La Página de Inicio de Sesión (La Puerta)
+
+**Archivo:** `src/app/page.tsx`
+
+Esta es la interfaz que ve el usuario. Es relativamente sencilla, ya que delega toda la lógica compleja al contexto.
+
+1.  **Uso del Contexto:** A través del hook `useSettings()`, accede a las variables de estado (`isLoading`, `authError`, `isSigningIn`) y a la función `handleGoogleSignIn`.
+2.  **Renderizado Condicional:**
+    -   Muestra una alerta si Firebase no está configurado.
+    -   Muestra errores si `authError` tiene un valor.
+    -   Deshabilita el botón y muestra "Iniciando sesión..." si `isSigningIn` es `true`.
+3.  **Llamada a la Acción:** El botón "Entrar con Google" tiene un evento `onClick` que ejecuta `handleGoogleSignIn()`.
+
+```tsx
+// --- Código relevante de src/app/page.tsx ---
+
+export default function LoginPage() {
+  const { 
+    user, 
+    isLoading, 
+    isFirebaseConfigured, 
+    authError, 
+    handleGoogleSignIn,
+    isSigningIn,
+  } = useSettings();
+
+  // ... (useEffect para redirigir si ya está logueado)
+
+  return (
+    // ... (JSX)
+    <Button
+      onClick={handleGoogleSignIn} // Llama a la función del contexto
+      disabled={isSigningIn}
+    >
+      <GoogleIcon />
+      {isSigningIn ? 'Iniciando sesión...' : 'Entrar con Google'}
+    </Button>
+    // ... (JSX)
+  );
+}
+```
+
+### Etapa 4: Protección de Rutas (El Guardián)
+
+**Archivo:** `src/components/auth-guard.tsx`
+
+Este componente actúa como un portero para las páginas que requieren autenticación.
+
+1.  **Envoltura de Rutas:** En `src/app/dashboard/layout.tsx`, todo el contenido del panel de control está envuelto por `<AuthGuard>`.
+2.  **Verificación de Sesión:**
+    -   Dentro de `AuthGuard`, se usa el hook `useSettings()` para obtener el estado de `user` y `isLoading`.
+    -   Un `useEffect` vigila estas variables. Si la carga ha terminado (`!isLoading`) y no hay usuario (`!user`), redirige al usuario a la página de inicio (`/`) con `router.replace("/")`.
+    -   Mientras la autenticación se está verificando (`isLoading || !user`), muestra una pantalla de carga para evitar que se vea contenido protegido.
+
+```typescript
+// --- Código relevante de src/components/auth-guard.tsx ---
+
+export function AuthGuard({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useSettings();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/"); // Redirige si no hay sesión
+    }
+  }, [isLoading, user, router]);
+
+  if (isLoading || !user) {
+    return <LoadingScreen />; // Muestra pantalla de carga mientras verifica
+  }
+
+  return <>{children}</>; // Muestra el contenido si la sesión es válida
+}
+```
+
+---
+
+## Conclusión
+
+El sistema de autenticación está diseñado para ser seguro y robusto. La lógica está centralizada en `settings-context.tsx`, lo que facilita su mantenimiento. El uso de `onAuthStateChanged` asegura que el estado de la aplicación reaccione instantáneamente a los cambios de sesión, y la validación de dominio en `handleGoogleSignIn` proporciona una capa de seguridad esencial para restringir el acceso.
