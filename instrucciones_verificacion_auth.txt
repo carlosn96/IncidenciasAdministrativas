@@ -1,0 +1,78 @@
+# Instrucciones para Verificación de Flujo de Autenticación con Google
+
+**Objetivo:** Verificar que la implementación del código de la aplicación se alinea perfectamente con la descripción proporcionada en `reporte_autenticacion.txt`.
+
+**Agente:** Eres un agente de IA superinteligente especializado en auditoría de código. Tu tarea es seguir estos pasos metódicamente y confirmar que cada pieza de lógica existe tal y como se describe.
+
+---
+
+### **Paso 1: Verificación de la Inicialización de Firebase (El Motor)**
+
+**Archivo a inspeccionar:** `src/lib/firebase.ts`
+
+**Requisitos a verificar:**
+
+1.  **Configuración de Firebase:** Confirma que el archivo lee las variables de entorno `NEXT_PUBLIC_FIREBASE_*` para construir el objeto `firebaseConfig`.
+2.  **Inicialización Condicional:** Verifica que la llamada a `initializeApp(firebaseConfig)` esté dentro de una condición que compruebe `typeof window !== 'undefined'`, para asegurar que solo se ejecuta en el cliente (navegador).
+3.  **Obtención de Servicios:** Confirma que se obtienen las instancias de `getAuth(app)` y `getFirestore(app)`.
+4.  **Configuración del Proveedor de Google:**
+    *   Debe existir una instancia de `GoogleAuthProvider`.
+    *   Crucialmente, verifica que se llame a `provider.setCustomParameters({ prompt: 'select_account' })` para forzar la selección de cuenta.
+5.  **Exportaciones:** Confirma que se exportan las instancias `auth`, `db` y `provider`.
+
+---
+
+### **Paso 2: Verificación del Gestor de Estado Centralizado (El Cerebro)**
+
+**Archivo a inspeccionar:** `src/context/settings-context.tsx`
+
+**Requisitos a verificar:**
+
+1.  **Uso de `onAuthStateChanged`:**
+    *   Dentro de un hook `useEffect`, debe existir una llamada a `auth.onAuthStateChanged`.
+    *   El callback de este "oyente" debe manejar dos escenarios:
+        *   **Si `firebaseUser` existe:** Debe llamar a una función para establecer el estado del usuario (ej. `setUser(firebaseUser)`) y a otra para cargar los datos de ese usuario desde Firestore (ej. `fetchUserData(firebaseUser.uid)`).
+        *   **Si `firebaseUser` NO existe (es `null`):** Debe llamar a una función que limpie el estado del usuario y sus datos (ej. `clearUserData()`).
+    *   El `useEffect` debe devolver una función de limpieza que cancele la suscripción (`unsubscribe()`).
+
+2.  **Lógica de `handleGoogleSignIn`:**
+    *   Debe ser una función `async`.
+    *   Debe contener una llamada a `signInWithPopup(auth, provider)` dentro de un bloque `try/catch`.
+    *   **Validación de Dominio (Crítico):** Inmediatamente después de una respuesta exitosa de `signInWithPopup`, el código debe obtener el email del usuario (`result.user.email`).
+    *   Debe existir una condición `if` que verifique si el email NO termina con el dominio permitido (`@${ALLOWED_DOMAIN}`).
+    *   Dentro de este `if`, debe haber una llamada a `signOut(auth)` para cerrar la sesión del usuario no autorizado y una llamada para establecer un mensaje de error en el estado.
+
+---
+
+### **Paso 3: Verificación de la Página de Inicio de Sesión (La Puerta)**
+
+**Archivo a inspeccionar:** `src/app/page.tsx`
+
+**Requisitos a verificar:**
+
+1.  **Uso del Contexto:** El componente debe usar el hook `useSettings()` para obtener el estado `user`, `isLoading`, `isFirebaseConfigured`, `authError`, `isSigningIn` y la función `handleGoogleSignIn`.
+2.  **Redirección:** Debe haber un `useEffect` que redirija al usuario a `/dashboard` si `!isLoading` y `user` existen.
+3.  **Renderizado Condicional:**
+    *   El botón de inicio de sesión debe estar deshabilitado (`disabled={isSigningIn}`).
+    *   El texto del botón debe cambiar condicionalmente si `isSigningIn` es `true`.
+    *   Deben existir componentes `Alert` que se muestren condicionalmente si `!isFirebaseConfigured` o si `authError` tiene un valor.
+4.  **Llamada a la Acción:** El botón "Entrar con Google" debe tener un `onClick` que ejecute la función `handleGoogleSignIn` obtenida del contexto.
+
+---
+
+### **Paso 4: Verificación del Guardián de Rutas (El Guardián)**
+
+**Archivo a inspeccionar:** `src/components/auth-guard.tsx`
+
+**Requisitos a verificar:**
+
+1.  **Uso del Contexto:** El componente `AuthGuard` debe usar el hook `useSettings()` para obtener el estado `user` y `isLoading`.
+2.  **Lógica de Redirección:**
+    *   Debe existir un `useEffect` que se active cuando cambien `isLoading` o `user`.
+    *   Dentro de este `useEffect`, debe haber una condición `if (!isLoading && !user)` que ejecute `router.replace("/")` para redirigir a los usuarios no autenticados.
+3.  **Pantalla de Carga:** Mientras `isLoading` es `true` o `user` no existe, el componente debe renderizar un componente de pantalla de carga (ej. `<LoadingScreen />`) para evitar mostrar contenido protegido prematuramente.
+4.  **Renderizado del Contenido:** Si la sesión es válida (`!isLoading && user`), el componente debe renderizar `{children}`.
+
+---
+
+**Conclusión:** Si todos los puntos anteriores se cumplen, el flujo de autenticación está implementado correctamente según la documentación.
