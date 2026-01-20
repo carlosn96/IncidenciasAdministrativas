@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,8 +24,27 @@ export const metadata: Metadata = {
     telephone: false,
   },
   manifest: "/manifest.json",
-  themeColor: "#0F1F6D",
+  icons: {
+    apple: [
+      { url: '/assets/images/icons/icon-72x72.png', sizes: '72x72' },
+      { url: '/assets/images/icons/icon-96x96.png', sizes: '96x96' },
+      { url: '/assets/images/icons/icon-128x128.png', sizes: '128x128' },
+      { url: '/assets/images/icons/icon-144x144.png', sizes: '144x144' },
+      { url: '/assets/images/icons/icon-152x152.png', sizes: '152x152' },
+      { url: '/assets/images/icons/icon-192x192.png', sizes: '192x192' },
+    ],
+  },
 };
+
+export const viewport: Viewport = {
+  themeColor: '#0F1F6D',
+  width: 'device-width',
+  initialScale: 1,
+  minimumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+}
+
 
 export const dynamic = "force-dynamic";
 
