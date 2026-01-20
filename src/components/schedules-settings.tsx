@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -16,8 +16,6 @@ import type { DaySchedule, Location, Schedule } from "@/lib/types";
 import { Pencil, PlusCircle, MoreVertical, Trash2, Save, Loader2, Check, Clock, MapPin } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
-
 
 // --- ScheduleEditDialog (New Component) ---
 
@@ -338,58 +336,50 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
   return (
     <>
       <Card>
-        <CardHeader>
-            <div className="flex flex-wrap justify-between items-center gap-4">
-                <div className="flex-1">
-                    <CardTitle>Plantillas de Horario</CardTitle>
-                    <CardDescription>
-                        Crea y gestiona tus horarios semanales por defecto. El horario activo se usará para las proyecciones.
-                    </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Select value={activeScheduleId || ""} onValueChange={setActiveScheduleId} disabled={schedules.length === 0}>
-                        <SelectTrigger className="w-full sm:w-[250px]">
-                            <SelectValue placeholder="Selecciona una plantilla..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {schedules.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon"><MoreVertical /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={handleCreate}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Crear Nueva Plantilla
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleEdit} disabled={!activeSchedule}>
-                                <Pencil className="mr-2 h-4 w-4"/> Editar Plantilla Activa
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator/>
-                            <DropdownMenuItem 
-                                onClick={handleDeleteTrigger} 
-                                disabled={!activeSchedule || schedules.length <= 1} 
-                                className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4"/> Eliminar Plantilla Activa
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+        <CardHeader className="p-4 border-b">
+            <div className="flex flex-wrap justify-end items-center gap-2">
+                <Select value={activeScheduleId || ""} onValueChange={setActiveScheduleId} disabled={schedules.length === 0}>
+                    <SelectTrigger className="w-full sm:w-[250px]">
+                        <SelectValue placeholder="Selecciona plantilla activa..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {schedules.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon"><MoreVertical /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleCreate} className="cursor-pointer">
+                            <PlusCircle className="mr-2 h-4 w-4"/> Crear Nueva Plantilla
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleEdit} disabled={!activeSchedule} className="cursor-pointer">
+                            <Pencil className="mr-2 h-4 w-4"/> Editar Plantilla Activa
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator/>
+                        <DropdownMenuItem 
+                            onClick={handleDeleteTrigger} 
+                            disabled={!activeSchedule || schedules.length <= 1} 
+                            className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4"/> Eliminar Plantilla Activa
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
             {/* Mobile View */}
             <div className="md:hidden">
               {!activeSchedule ? (
-                  <div className="py-16 text-center text-muted-foreground border rounded-lg">
+                  <div className="py-16 text-center text-muted-foreground">
                       <p>{schedules.length > 0 ? "Selecciona una plantilla para verla." : "No has creado ninguna plantilla."}</p>
                   </div>
               ) : (
-                  <div className="border rounded-lg">
-                      {activeSchedule.entries.map((entry, index) => (
-                          <div key={entry.day} className={cn("p-4", index < activeSchedule.entries.length - 1 && "border-b")}>
+                  <div className="divide-y">
+                      {activeSchedule.entries.map((entry) => (
+                          <div key={entry.day} className="p-4">
                               <p className="font-medium mb-2">{entry.day}</p>
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                   <div>
@@ -422,7 +412,7 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
             </div>
             
             {/* Desktop View */}
-            <div className="hidden md:block border rounded-lg overflow-x-auto">
+            <div className="hidden md:block">
                 <Table>
                 <TableHeader>
                     <TableRow>

@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -48,7 +46,6 @@ import { Label } from "@/components/ui/label";
 import type { Location } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface LocationsSettingsProps {
     userLocations: Location[];
@@ -101,32 +98,23 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
   return (
     <>
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start gap-4 flex-wrap">
-              <div>
-                  <CardTitle>Mis Ubicaciones de Trabajo</CardTitle>
-                  <CardDescription>
-                      Gestiona la lista de planteles donde asistes. Esta lista se usará para configurar tus horarios.
-                  </CardDescription>
-              </div>
+        <CardHeader className="p-4 border-b">
+          <div className="flex justify-end items-center gap-4">
               <Button onClick={() => setIsAddDialogOpen(true)} disabled={availableLocationsToAdd.length === 0}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Añadir Plantel
               </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {/* Mobile View */}
           <div className="md:hidden">
             {userLocations.length > 0 ? (
-              <div className="border rounded-lg">
-                {userLocations.map((loc, index) => (
+              <div className="divide-y">
+                {userLocations.map((loc) => (
                   <div
                     key={loc.id}
-                    className={cn(
-                      "p-4",
-                      index < userLocations.length - 1 && "border-b"
-                    )}
+                    className="p-4"
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -166,14 +154,14 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
                 ))}
               </div>
             ) : (
-              <div className="py-16 text-center text-muted-foreground border rounded-lg">
+              <div className="py-16 text-center text-muted-foreground">
                 <p>No has añadido ninguna ubicación.</p>
               </div>
             )}
           </div>
           
           {/* Desktop View */}
-          <div className="hidden md:block border rounded-lg overflow-x-auto">
+          <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -215,7 +203,7 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-16">
                       No has añadido ninguna ubicación.
                     </TableCell>
                   </TableRow>

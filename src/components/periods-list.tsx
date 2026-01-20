@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -30,7 +30,6 @@ import type { Period } from "@/lib/types";
 import { PlusCircle, ArrowRight, Pencil, MoreHorizontal, Trash2, BarChart } from "lucide-react";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
-import { cn } from "@/lib/utils";
 import { useSettings } from "@/context/settings-context";
 import { useToast } from "@/hooks/use-toast";
 
@@ -75,25 +74,21 @@ export function PeriodsList({ periods }: PeriodsListProps) {
     return (
         <>
             <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-start gap-4 flex-wrap">
-                        <div>
-                            <CardTitle>Periodos de Incidencias</CardTitle>
-                            <CardDescription>Gestiona tus periodos quincenales de registro.</CardDescription>
-                        </div>
+                <CardHeader className="p-4 border-b">
+                    <div className="flex justify-end items-center gap-4">
                         <Button onClick={() => setIsAddDialogOpen(true)}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Agregar Periodo
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     {/* Mobile View */}
                     <div className="md:hidden">
                         {periods.length > 0 ? (
-                            <div className="border rounded-lg">
-                                {periods.map((period, index) => (
-                                    <div key={period.id} className={cn("p-4", index < periods.length - 1 && "border-b")}>
+                            <div className="divide-y">
+                                {periods.map((period) => (
+                                    <div key={period.id} className="p-4">
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1 overflow-hidden">
                                                 <p className="font-medium truncate">{period.name}</p>
@@ -136,14 +131,14 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                 ))}
                             </div>
                         ) : (
-                            <div className="py-16 text-center text-muted-foreground border rounded-lg">
+                            <div className="py-16 text-center text-muted-foreground">
                                 <p>No hay periodos agregados.</p>
                             </div>
                         )}
                     </div>
 
                     {/* Desktop View */}
-                    <div className="hidden md:block border rounded-lg overflow-x-auto">
+                    <div className="hidden md:block">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -155,7 +150,7 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                             <TableBody>
                                 {periods.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-16">
                                             No hay periodos agregados.
                                         </TableCell>
                                     </TableRow>

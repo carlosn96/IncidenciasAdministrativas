@@ -38,31 +38,33 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold font-headline">Configuración</h1>
-        <p className="text-muted-foreground">
-          Gestiona las configuraciones y parámetros de la aplicación.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       <Tabs value={tab} onValueChange={handleTabChange} className="space-y-4">
-        <div className="w-full overflow-x-auto">
-          <TabsList>
-            <TabsTrigger value="locations">
-              <MapPin className="mr-2 h-4 w-4" />
-              Mis Ubicaciones
-            </TabsTrigger>
-            <TabsTrigger value="schedules">
-              <Clock className="mr-2 h-4 w-4" />
-              Horarios
-            </TabsTrigger>
-            <TabsTrigger value="periods">
-              <CalendarDays className="mr-2 h-4 w-4" />
-              Periodos
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold font-headline">Configuración</h1>
+                <p className="text-muted-foreground">
+                  Gestiona tus ubicaciones, horarios y periodos.
+                </p>
+            </div>
+            <div className="w-full overflow-x-auto pb-1 md:w-auto">
+                <TabsList className="w-full md:w-auto">
+                    <TabsTrigger value="locations" className="flex-1 md:flex-initial">
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Ubicaciones
+                    </TabsTrigger>
+                    <TabsTrigger value="schedules" className="flex-1 md:flex-initial">
+                      <Clock className="mr-2 h-4 w-4" />
+                      Horarios
+                    </TabsTrigger>
+                    <TabsTrigger value="periods" className="flex-1 md:flex-initial">
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      Periodos
+                    </TabsTrigger>
+                </TabsList>
+            </div>
         </div>
+
         <TabsContent value="locations">
             <LocationsSettings
               userLocations={userLocations}
