@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { v4 as uuidv4 } from "uuid";
 import { manageCalendarEvent } from "@/lib/actions";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 type CalendarChangeAction = 'create' | 'update' | 'delete';
 type CalendarChange = {
@@ -155,13 +156,15 @@ export default function ProjectionsPage() {
 
   useEffect(() => {
     if (selectedPeriod) {
-        setOriginalProjectionsForCompare(JSON.parse(JSON.stringify(selectedPeriod.laborDays)));
-        setProjections(JSON.parse(JSON.stringify(selectedPeriod.laborDays)));
+        const originalData = JSON.parse(JSON.stringify(selectedPeriod.laborDays));
+        setOriginalProjectionsForCompare(originalData);
+        setProjections(originalData);
     } else {
         setProjections([]);
         setOriginalProjectionsForCompare([]);
     }
   }, [selectedPeriod]);
+
 
   const handleProjectionChange = (
     date: string,
@@ -211,7 +214,7 @@ export default function ProjectionsPage() {
             const hasNewData = !!(newIncident?.time && newIncident?.location);
             const originalEventId = originalIncident?.calendarEventId;
 
-            // CREATE
+            // CREATE: Went from nothing to something
             if (!hasOriginalData && hasNewData) {
                 changes.push({
                     action: 'create', date: day.date, incidentType: type,
@@ -220,11 +223,11 @@ export default function ProjectionsPage() {
                     startTime: new Date(`${day.date}T${newIncident.time}`),
                 });
             }
-            // DELETE
+            // DELETE: Went from something to nothing
             else if (hasOriginalData && !hasNewData && originalEventId) {
                 changes.push({ action: 'delete', date: day.date, incidentType: type, eventId: originalEventId });
             }
-            // UPDATE
+            // UPDATE: Had something, and it changed
             else if (hasOriginalData && hasNewData && (originalIncident.time !== newIncident.time || originalIncident.location !== newIncident.location)) {
                 changes.push({
                     action: originalEventId ? 'update' : 'create', date: day.date, incidentType: type, eventId: originalEventId,
@@ -276,19 +279,26 @@ export default function ProjectionsPage() {
             end: endTime?.toISOString(),
         });
         
-        if (result.success) {
+        if (result.success && (change.action === 'create' || change.action === 'update')) {
             const dayIndex = updatedProjections.findIndex((d: LaborDay) => d.date === change.date);
             if (dayIndex !== -1) {
                 const day = updatedProjections[dayIndex];
                 const incident = day[change.incidentType];
-                if (change.action === 'create' || change.action === 'update') {
-                    if (incident) incident.calendarEventId = result.eventId;
-                } else if (change.action === 'delete') {
-                    if (incident) delete incident.calendarEventId;
+                if (incident) {
+                    incident.calendarEventId = result.eventId;
                 }
             }
-        } else {
-             toast({ variant: 'destructive', title: `Error al ${change.action} evento (${change.date})`, description: result.error, duration: 15000 });
+        } else if (result.success && change.action === 'delete') {
+            const dayIndex = updatedProjections.findIndex((d: LaborDay) => d.date === change.date);
+            if (dayIndex !== -1) {
+                const day = updatedProjections[dayIndex];
+                const incident = day[change.incidentType];
+                if (incident) {
+                    delete incident.calendarEventId;
+                }
+            }
+        } else if (!result.success) {
+            toast({ variant: 'destructive', title: `Error al ${change.action} evento (${change.date})`, description: result.error, duration: 15000 });
         }
     });
 
@@ -321,17 +331,15 @@ export default function ProjectionsPage() {
         return cleanedDay;
     });
 
+    const newPeriodState = { ...selectedPeriod, laborDays: cleanedProjections };
+
     setPeriods(prevPeriods =>
-      prevPeriods.map(p => {
-        if (p.id === selectedPeriodId) {
-          return { ...p, laborDays: cleanedProjections };
-        }
-        return p;
-      })
+      prevPeriods.map(p => (p.id === selectedPeriodId ? newPeriodState : p))
     );
     
-    setOriginalProjectionsForCompare(JSON.parse(JSON.stringify(cleanedProjections)));
-    setProjections(JSON.parse(JSON.stringify(cleanedProjections)));
+    const newOriginalData = JSON.parse(JSON.stringify(cleanedProjections));
+    setOriginalProjectionsForCompare(newOriginalData);
+    setProjections(newOriginalData);
 
     setSaveState('saved');
     setTimeout(() => {
@@ -521,7 +529,8 @@ export default function ProjectionsPage() {
                 
                 <TooltipProvider>
                     {/* Mobile View */}
-                    <div className="md:hidden space-y-4">
+                    <div className="md:hidden">
+                      <Accordion type="single" collapsible className="w-full space-y-2">
                         {projections.map((day) => {
                              const isToday = day.date === todayString;
                              const isDayComplete = !!(day.entry && day.exit);
@@ -537,60 +546,72 @@ export default function ProjectionsPage() {
                              const exitSelectValue = isExitManual ? 'manual' : exitLocationValue ?? "";
 
                             return (
-                                <Card key={day.date} className={cn(isDayComplete && "bg-green-500/10")}>
-                                    <CardHeader className="p-4 flex flex-row items-baseline justify-between">
-                                        <div>
-                                            <p className="font-medium capitalize flex items-center gap-2.5">
-                                                {isToday && (
-                                                    <span className="relative flex h-2.5 w-2.5" title="Hoy">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
-                                                    </span>
-                                                )}
-                                                <span>{format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}</span>
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Proyectadas: {formatMinutesToHours(calculateMinutes(day.projectedEntry || day.entry, day.projectedExit || day.exit))} / Reales: <span className="text-green-600 font-semibold">{formatMinutesToHours(calculateMinutes(day.entry, day.exit))}</span>
-                                            </p>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="p-4 pt-0 space-y-4">
-                                        <div className="space-y-2 p-3 rounded-md border bg-muted/30">
-                                            <h4 className="font-medium text-sm">Entrada</h4>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <Input type="time" value={entryTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} />
-                                                <div className="space-y-1">
-                                                    <Select value={entrySelectValue} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v === 'manual' ? '' : v)} disabled={!!day.entry}>
-                                                        <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                                        <SelectContent>
-                                                            {userLocations.map(l => <SelectItem key={`${l.id}-proj-entry-m`} value={l.name}>{l.name}</SelectItem>)}
-                                                            <SelectItem value="manual">Otro</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {entrySelectValue === 'manual' && <Input type="text" placeholder="Ubicación" value={entryLocationValue ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'location', e.target.value)} disabled={!!day.entry} />}
+                                <AccordionItem 
+                                  value={day.date} 
+                                  key={day.date}
+                                  className={cn(
+                                    "rounded-lg border bg-card text-card-foreground shadow-sm data-[state=open]:shadow-md",
+                                    isDayComplete && "bg-green-500/10 border-primary/20",
+                                  )}
+                                >
+                                    <AccordionTrigger className="p-4 text-left hover:no-underline">
+                                      <div className="flex-1">
+                                        <p className="font-medium capitalize flex items-center gap-2.5">
+                                            {isToday && (
+                                                <span className="relative flex h-2.5 w-2.5" title="Hoy">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                                </span>
+                                            )}
+                                            <span>{format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}</span>
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1 text-left">
+                                            Proyectadas: {formatMinutesToHours(calculateMinutes(day.projectedEntry || day.entry, day.projectedExit || day.exit))}
+                                            <span className="mx-2">/</span>
+                                            Reales: <span className="font-semibold text-green-600">{formatMinutesToHours(calculateMinutes(day.entry, day.exit))}</span>
+                                        </p>
+                                      </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-4 pb-4">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2 p-3 rounded-md border bg-muted/30">
+                                                <h4 className="font-medium text-sm">Entrada</h4>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Input type="time" value={entryTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)} disabled={!!day.entry} />
+                                                    <div className="space-y-1">
+                                                        <Select value={entrySelectValue} onValueChange={v => handleProjectionChange(day.date, 'projectedEntry', 'location', v === 'manual' ? '' : v)} disabled={!!day.entry}>
+                                                            <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                                            <SelectContent>
+                                                                {userLocations.map(l => <SelectItem key={`${l.id}-proj-entry-m`} value={l.name}>{l.name}</SelectItem>)}
+                                                                <SelectItem value="manual">Otro</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {entrySelectValue === 'manual' && <Input type="text" placeholder="Ubicación" value={entryLocationValue ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'location', e.target.value)} disabled={!!day.entry} />}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2 p-3 rounded-md border bg-muted/30">
+                                                <h4 className="font-medium text-sm">Salida</h4>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Input type="time" value={exitTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} />
+                                                    <div className="space-y-1">
+                                                        <Select value={exitSelectValue} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v === 'manual' ? '' : v)} disabled={!!day.exit}>
+                                                            <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
+                                                            <SelectContent>
+                                                                {userLocations.map(l => <SelectItem key={`${l.id}-proj-exit-m`} value={l.name}>{l.name}</SelectItem>)}
+                                                                <SelectItem value="manual">Otro</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {exitSelectValue === 'manual' && <Input type="text" placeholder="Ubicación" value={exitLocationValue ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'location', e.target.value)} disabled={!!day.exit} />}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-2 p-3 rounded-md border bg-muted/30">
-                                            <h4 className="font-medium text-sm">Salida</h4>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <Input type="time" value={exitTimeValue} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)} disabled={!!day.exit} />
-                                                <div className="space-y-1">
-                                                    <Select value={exitSelectValue} onValueChange={v => handleProjectionChange(day.date, 'projectedExit', 'location', v === 'manual' ? '' : v)} disabled={!!day.exit}>
-                                                        <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                                        <SelectContent>
-                                                            {userLocations.map(l => <SelectItem key={`${l.id}-proj-exit-m`} value={l.name}>{l.name}</SelectItem>)}
-                                                            <SelectItem value="manual">Otro</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {exitSelectValue === 'manual' && <Input type="text" placeholder="Ubicación" value={exitLocationValue ?? ""} onChange={e => handleProjectionChange(day.date, 'projectedExit', 'location', e.target.value)} disabled={!!day.exit} />}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                    </AccordionContent>
+                                </AccordionItem>
                             )
                         })}
+                      </Accordion>
                     </div>
 
                     {/* Desktop View */}
