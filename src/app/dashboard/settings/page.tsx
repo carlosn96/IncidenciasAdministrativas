@@ -47,20 +47,22 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={handleTabChange} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-1 sm:w-auto sm:inline-flex sm:h-10">
-          <TabsTrigger value="locations">
-            <MapPin className="mr-2 h-4 w-4" />
-            Mis Ubicaciones
-          </TabsTrigger>
-          <TabsTrigger value="schedules">
-            <Clock className="mr-2 h-4 w-4" />
-            Horarios
-          </TabsTrigger>
-          <TabsTrigger value="periods">
-            <CalendarDays className="mr-2 h-4 w-4" />
-            Periodos
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList>
+            <TabsTrigger value="locations">
+              <MapPin className="mr-2 h-4 w-4" />
+              Mis Ubicaciones
+            </TabsTrigger>
+            <TabsTrigger value="schedules">
+              <Clock className="mr-2 h-4 w-4" />
+              Horarios
+            </TabsTrigger>
+            <TabsTrigger value="periods">
+              <CalendarDays className="mr-2 h-4 w-4" />
+              Periodos
+            </TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="locations">
             <LocationsSettings
               userLocations={userLocations}
