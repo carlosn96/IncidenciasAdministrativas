@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from "react";
@@ -10,6 +9,7 @@ import {
   SidebarFooter,
   SidebarContent,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -41,11 +41,18 @@ export function Nav() {
   const router = useRouter();
   const { user, periods } = useSettings();
   const { toast } = useToast();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const activePeriod = useMemo(() => {
     const today = new Date();
     return periods.find(p => isWithinInterval(today, { start: p.startDate, end: endOfDay(p.endDate) }));
   }, [periods]);
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -70,7 +77,7 @@ export function Nav() {
   return (
     <>
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-2">
-        <Link href="/dashboard" className="flex items-center justify-center gap-3">
+        <Link href="/dashboard" className="flex items-center justify-center gap-3" onClick={handleLinkClick}>
           <div className="bg-white p-1 rounded-md">
             <AppLogo className="h-6 w-6 shrink-0" />
           </div>
@@ -86,6 +93,7 @@ export function Nav() {
               asChild
               isActive={pathname === "/dashboard"}
               tooltip="Resumen"
+              onClick={handleLinkClick}
             >
               <Link href="/dashboard">
                 <LayoutDashboard />
@@ -100,6 +108,7 @@ export function Nav() {
                 asChild
                 isActive={pathname.startsWith(`/dashboard/period/${activePeriod.id}`)}
                 tooltip="Periodo Actual"
+                onClick={handleLinkClick}
               >
                 <Link href={`/dashboard/period/${activePeriod.id}`}>
                   <ClipboardList />
@@ -114,6 +123,7 @@ export function Nav() {
               asChild
               isActive={pathname.startsWith("/dashboard/projections")}
               tooltip="Proyecciones"
+              onClick={handleLinkClick}
             >
               <Link href="/dashboard/projections">
                 <BarChart />
@@ -127,6 +137,7 @@ export function Nav() {
               asChild
               isActive={pathname.startsWith("/dashboard/profile")}
               tooltip="Perfil"
+              onClick={handleLinkClick}
             >
               <Link href="/dashboard/profile">
                 <User />
@@ -140,6 +151,7 @@ export function Nav() {
               asChild
               isActive={pathname.startsWith("/dashboard/settings")}
               tooltip="Ajustes"
+              onClick={handleLinkClick}
             >
               <Link href="/dashboard/settings">
                 <Settings />
@@ -172,7 +184,7 @@ export function Nav() {
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="end" className="w-56">
             <DropdownMenuItem asChild>
-                <Link href="/dashboard/profile">
+                <Link href="/dashboard/profile" onClick={handleLinkClick}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                 </Link>
