@@ -31,7 +31,6 @@ export type Location = {
 export type Incident = {
   time: string;
   location: string;
-  calendarEventId?: string;
 };
 
 export type LaborDay = {
@@ -51,4 +50,3 @@ export type Period = {
   totalDurationMinutes: number; // Expected duration based on 8 hours per working day
   includeSaturdays: boolean;
 };
-

@@ -13,26 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isWithinInterval, endOfDay, addMinutes } from "date-fns";
+import { format, parseISO, differenceInMinutes, getDay, isBefore, startOfDay, isWithinInterval, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { BarChart, Save, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check, CalendarSync, CalendarCheck, Clock, MapPin } from "lucide-react";
+import { BarChart, Save, BrainCircuit, AlertTriangle, UploadCloud, Loader2, Check, Clock, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { v4 as uuidv4 } from "uuid";
-import { manageCalendarEvent } from "@/lib/actions";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
-type CalendarChangeAction = 'create' | 'update' | 'delete';
-type CalendarChange = {
-    action: CalendarChangeAction;
-    date: string;
-    incidentType: 'projectedEntry' | 'projectedExit';
-    eventId?: string;
-    summary?: string;
-    location?: string;
-    startTime?: Date;
-};
 
 
 // Helper functions
@@ -69,7 +57,6 @@ export default function ProjectionsPage() {
   const [newTemplateName, setNewTemplateName] = useState("");
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const todayString = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
-  const googleCalendarId = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID;
 
   const activeSchedule = useMemo(() => {
     return schedules.find((s) => s.id === activeScheduleId);
@@ -199,128 +186,14 @@ export default function ProjectionsPage() {
     );
   };
 
-  const determineChanges = (original: LaborDay[], current: LaborDay[]) => {
-    const changes: CalendarChange[] = [];
-
-    current.forEach((day) => {
-        const originalDay = original.find(d => d.date === day.date);
-
-        const processIncidentType = (type: 'projectedEntry' | 'projectedExit') => {
-            const originalIncident = originalDay?.[type];
-            const newIncident = day[type];
-            const incidentTypeLabel = type === 'projectedEntry' ? 'ENTRADA' : 'SALIDA';
-
-            const hasOriginalData = !!(originalIncident?.time && originalIncident?.location);
-            const hasNewData = !!(newIncident?.time && newIncident?.location);
-            const originalEventId = originalIncident?.calendarEventId;
-
-            // CREATE: Went from nothing to something
-            if (!hasOriginalData && hasNewData) {
-                changes.push({
-                    action: 'create', date: day.date, incidentType: type,
-                    summary: `${incidentTypeLabel}: ${newIncident.location}`,
-                    location: newIncident.location,
-                    startTime: new Date(`${day.date}T${newIncident.time}`),
-                });
-            }
-            // DELETE: Went from something to nothing
-            else if (hasOriginalData && !hasNewData && originalEventId) {
-                changes.push({ action: 'delete', date: day.date, incidentType: type, eventId: originalEventId });
-            }
-            // UPDATE: Had something, and it changed
-            else if (hasOriginalData && hasNewData && (originalIncident.time !== newIncident.time || originalIncident.location !== newIncident.location)) {
-                changes.push({
-                    action: originalEventId ? 'update' : 'create', date: day.date, incidentType: type, eventId: originalEventId,
-                    summary: `${incidentTypeLabel}: ${newIncident.location}`,
-                    location: newIncident.location,
-                    startTime: new Date(`${day.date}T${newIncident.time}`),
-                });
-            }
-        };
-
-        processIncidentType('projectedEntry');
-        processIncidentType('projectedExit');
-    });
-
-    return changes;
-  };
-
-  const syncCalendarEvents = async (originalProjections: LaborDay[], newProjections: LaborDay[]) => {
-    if (!googleCalendarId) {
-      toast({
-          variant: "destructive",
-          title: "Error de Configuración",
-          description: "La variable NEXT_PUBLIC_GOOGLE_CALENDAR_ID no se encontró. Por favor, añádela a tu archivo .env y REINICIA el servidor.",
-          duration: 15000,
-      });
-      return { success: false, finalProjections: newProjections };
-    }
-    
-    const changesToSync = determineChanges(originalProjections, newProjections);
-    if (changesToSync.length === 0) {
-        return { success: true, finalProjections: newProjections };
-    }
-
-    const updatedProjections = JSON.parse(JSON.stringify(newProjections));
-    
-    toast({ title: `Sincronizando ${changesToSync.length} cambio(s)...`, description: "Por favor, espera." });
-
-    const syncPromises = changesToSync.map(async (change) => {
-        const startTime = change.startTime;
-        const endTime = startTime ? addMinutes(startTime, 30) : undefined;
-        
-        const result = await manageCalendarEvent({
-            action: change.action,
-            calendarId: googleCalendarId,
-            eventId: change.eventId,
-            summary: change.summary,
-            location: change.location,
-            start: startTime?.toISOString(),
-            end: endTime?.toISOString(),
-        });
-        
-        if (result.success && (change.action === 'create' || change.action === 'update')) {
-            const dayIndex = updatedProjections.findIndex((d: LaborDay) => d.date === change.date);
-            if (dayIndex !== -1) {
-                const day = updatedProjections[dayIndex];
-                const incident = day[change.incidentType];
-                if (incident) {
-                    incident.calendarEventId = result.eventId;
-                }
-            }
-        } else if (result.success && change.action === 'delete') {
-            const dayIndex = updatedProjections.findIndex((d: LaborDay) => d.date === change.date);
-            if (dayIndex !== -1) {
-                const day = updatedProjections[dayIndex];
-                const incident = day[change.incidentType];
-                if (incident) {
-                    delete incident.calendarEventId;
-                }
-            }
-        } else if (!result.success) {
-            toast({ variant: 'destructive', title: `Error al ${change.action} evento (${change.date})`, description: result.error, duration: 15000 });
-        }
-    });
-
-    await Promise.all(syncPromises);
-    
-    return { success: true, finalProjections: updatedProjections };
-  };
-
-  const handleSaveChanges = async (syncCalendar: boolean) => {
+  const handleSaveChanges = async () => {
     if (!selectedPeriodId || !selectedPeriod) {
         return;
     }
 
     setSaveState('saving');
-    let finalProjections = projections;
 
-    if (syncCalendar) {
-        const syncResult = await syncCalendarEvents(originalProjectionsForCompare, projections);
-        finalProjections = syncResult.finalProjections;
-    }
-
-    const cleanedProjections = finalProjections.map(day => {
+    const cleanedProjections = projections.map(day => {
         const cleanedDay = {...day};
         if (cleanedDay.projectedEntry && (!cleanedDay.projectedEntry.time || !cleanedDay.projectedEntry.location)) {
             delete cleanedDay.projectedEntry;
@@ -666,26 +539,11 @@ export default function ProjectionsPage() {
                                         <div className="relative flex items-center">
                                             <Input
                                                 type="time"
-                                                className={cn(
-                                                    "min-w-[100px]",
-                                                    !!day.projectedEntry?.calendarEventId && !day.entry && "pl-8"
-                                                )}
+                                                className="min-w-[100px]"
                                                 value={entryTimeValue}
                                                 onChange={e => handleProjectionChange(day.date, 'projectedEntry', 'time', e.target.value)}
                                                 disabled={!!day.entry}
                                             />
-                                            {day.projectedEntry?.calendarEventId && !day.entry && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <button className="absolute left-2.5 top-1/2 -translate-y-1/2 text-green-600 cursor-help outline-none ring-ring focus-visible:ring-2 rounded-sm">
-                                                            <CalendarCheck className="h-4 w-4" />
-                                                        </button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Evento de entrada sincronizado.</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            )}
                                         </div>
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
@@ -717,26 +575,11 @@ export default function ProjectionsPage() {
                                         <div className="relative flex items-center">
                                             <Input
                                                 type="time"
-                                                className={cn(
-                                                    "min-w-[100px]",
-                                                    !!day.projectedExit?.calendarEventId && !day.exit && "pl-8"
-                                                )}
+                                                className="min-w-[100px]"
                                                 value={exitTimeValue}
                                                 onChange={e => handleProjectionChange(day.date, 'projectedExit', 'time', e.target.value)}
                                                 disabled={!!day.exit}
                                             />
-                                            {day.projectedExit?.calendarEventId && !day.exit && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <button className="absolute left-2.5 top-1/2 -translate-y-1/2 text-green-600 cursor-help outline-none ring-ring focus-visible:ring-2 rounded-sm">
-                                                            <CalendarCheck className="h-4 w-4" />
-                                                        </button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Evento de salida sincronizado.</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            )}
                                         </div>
                                     </TableCell>
                                     <TableCell className="px-1 py-2">
@@ -775,15 +618,10 @@ export default function ProjectionsPage() {
                 </TooltipProvider>
 
                 <div className="flex flex-col sm:flex-row justify-end pt-6 items-center gap-2">
-                    <Button variant="outline" onClick={() => handleSaveChanges(false)} disabled={!selectedPeriod || saveState !== 'idle'} className="w-full sm:w-[180px]">
+                    <Button onClick={handleSaveChanges} disabled={!selectedPeriod || saveState !== 'idle'} className="w-full sm:w-[180px]">
                         {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Guardando...</>
                         : saveState === 'saved' ? <><Check /> Guardado</>
-                        : <><Save /> Guardar Cambios</>}
-                    </Button>
-                    <Button onClick={() => handleSaveChanges(true)} disabled={!selectedPeriod || saveState !== 'idle' } className="w-full sm:w-[240px] bg-green-600 hover:bg-green-700">
-                        {saveState === 'saving' ? <><Loader2 className="animate-spin" /> Sincronizando...</>
-                        : saveState === 'saved' ? <><Check /> Sincronizado</>
-                        : <><CalendarSync /> Guardar y Sincronizar</>}
+                        : <><Save className="mr-2 h-4 w-4"/> Guardar Cambios</>}
                     </Button>
                 </div>
               </CardContent>
