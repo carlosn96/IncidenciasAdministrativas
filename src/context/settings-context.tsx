@@ -1,11 +1,10 @@
-
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { User as FirebaseUser, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, provider, isFirebaseConfigured } from '@/lib/firebase';
-import type { Location, Period, Schedule } from '@/lib/types';
+import type { Location, Period, Schedule, UserProfile } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
 
@@ -44,6 +43,7 @@ const getInitialSchedules = (): Schedule[] => [{
 }];
 
 const getInitialPeriods = (): Period[] => [];
+const getInitialUserProfile = (): UserProfile => ({ academicBackground: '', coordinatedCourses: '' });
 
 
 interface AuthError {
@@ -64,6 +64,8 @@ interface SettingsContextType {
   setActiveScheduleId: React.Dispatch<React.SetStateAction<string | null>>;
   periods: Period[];
   setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
+  userProfile: UserProfile;
+  setUserProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
   // Auth related
   authError: AuthError | null;
   isSigningIn: boolean;
@@ -83,6 +85,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [activeScheduleId, setActiveScheduleId] = useState<string | null>(null);
   const [periods, setPeriods] = useState<Period[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile>(getInitialUserProfile());
   
   const fetchUserData = useCallback(async (userId: string) => {
       if (!db) {
@@ -105,6 +108,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setSchedules(loadedSchedules);
           setActiveScheduleId(data.activeScheduleId || (loadedSchedules.length > 0 ? loadedSchedules[0].id : null));
           setPeriods(rehydratedPeriods);
+          setUserProfile(data.userProfile || getInitialUserProfile());
         } else {
           console.log(`Creating new user document for ${userId}`);
           const initialSchedules = getInitialSchedules();
@@ -114,12 +118,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setSchedules(initialSchedules);
           setActiveScheduleId(initialActiveScheduleId);
           setPeriods(getInitialPeriods());
+          setUserProfile(getInitialUserProfile());
           
           await setDoc(userDocRef, {
             userLocations: getInitialUserLocations(),
             schedules: initialSchedules,
             activeScheduleId: initialActiveScheduleId,
             periods: getInitialPeriods(),
+            userProfile: getInitialUserProfile(),
           });
         }
       } catch (error) {
@@ -133,6 +139,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSchedules(getInitialSchedules());
     setPeriods(getInitialPeriods());
     setActiveScheduleId(null);
+    setUserProfile(getInitialUserProfile());
   };
     
   useEffect(() => {
@@ -175,12 +182,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         schedules,
         activeScheduleId,
         periods,
+        userProfile,
       };
       setDoc(userDocRef, dataToStore, { merge: true }).catch((error) => {
         console.error("Failed to save data to Firestore:", error);
       });
     }
-  }, [isLoading, user, userLocations, schedules, activeScheduleId, periods]);
+  }, [isLoading, user, userLocations, schedules, activeScheduleId, periods, userProfile]);
 
   const handleGoogleSignIn = async () => {
     if (!auth || !provider) return;
@@ -247,6 +255,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setActiveScheduleId,
     periods,
     setPeriods,
+    userProfile,
+    setUserProfile,
     authError,
     isSigningIn,
     handleGoogleSignIn,

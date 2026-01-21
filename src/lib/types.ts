@@ -1,12 +1,4 @@
 
-export type User = {
-  name: string;
-  email: string;
-  avatarUrl: string;
-  academicBackground: string;
-  coordinatedCourses: string[];
-};
-
 export type DaySchedule = {
   day: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
   startTime: string;
@@ -49,4 +41,9 @@ export type Period = {
   laborDays: LaborDay[];
   totalDurationMinutes: number; // Expected duration based on 8 hours per working day
   includeSaturdays: boolean;
+};
+
+export type UserProfile = {
+  academicBackground: string;
+  coordinatedCourses: string;
 };
