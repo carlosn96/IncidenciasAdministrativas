@@ -2,7 +2,6 @@
 'use server';
 
 import { google } from 'googleapis';
-import { auth } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { differenceInMinutes, format, parseISO } from 'date-fns';
@@ -55,9 +54,8 @@ const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
 };
 
 
-export async function syncPeriodToSheet(periodId: string) {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
+export async function syncPeriodToSheet(periodId: string, userId: string) {
+    if (!userId) {
         return { success: false, error: "Usuario no autenticado." };
     }
      if (!db) {
@@ -65,14 +63,11 @@ export async function syncPeriodToSheet(periodId: string) {
     }
 
     try {
-        const oauth2Client = await getAuthenticatedClient(currentUser.uid);
+        const oauth2Client = await getAuthenticatedClient(userId);
         const sheets = google.sheets({ version: 'v4', auth: oauth2Client });
         
         // 1. Fetch Period Data from Firestore
-        const periodDocRef = doc(db, 'users', currentUser.uid, 'periods', periodId);
-        // Note: Firestore security rules must allow this direct read if you structure data this way.
-        // For this app, all data is in a single user doc, so we fetch that.
-        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocRef = doc(db, 'users', userId);
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {

@@ -1,15 +1,12 @@
-
 'use server';
 /**
  * @fileOverview Server actions for the application.
  * This file is reserved for server-side logic that can be called from client components.
  */
 
-import { auth as firebaseAuth } from "@/lib/firebase";
 import { google } from "googleapis";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { headers } from "next/headers";
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -19,9 +16,8 @@ const oauth2Client = new google.auth.OAuth2(
     : 'http://localhost:9002/api/auth/google/callback'
 );
 
-export async function getGoogleAuthUrl() {
-  const user = firebaseAuth.currentUser;
-  if (!user) {
+export async function getGoogleAuthUrl(userId: string) {
+  if (!userId) {
     throw new Error("User not authenticated");
   }
 
@@ -35,20 +31,19 @@ export async function getGoogleAuthUrl() {
     access_type: "offline",
     prompt: "consent",
     scope: scopes,
-    state: user.uid, // Pass the user's UID to identify them in the callback
+    state: userId, // Pass the user's UID to identify them in the callback
   });
 
   return { url };
 }
 
-export async function disconnectGoogleAccount() {
-  const user = firebaseAuth.currentUser;
-  if (!user) {
+export async function disconnectGoogleAccount(userId: string) {
+  if (!userId) {
     throw new Error("User not authenticated");
   }
 
   try {
-    const userDocRef = doc(db, 'users', user.uid);
+    const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {

@@ -75,9 +75,10 @@ export default function ProfilePage() {
     }
     
     const handleGoogleConnect = async () => {
+      if (!user) return;
       setIntegrationState('loading');
       try {
-        const { url } = await getGoogleAuthUrl();
+        const { url } = await getGoogleAuthUrl(user.uid);
         window.location.href = url;
       } catch (error) {
         toast({
@@ -90,9 +91,10 @@ export default function ProfilePage() {
     };
     
     const handleGoogleDisconnect = async () => {
+        if (!user) return;
         setIntegrationState('loading');
         try {
-            const result = await disconnectGoogleAccount();
+            const result = await disconnectGoogleAccount(user.uid);
             if (result.success) {
                 // The context will update the userProfile, which will trigger a re-render.
                 // We just need to update our local state and show a toast.

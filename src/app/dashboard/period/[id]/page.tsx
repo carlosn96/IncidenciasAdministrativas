@@ -84,7 +84,7 @@ const formatTime12h = (timeStr?: string): string => {
 
 export default function PeriodDetailPage() {
   const params = useParams<{ id: string }>();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, userProfile } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId, userProfile, user } = useSettings();
   const period = periods.find(p => p.id === params.id);
   const activeSchedule = schedules.find(s => s.id === activeScheduleId);
 
@@ -274,10 +274,10 @@ export default function PeriodDetailPage() {
   };
 
   const handleSyncToSheet = async () => {
-    if (!period) return;
+    if (!period || !user) return;
     setIsSyncing(true);
     try {
-      const result = await syncPeriodToSheet(period.id);
+      const result = await syncPeriodToSheet(period.id, user.uid);
       if (result.success && result.spreadsheetUrl) {
         toast({
           title: "Sincronización Exitosa",
@@ -694,3 +694,4 @@ export default function PeriodDetailPage() {
     
 
     
+
