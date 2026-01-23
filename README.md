@@ -163,3 +163,53 @@ Si el sistema de autenticación de Firebase genera problemas, existen varias alt
     *   **Implementar una nueva interfaz de usuario** para el registro e inicio de sesión.
 
 En resumen, aunque "omitir Firebase" no es una opción sin una reescritura significativa, la aplicación es flexible. Se puede desplegar en cualquier servidor moderno y se puede adaptar a diferentes métodos de autenticación si es necesario, aunque la ruta más sencilla suele ser optimizar la configuración existente.
+
+---
+
+### **Obtención de Credenciales de Google OAuth 2.0 (Para Google Sheets)**
+
+Como se explicó anteriormente, el `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` son credenciales **para toda la aplicación**, no para cada usuario. Son la forma en que tu aplicación se identifica ante Google.
+
+Sigue estos pasos para obtenerlas:
+
+1.  **Ir a la Consola de Google Cloud:**
+    *   Abre la [Consola de Google Cloud](https://console.cloud.google.com/).
+    *   Asegúrate de tener seleccionado el proyecto de Google Cloud asociado a tu proyecto de Firebase.
+
+2.  **Habilitar la API de Google Sheets:**
+    *   En el menú de navegación, ve a **APIs y Servicios > Biblioteca**.
+    *   Busca "Google Sheets API" y selecciónala.
+    *   Haz clic en el botón **Habilitar**. Si ya está habilitada, puedes omitir este paso.
+
+3.  **Configurar la Pantalla de Consentimiento (OAuth Consent Screen):**
+    *   En el menú de navegación, ve a **APIs y Servicios > Pantalla de consentimiento de OAuth**.
+    *   Selecciona el tipo de usuario **Externo** y haz clic en "Crear".
+    *   **Rellena la información de la aplicación:**
+        *   **Nombre de la aplicación:** El nombre que verán los usuarios cuando pidan permiso (ej. "Sistema de Gestión de Incidencias").
+        *   **Correo electrónico de asistencia al usuario:** Tu correo electrónico.
+    *   En "Dominios autorizados", añade el dominio de tu aplicación si ya la tienes desplegada (ej. `mi-app.com`).
+    *   Añade tu correo en la sección de "Información de contacto del desarrollador". Haz clic en "Guardar y continuar" en los siguientes pasos hasta volver al panel.
+
+4.  **Crear las Credenciales (ID de Cliente de OAuth):**
+    *   En el menú de navegación, ve a **APIs y Servicios > Credenciales**.
+    *   Haz clic en **+ CREAR CREDENCIALES** y selecciona **ID de cliente de OAuth**.
+    *   En "Tipo de aplicación", elige **Aplicación web**.
+    *   Dale un nombre (ej. "Cliente Web de Incidencias").
+    *   **Configuración Crítica - URIs de redireccionamiento autorizados:** Aquí debes añadir las URLs a las que Google redirigirá al usuario después de que conceda el permiso. Añade las siguientes dos:
+        *   `http://localhost:9002/api/auth/google/callback` (para tu entorno de desarrollo local).
+        *   `https://[TU_DOMINIO_DE_PRODUCCION]/api/auth/google/callback` (reemplaza `[TU_DOMINIO_DE_PRODUCCION]` con la URL real donde desplegarás la aplicación).
+    *   Haz clic en **Crear**.
+
+5.  **Obtener y Usar las Credenciales:**
+    *   Aparecerá una ventana emergente con tu **ID de cliente** y tu **Secreto de cliente**.
+    *   Copia estos dos valores.
+    *   Pégalos en tu archivo `.env` en la raíz del proyecto:
+        ```env
+        GOOGLE_CLIENT_ID="tu-id-de-cliente-aqui.apps.googleusercontent.com"
+        GOOGLE_CLIENT_SECRET="GOCSPX-tu-secreto-de-cliente-aqui"
+        ```
+
+6.  **Reiniciar el Servidor:**
+    *   Detén tu servidor de desarrollo (si está en ejecución) y vuelve a iniciarlo con `npm run dev` para que lea las nuevas variables de entorno.
+
+Con estos pasos, tu aplicación estará correctamente identificada ante Google y lista para que los usuarios puedan autorizar la sincronización con sus cuentas de Google Sheets de manera individual y segura.
