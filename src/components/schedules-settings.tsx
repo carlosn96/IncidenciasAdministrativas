@@ -16,6 +16,7 @@ import type { DaySchedule, Location, Schedule } from "@/lib/types";
 import { Pencil, PlusCircle, MoreVertical, Trash2, Save, Loader2, Check, Clock, MapPin } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useSettings } from "@/context/settings-context";
 
 // --- ScheduleEditDialog (New Component) ---
 
@@ -247,13 +248,10 @@ function ScheduleEditDialog({ isOpen, onOpenChange, schedule, onSave, userLocati
 
 interface SchedulesSettingsProps {
     userLocations: Location[];
-    schedules: Schedule[];
-    setSchedules: React.Dispatch<React.SetStateAction<Schedule[]>>;
-    activeScheduleId: string | null;
-    setActiveScheduleId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-export function SchedulesSettings({ userLocations, schedules, setSchedules, activeScheduleId, setActiveScheduleId }: SchedulesSettingsProps) {
+export function SchedulesSettings({ userLocations }: SchedulesSettingsProps) {
+    const { schedules, updateSchedules, activeScheduleId, updateActiveScheduleId } = useSettings();
     const { toast } = useToast();
     
     // Dialog states
@@ -305,10 +303,10 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
                 id: uuidv4(),
                 name: scheduleToSave.name.trim()
             };
-            setSchedules(prev => [...prev, newSchedule]);
-            setActiveScheduleId(newSchedule.id);
+            updateSchedules([...schedules, newSchedule]);
+            updateActiveScheduleId(newSchedule.id);
         } else { // If we're editing an existing one
-            setSchedules(prev => prev.map(s => s.id === scheduleToSave.id ? scheduleToSave : s));
+            updateSchedules(schedules.map(s => s.id === scheduleToSave.id ? scheduleToSave : s));
         }
         
         return true;
@@ -316,10 +314,13 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
     
     const handleDeleteTemplate = () => {
         if (!activeScheduleId) return;
-        setSchedules(prev => prev.filter(s => s.id !== activeScheduleId));
-        // Set new active schedule to the first one in the list, or null if empty
+        
         const newSchedules = schedules.filter(s => s.id !== activeScheduleId);
-        setActiveScheduleId(newSchedules.length > 0 ? newSchedules[0].id : null);
+        updateSchedules(newSchedules);
+        
+        // Set new active schedule to the first one in the list, or null if empty
+        updateActiveScheduleId(newSchedules.length > 0 ? newSchedules[0].id : null);
+        
         toast({ title: "Plantilla Eliminada" });
         setIsDeleteTemplateOpen(false);
     };
@@ -338,7 +339,7 @@ export function SchedulesSettings({ userLocations, schedules, setSchedules, acti
       <Card>
         <CardHeader className="p-4 border-b">
             <div className="flex flex-wrap justify-end items-center gap-2">
-                <Select value={activeScheduleId || ""} onValueChange={setActiveScheduleId} disabled={schedules.length === 0}>
+                <Select value={activeScheduleId || ""} onValueChange={updateActiveScheduleId} disabled={schedules.length === 0}>
                     <SelectTrigger className="w-full sm:w-[250px]">
                         <SelectValue placeholder="Selecciona plantilla activa..." />
                     </SelectTrigger>

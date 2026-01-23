@@ -5,7 +5,7 @@
  */
 
 import { google } from "googleapis";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { oauth2Client, REDIRECT_URI } from "./google-oauth-client";
 
@@ -36,6 +36,10 @@ export async function disconnectGoogleAccount(userId: string) {
   }
 
   try {
+    if (!db) {
+        throw new Error("Firestore DB is not initialized.");
+    }
+
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
 
@@ -54,12 +58,17 @@ export async function disconnectGoogleAccount(userId: string) {
           REDIRECT_URI
         );
         userClient.setCredentials({ refresh_token: refreshToken });
-        await userClient.revokeCredentials();
+        try {
+            await userClient.revokeCredentials();
+        } catch (revokeError) {
+            console.warn("Could not revoke Google token, it might have been already invalid.", revokeError);
+        }
       }
 
-      // Remove the token from Firestore
-      delete userProfile.googleRefreshToken;
-      await setDoc(userDocRef, { userProfile }, { merge: true });
+      // Atomically remove the field from the document
+      await updateDoc(userDocRef, {
+        'userProfile.googleRefreshToken': deleteField()
+      });
     }
     return { success: true };
   } catch (error) {

@@ -47,7 +47,7 @@ export function PeriodsList({ periods }: PeriodsListProps) {
     const [periodToDelete, setPeriodToDelete] = useState<Period | null>(null);
     
     const router = useRouter();
-    const { setPeriods } = useSettings();
+    const { updatePeriods } = useSettings();
     const { toast } = useToast();
 
     const handleEditClick = (period: Period) => {
@@ -62,7 +62,7 @@ export function PeriodsList({ periods }: PeriodsListProps) {
 
     const handleDeletePeriod = () => {
         if (!periodToDelete) return;
-        setPeriods(prev => prev.filter(p => p.id !== periodToDelete.id));
+        updatePeriods(prev => prev.filter(p => p.id !== periodToDelete.id));
         toast({
             title: "Periodo Eliminado",
             description: "El periodo ha sido eliminado exitosamente.",

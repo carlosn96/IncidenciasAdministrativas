@@ -46,14 +46,14 @@ import { Label } from "@/components/ui/label";
 import type { Location } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2 } from "lucide-react";
+import { useSettings } from "@/context/settings-context";
 
 interface LocationsSettingsProps {
-    userLocations: Location[];
-    setUserLocations: React.Dispatch<React.SetStateAction<Location[]>>;
     allLocations: Location[];
 }
 
-export function LocationsSettings({ userLocations, setUserLocations, allLocations }: LocationsSettingsProps) {
+export function LocationsSettings({ allLocations }: LocationsSettingsProps) {
+  const { userLocations, updateUserLocations } = useSettings();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const { toast } = useToast();
@@ -67,7 +67,8 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
     const locationToAdd = allLocations.find(loc => loc.id === selectedLocationId);
 
     if (locationToAdd) {
-        setUserLocations(prev => [...prev, locationToAdd].sort((a, b) => a.name.localeCompare(b.name)));
+        const newLocations = [...userLocations, locationToAdd].sort((a, b) => a.name.localeCompare(b.name));
+        updateUserLocations(newLocations);
         toast({
             title: "Ubicación Añadida",
             description: `Se ha añadido '${locationToAdd.name}' a tu lista personal.`,
@@ -85,7 +86,9 @@ export function LocationsSettings({ userLocations, setUserLocations, allLocation
 
   const handleDeleteLocation = (locationId: string) => {
     const locationToRemove = userLocations.find(loc => loc.id === locationId);
-    setUserLocations(prev => prev.filter(loc => loc.id !== locationId));
+    const newLocations = userLocations.filter(loc => loc.id !== locationId);
+    updateUserLocations(newLocations);
+
     if (locationToRemove) {
       toast({
           title: "Ubicación Eliminada",

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { User as FirebaseUser, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, provider, isFirebaseConfigured } from '@/lib/firebase';
 import type { Location, Period, Schedule, UserProfile } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -57,19 +57,21 @@ interface SettingsContextType {
   isFirebaseConfigured: boolean;
   allLocations: Location[];
   userLocations: Location[];
-  setUserLocations: React.Dispatch<React.SetStateAction<Location[]>>;
   schedules: Schedule[];
-  setSchedules: React.Dispatch<React.SetStateAction<Schedule[]>>;
   activeScheduleId: string | null;
-  setActiveScheduleId: React.Dispatch<React.SetStateAction<string | null>>;
   periods: Period[];
-  setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
   userProfile: UserProfile;
-  setUserProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
   // Auth related
   authError: AuthError | null;
   isSigningIn: boolean;
   handleGoogleSignIn: () => Promise<void>;
+  // New update functions
+  updateUserLocations: (data: Location[]) => void;
+  updateSchedules: (data: Schedule[]) => void;
+  updateActiveScheduleId: (data: string | null) => void;
+  updatePeriods: (data: Period[] | ((prev: Period[]) => Period[])) => void;
+  updateUserProfile: (data: UserProfile | ((prev: UserProfile) => UserProfile)) => void;
+  refetchData: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -174,22 +176,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe?.();
   }, [fetchUserData]);
 
-  useEffect(() => {
-    if (!isLoading && user && db) {
-      const userDocRef = doc(db, 'users', user.uid);
-      const dataToStore = {
-        userLocations,
-        schedules,
-        activeScheduleId,
-        periods,
-        userProfile,
-      };
-      setDoc(userDocRef, dataToStore, { merge: true }).catch((error) => {
-        console.error("Failed to save data to Firestore:", error);
-      });
-    }
-  }, [isLoading, user, userLocations, schedules, activeScheduleId, periods, userProfile]);
-
   const handleGoogleSignIn = async () => {
     if (!auth || !provider) return;
     
@@ -242,24 +228,53 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // --- Atomic Update Functions ---
+
+  const performUpdate = useCallback(<T>(fieldName: string, newData: T | ((prev: T) => T), stateSetter: React.Dispatch<React.SetStateAction<T>>) => {
+    if (!user || !db) return;
+    
+    stateSetter(prevState => {
+      const updatedData = typeof newData === 'function' ? (newData as (prev: T) => T)(prevState) : newData;
+      const userDocRef = doc(db, 'users', user.uid);
+      updateDoc(userDocRef, { [fieldName]: updatedData });
+      return updatedData;
+    });
+  }, [user]);
+
+  const updatePeriods = useCallback((data: Period[] | ((prev: Period[]) => Period[])) => {
+    if (!user || !db) return;
+
+    setPeriods(prevPeriods => {
+        const newPeriods = typeof data === 'function' ? data(prevPeriods) : data;
+        const sortedData = [...newPeriods].sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
+        const userDocRef = doc(db, 'users', user.uid);
+        updateDoc(userDocRef, { periods: sortedData });
+        return sortedData;
+    });
+  }, [user]);
+
+
   const value = {
     user,
     isLoading,
     isFirebaseConfigured,
     allLocations: ALL_UNE_LOCATIONS,
     userLocations,
-    setUserLocations,
     schedules,
-    setSchedules,
     activeScheduleId,
-    setActiveScheduleId,
     periods,
-    setPeriods,
     userProfile,
-    setUserProfile,
     authError,
     isSigningIn,
     handleGoogleSignIn,
+    updateUserLocations: useCallback((data: Location[]) => performUpdate('userLocations', data, setUserLocations), [performUpdate]),
+    updateSchedules: useCallback((data: Schedule[]) => performUpdate('schedules', data, setSchedules), [performUpdate]),
+    updateActiveScheduleId: useCallback((data: string | null) => performUpdate('activeScheduleId', data, setActiveScheduleId), [performUpdate]),
+    updatePeriods,
+    updateUserProfile: useCallback((data: UserProfile | ((prev: UserProfile) => UserProfile)) => performUpdate('userProfile', data, setUserProfile), [performUpdate]),
+    refetchData: useCallback(() => {
+        if (user) fetchUserData(user.uid);
+    }, [user, fetchUserData]),
   };
 
   return (

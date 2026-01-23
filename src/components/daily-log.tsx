@@ -73,7 +73,7 @@ const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
   };
 
 export function DailyLog() {
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId } = useSettings();
+  const { periods, updatePeriods, userLocations, schedules, activeScheduleId } = useSettings();
   const [currentTime, setCurrentTime] = useState<string | null>(null);
   const [currentDay, setCurrentDay] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
@@ -186,7 +186,7 @@ export function DailyLog() {
       return p;
     });
 
-    setPeriods(updatedPeriods);
+    updatePeriods(updatedPeriods);
 
     toast({
       title: `${type} Registrada`,
@@ -267,7 +267,7 @@ export function DailyLog() {
       return p;
     });
   
-    setPeriods(updatedPeriods);
+    updatePeriods(updatedPeriods);
     setSaveState('saved');
     setTimeout(() => {
         setIsEditDialogOpen(false);
@@ -299,7 +299,7 @@ export function DailyLog() {
       return p;
     });
   
-    setPeriods(updatedPeriods);
+    updatePeriods(updatedPeriods);
     toast({
       title: "Registro Eliminado",
       description: `Se ha eliminado el registro de ${type.toLowerCase()}.`,

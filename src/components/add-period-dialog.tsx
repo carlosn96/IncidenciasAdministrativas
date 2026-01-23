@@ -22,7 +22,7 @@ interface AddPeriodDialogProps {
 }
 
 export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
-    const { periods, setPeriods } = useSettings();
+    const { periods, updatePeriods } = useSettings();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [periodName, setPeriodName] = useState("");
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
@@ -107,7 +107,7 @@ export function AddPeriodDialog({ open, onOpenChange }: AddPeriodDialogProps) {
             includeSaturdays: includeSaturdays,
         };
 
-        setPeriods(prev => [newPeriod, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
+        updatePeriods(prev => [newPeriod, ...prev]);
         toast({
             title: "Periodo Agregado",
             description: "El nuevo periodo ha sido agregado exitosamente."

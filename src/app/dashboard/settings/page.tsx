@@ -16,13 +16,7 @@ import { useSettings } from "@/context/settings-context";
 
 export default function SettingsPage() {
   const { 
-    userLocations, 
-    setUserLocations, 
     allLocations, 
-    schedules,
-    setSchedules,
-    activeScheduleId,
-    setActiveScheduleId,
     periods
   } = useSettings();
 
@@ -67,19 +61,11 @@ export default function SettingsPage() {
 
         <TabsContent value="locations">
             <LocationsSettings
-              userLocations={userLocations}
-              setUserLocations={setUserLocations}
               allLocations={allLocations}
             />
         </TabsContent>
         <TabsContent value="schedules">
-            <SchedulesSettings
-              userLocations={userLocations}
-              schedules={schedules}
-              setSchedules={setSchedules}
-              activeScheduleId={activeScheduleId}
-              setActiveScheduleId={setActiveScheduleId}
-            />
+            <SchedulesSettings />
         </TabsContent>
         <TabsContent value="periods">
             <PeriodsList

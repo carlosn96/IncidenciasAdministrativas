@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { oauth2Client } from '@/lib/google-oauth-client';
 
@@ -30,13 +30,14 @@ export async function GET(request: NextRequest) {
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
-      const userProfile = userDoc.data().userProfile || {};
-      userProfile.googleRefreshToken = refreshToken;
-      await setDoc(userDocRef, { userProfile }, { merge: true });
+      await updateDoc(userDocRef, {
+        'userProfile.googleRefreshToken': refreshToken,
+      });
     } else {
         // This case is unlikely if the user initiated the flow from the app, but handle it anyway.
-        const userProfile = { googleRefreshToken: refreshToken };
-        await setDoc(userDocRef, { userProfile });
+        await setDoc(userDocRef, { 
+            userProfile: { googleRefreshToken: refreshToken }
+        });
     }
 
     return NextResponse.redirect(new URL('/dashboard/profile?success=google_connected', url.origin));

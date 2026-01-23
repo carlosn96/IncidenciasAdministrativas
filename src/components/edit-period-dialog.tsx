@@ -22,7 +22,7 @@ interface EditPeriodDialogProps {
 }
 
 export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialogProps) {
-    const { periods, setPeriods } = useSettings();
+    const { periods, updatePeriods } = useSettings();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [periodName, setPeriodName] = useState("");
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
@@ -114,8 +114,7 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
             includeSaturdays: includeSaturdays,
         };
 
-        setPeriods(prev => prev.map(p => p.id === updatedPeriod.id ? updatedPeriod : p)
-                              .sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
+        updatePeriods(prev => prev.map(p => p.id === updatedPeriod.id ? updatedPeriod : p));
         
         toast({
             title: "Periodo Actualizado",

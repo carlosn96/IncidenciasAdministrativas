@@ -24,6 +24,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { getGoogleAuthUrl, disconnectGoogleAccount } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import { AppLogo, GoogleIcon } from "@/components/icons";
+import { useSearchParams } from "next/navigation";
 
 const profileFormSchema = z.object({
   academicBackground: z.string().max(500, "Máximo 500 caracteres.").optional(),
@@ -33,10 +34,11 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfilePage() {
-    const { user, userProfile, setUserProfile } = useSettings();
+    const { user, userProfile, updateUserProfile, refetchData } = useSettings();
     const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [integrationState, setIntegrationState] = useState<'idle' | 'loading'>('idle');
     const { toast } = useToast();
+    const searchParams = useSearchParams();
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -55,11 +57,18 @@ export default function ProfilePage() {
             });
         }
     }, [userProfile, form]);
+    
+    useEffect(() => {
+        const success = searchParams.get('success');
+        if (success === 'google_connected') {
+            refetchData();
+        }
+    }, [searchParams, refetchData]);
 
     const onSubmit = (data: ProfileFormValues) => {
         setSaveState('saving');
         
-        setUserProfile(prev => ({
+        updateUserProfile(prev => ({
             ...prev,
             academicBackground: data.academicBackground || "",
             coordinatedCourses: data.coordinatedCourses || "",
@@ -96,9 +105,8 @@ export default function ProfilePage() {
         try {
             const result = await disconnectGoogleAccount(user.uid);
             if (result.success) {
-                // The context will update the userProfile, which will trigger a re-render.
-                // We just need to update our local state and show a toast.
-                setUserProfile(prev => ({ ...prev, googleRefreshToken: undefined }));
+                // The server action removed the token from DB. Now update local state.
+                updateUserProfile(prev => ({ ...prev, googleRefreshToken: undefined }));
                 toast({
                     title: "Cuenta desconectada",
                     description: "Tu cuenta de Google ha sido desvinculada.",
