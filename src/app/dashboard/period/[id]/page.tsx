@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Clock, Pencil, Download, Loader2, Check, Sheet as SheetIcon } from "lucide-react";
+import { ArrowLeft, Clock, Pencil, Download, Loader2, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { differenceInMinutes, format, parse, parseISO, getDay, isAfter, startOfDay } from "date-fns";
@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { syncPeriodToSheet } from "@/lib/google-sheets-actions";
+import { GoogleIcon } from "@/components/icons";
 
 
 // Helper function to calculate worked hours
@@ -365,12 +366,12 @@ export default function PeriodDetailPage() {
                                 {isSyncing ? (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 ) : (
-                                    <SheetIcon className="mr-2 h-4 w-4" />
+                                    <GoogleIcon className="mr-2 h-4 w-4" />
                                 )}
                                 <span className="hidden sm:inline">
                                     {isSyncing ? "Sincronizando..." : "Sincronizar"}
                                 </span>
-                                <span className="sm:hidden">Sheets</span>
+                                <span className="sm:hidden">Sincronizar</span>
                             </Button>
                         </span>
                     </TooltipTrigger>
