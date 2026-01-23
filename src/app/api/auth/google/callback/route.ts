@@ -1,16 +1,8 @@
 
-import { google } from 'googleapis';
 import { NextRequest, NextResponse } from 'next/server';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
-    : 'http://localhost:9002/api/auth/google/callback'
-);
+import { oauth2Client } from '@/lib/google-oauth-client';
 
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;

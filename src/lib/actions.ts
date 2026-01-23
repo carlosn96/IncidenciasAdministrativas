@@ -7,14 +7,7 @@
 import { google } from "googleapis";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
-    : 'http://localhost:9002/api/auth/google/callback'
-);
+import { oauth2Client, REDIRECT_URI } from "./google-oauth-client";
 
 export async function getGoogleAuthUrl(userId: string) {
   if (!userId) {
@@ -53,8 +46,15 @@ export async function disconnectGoogleAccount(userId: string) {
       // Revoke the token with Google
       const refreshToken = userProfile.googleRefreshToken;
       if (refreshToken) {
-        oauth2Client.setCredentials({ refresh_token: refreshToken });
-        await oauth2Client.revokeCredentials();
+        // Create a new client instance for this specific revocation action
+        // to avoid race conditions with the shared module-level client.
+        const userClient = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          REDIRECT_URI
+        );
+        userClient.setCredentials({ refresh_token: refreshToken });
+        await userClient.revokeCredentials();
       }
 
       // Remove the token from Firestore

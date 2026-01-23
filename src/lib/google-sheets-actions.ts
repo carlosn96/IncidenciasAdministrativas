@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { differenceInMinutes, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Incident, Period } from './types';
+import { REDIRECT_URI } from './google-oauth-client';
 
 
 // Helper function to create an authenticated OAuth2 client
@@ -27,9 +28,7 @@ async function getAuthenticatedClient(userId: string) {
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        process.env.NEXT_PUBLIC_APP_URL
-            ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
-            : 'http://localhost:9002/api/auth/google/callback'
+        REDIRECT_URI
     );
 
     oauth2Client.setCredentials({ refresh_token: refreshToken });
