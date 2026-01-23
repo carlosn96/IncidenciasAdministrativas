@@ -41,9 +41,11 @@ export type Period = {
   laborDays: LaborDay[];
   totalDurationMinutes: number; // Expected duration based on 8 hours per working day
   includeSaturdays: boolean;
+  googleSheetId?: string;
 };
 
 export type UserProfile = {
   academicBackground: string;
   coordinatedCourses: string;
+  googleRefreshToken?: string;
 };

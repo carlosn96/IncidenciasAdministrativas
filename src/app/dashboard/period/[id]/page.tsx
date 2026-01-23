@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Clock, Pencil, Download, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Clock, Pencil, Download, Loader2, Check, Sheet as SheetIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { differenceInMinutes, format, parse, parseISO, getDay, isAfter, startOfDay } from "date-fns";
@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { syncPeriodToSheet } from "@/lib/google-sheets-actions";
 
 
 // Helper function to calculate worked hours
@@ -50,7 +51,7 @@ const calculateTotalMinutes = (days: LaborDay[]): number => {
     if (!day.entry?.time || !day.exit?.time) return total;
 
     const [startHour, startMinute] = day.entry.time.split(":").map(Number);
-    const [endHour, endMinute] = day.exit.time.split(":").map(Number);
+    const [endHour, endMinute] = exit.time.split(":").map(Number);
 
     const startDate = new Date(0);
     startDate.setHours(startHour, startMinute, 0, 0);
@@ -82,13 +83,14 @@ const formatTime12h = (timeStr?: string): string => {
 
 export default function PeriodDetailPage() {
   const params = useParams<{ id: string }>();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId } = useSettings();
+  const { periods, setPeriods, userLocations, schedules, activeScheduleId, userProfile } = useSettings();
   const period = periods.find(p => p.id === params.id);
   const activeSchedule = schedules.find(s => s.id === activeScheduleId);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
   const todayString = format(new Date(), 'yyyy-MM-dd');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // State for editing a single day
   const [isEditDayDialogOpen, setIsEditDayDialogOpen] = useState(false);
@@ -103,6 +105,7 @@ export default function PeriodDetailPage() {
   const [manualEntryLocation, setManualEntryLocation] = useState("");
   const [manualExitLocation, setManualExitLocation] = useState("");
 
+  const isGoogleConnected = !!userProfile?.googleRefreshToken;
 
   useEffect(() => {
     if (dayToEdit) {
@@ -269,6 +272,38 @@ export default function PeriodDetailPage() {
     });
   };
 
+  const handleSyncToSheet = async () => {
+    if (!period) return;
+    setIsSyncing(true);
+    try {
+      const result = await syncPeriodToSheet(period.id);
+      if (result.success && result.spreadsheetUrl) {
+        toast({
+          title: "Sincronización Exitosa",
+          description: "El periodo se ha sincronizado con Google Sheets.",
+          action: (
+            <Button asChild variant="outline">
+              <a href={result.spreadsheetUrl} target="_blank" rel="noopener noreferrer">
+                Abrir Hoja
+              </a>
+            </Button>
+          ),
+        });
+      } else {
+        throw new Error(result.error || "Ocurrió un error desconocido.");
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error de Sincronización",
+        description: error.message,
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+
   if (!period) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
@@ -322,6 +357,30 @@ export default function PeriodDetailPage() {
               <span className="hidden sm:inline">Editar Periodo</span>
               <span className="sm:hidden">Editar</span>
             </Button>
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span tabIndex={isGoogleConnected ? undefined : 0}>
+                            <Button variant="outline" onClick={handleSyncToSheet} disabled={!isGoogleConnected || isSyncing}>
+                                {isSyncing ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <SheetIcon className="mr-2 h-4 w-4" />
+                                )}
+                                <span className="hidden sm:inline">
+                                    {isSyncing ? "Sincronizando..." : "Sincronizar"}
+                                </span>
+                                <span className="sm:hidden">Sheets</span>
+                            </Button>
+                        </span>
+                    </TooltipTrigger>
+                    {!isGoogleConnected && (
+                         <TooltipContent>
+                            <p>Conecta tu cuenta de Google en tu perfil para habilitar esto.</p>
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
             <Button variant="outline" onClick={handleDownloadCSV}>
               <Download className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Descargar</span>
