@@ -27,11 +27,12 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { Period } from "@/lib/types";
-import { PlusCircle, ArrowRight, Pencil, MoreHorizontal, Trash2, BarChart } from "lucide-react";
+import { PlusCircle, ArrowRight, Pencil, MoreHorizontal, Trash2, BarChart, CloudUpload, Calendar, Loader2 } from "lucide-react";
 import { AddPeriodDialog } from "@/components/add-period-dialog";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
 import { useSettings } from "@/context/settings-context";
 import { useToast } from "@/hooks/use-toast";
+import { useSyncPeriod } from "@/hooks/use-sync-period";
 
 interface PeriodsListProps {
     periods: Period[];
@@ -45,9 +46,11 @@ export function PeriodsList({ periods }: PeriodsListProps) {
     // State for delete confirmation
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [periodToDelete, setPeriodToDelete] = useState<Period | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     
     const router = useRouter();
-    const { updatePeriods } = useSettings();
+    const { updatePeriods, user, userProfile } = useSettings();
+    const { sync: syncPeriod, isSyncing } = useSyncPeriod();
     const { toast } = useToast();
 
     const handleEditClick = (period: Period) => {
@@ -60,8 +63,11 @@ export function PeriodsList({ periods }: PeriodsListProps) {
         setIsDeleteDialogOpen(true);
     };
 
-    const handleDeletePeriod = () => {
+    const handleDeletePeriod = async () => {
         if (!periodToDelete) return;
+        setIsDeleting(true);
+        // Simulate async operation or just delay for UX
+        await new Promise(resolve => setTimeout(resolve, 500));
         updatePeriods(prev => prev.filter(p => p.id !== periodToDelete.id));
         toast({
             title: "Periodo Eliminado",
@@ -69,16 +75,21 @@ export function PeriodsList({ periods }: PeriodsListProps) {
         });
         setIsDeleteDialogOpen(false);
         setPeriodToDelete(null);
+        setIsDeleting(false);
     };
 
     return (
         <>
-            <Card>
-                <CardHeader className="p-4 border-b">
-                    <div className="flex justify-end items-center gap-4">
-                        <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Card className="shadow-sm">
+                <CardHeader className="pb-3">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h2 className="text-lg font-semibold">Periodos</h2>
+                            <p className="text-sm text-muted-foreground">Gestiona tus periodos laborales</p>
+                        </div>
+                        <Button onClick={() => setIsAddDialogOpen(true)} size="sm" className="shadow-sm">
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Agregar Periodo
+                            Agregar
                         </Button>
                     </div>
                 </CardHeader>
@@ -86,53 +97,69 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                     {/* Mobile View */}
                     <div className="md:hidden">
                         {periods.length > 0 ? (
-                            <div className="divide-y">
+                            <div className="space-y-3 p-4">
                                 {periods.map((period) => (
-                                    <div key={period.id} className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1 overflow-hidden">
-                                                <p className="font-medium truncate">{period.name}</p>
-                                                <p className="text-sm text-muted-foreground whitespace-nowrap">
-                                                    {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
-                                                </p>
+                                    <Card key={period.id} className="shadow-sm hover:shadow-md transition-shadow">
+                                        <CardContent className="p-4">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-start space-x-3 flex-1 min-w-0">
+                                                    <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                                                        <Calendar className="w-5 h-5 text-primary" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-semibold text-base truncate">{period.name}</h3>
+                                                        <p className="text-sm text-muted-foreground mt-1">
+                                                            {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 ml-2" aria-label="Abrir menú de acciones">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-56">
+                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/period/${period.id}`)} className="cursor-pointer">
+                                                            <ArrowRight className="mr-2 h-4 w-4" />
+                                                            <span>Ver Incidencias</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/projections?period=${period.id}`)} className="cursor-pointer">
+                                                            <BarChart className="mr-2 h-4 w-4" />
+                                                            <span>Realizar Proyección</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => syncPeriod(period.id, user?.uid || '')}
+                                                            disabled={!userProfile?.googleRefreshToken || isSyncing}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CloudUpload className="mr-2 h-4 w-4" />}
+                                                            <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleEditClick(period)} className="cursor-pointer">
+                                                            <Pencil className="mr-2 h-4 w-4" />
+                                                            <span>Editar</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleDeleteTrigger(period)}
+                                                            className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            <span>Eliminar</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2">
-                                                        <span className="sr-only">Abrir menú</span>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/period/${period.id}`)} className="cursor-pointer">
-                                                        <ArrowRight className="mr-2 h-4 w-4" />
-                                                        <span>Ver Incidencias</span>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/projections?period=${period.id}`)} className="cursor-pointer">
-                                                        <BarChart className="mr-2 h-4 w-4" />
-                                                        <span>Realizar Proyección</span>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleEditClick(period)} className="cursor-pointer">
-                                                        <Pencil className="mr-2 h-4 w-4" />
-                                                        <span>Editar</span>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleDeleteTrigger(period)}
-                                                        className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground"
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        <span>Eliminar</span>
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
+                                        </CardContent>
+                                    </Card>
                                 ))}
                             </div>
                         ) : (
                             <div className="py-16 text-center text-muted-foreground">
-                                <p>No hay periodos agregados.</p>
+                                <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                                <p className="text-lg font-medium">No hay periodos agregados</p>
+                                <p className="text-sm">Comienza agregando tu primer periodo.</p>
                             </div>
                         )}
                     </div>
@@ -156,8 +183,11 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                     </TableRow>
                                 ) : (
                                     periods.map((period) => (
-                                        <TableRow key={period.id}>
-                                            <TableCell className="font-medium">{period.name}</TableCell>
+                                        <TableRow key={period.id} className="hover:bg-muted/50">
+                                            <TableCell className="font-medium">
+                                                <Calendar className="inline mr-2 h-4 w-4 text-muted-foreground" />
+                                                {period.name}
+                                            </TableCell>
                                             <TableCell className="whitespace-nowrap">
                                                 {`${format(period.startDate, "d 'de' LLL", { locale: es })} - ${format(period.endDate, "d 'de' LLL, yyyy", { locale: es })}`}
                                             </TableCell>
@@ -177,6 +207,14 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                                                         <DropdownMenuItem onClick={() => router.push(`/dashboard/projections?period=${period.id}`)} className="cursor-pointer">
                                                             <BarChart className="mr-2 h-4 w-4" />
                                                             <span>Realizar Proyección</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => syncPeriod(period.id, user?.uid || '')}
+                                                            disabled={!userProfile?.googleRefreshToken || isSyncing}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CloudUpload className="mr-2 h-4 w-4" />}
+                                                            <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleEditClick(period)} className="cursor-pointer">
                                                             <Pencil className="mr-2 h-4 w-4" />
@@ -214,12 +252,20 @@ export function PeriodsList({ periods }: PeriodsListProps) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setPeriodToDelete(null)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isDeleting} onClick={() => setPeriodToDelete(null)}>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDeletePeriod}
+                            disabled={isDeleting}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            Eliminar
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Eliminando...
+                                </>
+                            ) : (
+                                'Eliminar'
+                            )}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
