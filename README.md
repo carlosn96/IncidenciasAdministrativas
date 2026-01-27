@@ -14,6 +14,134 @@ La aplicación está construida con las últimas tecnologías web y se integra p
 
 ---
 
+## Tecnologías Utilizadas
+
+-   **Framework Frontend**: Next.js 15 (con App Router)
+-   **Lenguaje**: TypeScript
+-   **UI y Componentes**: ShadCN UI (basado en Radix UI), Tailwind CSS
+-   **Backend y Base de Datos**: Firebase (Authentication, Cloud Firestore)
+-   **Integraciones**: Google OAuth 2.0, Google Sheets API
+-   **Gestión de Estado**: React Context API
+-   **Formularios**: React Hook Form con Zod para validación
+-   **Fechas**: date-fns
+-   **Gráficos**: Recharts
+-   **Iconos**: Lucide React
+-   **PWA**: Next-PWA para funcionalidad offline
+-   **Otras**: UUID para identificadores únicos, clsx y tailwind-merge para clases CSS
+
+---
+
+## Estructura del Proyecto
+
+```
+src/
+├── app/                          # Páginas y layouts (Next.js App Router)
+│   ├── api/auth/google/callback/ # Callback de autenticación Google
+│   ├── dashboard/                # Páginas del dashboard
+│   │   ├── layout.tsx            # Layout del dashboard con navegación
+│   │   ├── page.tsx              # Dashboard principal
+│   │   ├── period/[id]/page.tsx  # Detalle de período
+│   │   ├── profile/page.tsx      # Perfil de usuario
+│   │   ├── projections/page.tsx  # Proyecciones
+│   │   ├── schedules/page.tsx    # Configuración de horarios
+│   │   └── settings/page.tsx     # Configuración general
+│   ├── globals.css               # Estilos globales
+│   ├── layout.tsx                # Layout raíz
+│   └── page.tsx                  # Página de inicio/login
+├── components/                   # Componentes reutilizables
+│   ├── ui/                       # Componentes base de UI (ShadCN)
+│   ├── add-period-dialog.tsx     # Diálogo para agregar período
+│   ├── auth-guard.tsx            # Guardia de autenticación
+│   ├── daily-log.tsx             # Registro diario de incidencias
+│   ├── edit-period-dialog.tsx    # Diálogo para editar período
+│   ├── header.tsx                # Cabecera de la aplicación
+│   ├── icons.tsx                 # Iconos personalizados
+│   ├── incident-types-settings.tsx # Configuración de tipos de incidencia
+│   ├── loading-screen.tsx        # Pantalla de carga
+│   ├── locations-settings.tsx    # Configuración de ubicaciones
+│   ├── nav.tsx                   # Navegación
+│   ├── periods-list.tsx          # Lista de períodos
+│   ├── schedules-settings.tsx    # Configuración de horarios
+│   └── ui/                       # Componentes UI (completo set de ShadCN)
+├── context/
+│   └── settings-context.tsx      # Contexto global de configuración y estado
+├── hooks/                        # Hooks personalizados
+│   ├── use-mobile.tsx            # Hook para detectar dispositivo móvil
+│   ├── use-sync-period.tsx       # Hook para sincronizar períodos
+│   └── use-toast.ts              # Hook para notificaciones toast
+└── lib/                          # Utilidades y configuraciones
+    ├── actions.ts                # Acciones del servidor (Next.js)
+    ├── firebase.ts               # Configuración de Firebase
+    ├── google-oauth-client.ts    # Cliente OAuth de Google
+    ├── google-sheets-actions.ts  # Acciones para Google Sheets
+    ├── types.ts                  # Definiciones de tipos TypeScript
+    └── utils.ts                  # Utilidades generales
+```
+
+---
+
+## Instalación y Configuración
+
+### Prerrequisitos
+
+- Node.js 18+
+- npm o yarn
+- Cuenta de Google Cloud Platform
+- Proyecto de Firebase
+
+### Instalación
+
+1. Clona el repositorio:
+   ```bash
+   git clone <url-del-repositorio>
+   cd IncidenciasAdministrativas
+   ```
+
+2. Instala las dependencias:
+   ```bash
+   npm install
+   ```
+
+3. Crea un archivo `.env.local` en la raíz del proyecto con las siguientes variables:
+   ```env
+   # Firebase Configuration
+   NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+
+   # Google OAuth (para Google Sheets)
+   GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+   # Opcional: Modo desarrollo (simula usuario logueado)
+   NEXT_PUBLIC_DEV_MODE_USER_ID=dev-user-id
+   ```
+
+### Configuración de Firebase
+
+1. Crea un proyecto en [Firebase Console](https://console.firebase.google.com/).
+2. Habilita Authentication con Google provider.
+3. Configura Firestore Database.
+4. En Authentication > Settings > Authorized domains, agrega tu dominio local (`localhost`) y de producción.
+5. Copia las credenciales de Firebase al archivo `.env.local`.
+
+### Configuración de Google OAuth
+
+Sigue los pasos detallados en la sección "Obtención de Credenciales de Google OAuth 2.0" más abajo.
+
+### Scripts Disponibles
+
+- `npm run dev`: Inicia el servidor de desarrollo en puerto 9002
+- `npm run build`: Construye la aplicación para producción
+- `npm run start`: Inicia el servidor de producción
+- `npm run lint`: Ejecuta ESLint
+- `npm run typecheck`: Verifica tipos con TypeScript
+
+---
+
 ## Funcionalidades Detalladas
 
 A continuación se detalla el funcionamiento de cada módulo de la aplicación.
@@ -106,17 +234,6 @@ Se accede desde la tarjeta del periodo activo en el panel principal o desde el l
 
 -   Permite al usuario ver la información de su cuenta, como su foto de perfil, nombre y correo, obtenidos de Google.
 -   Incluye campos adicionales (actualmente desactivados) para futura información profesional.
-
----
-
-## Tecnologías Utilizadas
-
--   **Framework**: Next.js (con App Router)
--   **Backend y Base de Datos**: Firebase (Authentication, Cloud Firestore)
--   **UI y Componentes**: ShadCN UI, Tailwind CSS
--   **Gestión de Estado**: React Context API
--   **Iconos**: Lucide React
--   **Lenguaje**: TypeScript
 
 ---
 
