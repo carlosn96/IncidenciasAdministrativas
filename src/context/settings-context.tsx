@@ -43,7 +43,7 @@ const getInitialSchedules = (): Schedule[] => [{
 }];
 
 const getInitialPeriods = (): Period[] => [];
-const getInitialUserProfile = (): UserProfile => ({ academicBackground: '', coordinatedCourses: '' });
+const getInitialUserProfile = (): UserProfile => ({ academicBackground: '', coordinatedCourses: '', googleDriveFolderId: '', googleSpreadsheetId: '' });
 
 
 interface AuthError {
@@ -230,16 +230,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   // --- Atomic Update Functions ---
 
-  const performUpdate = useCallback(<T>(fieldName: string, newData: T | ((prev: T) => T), stateSetter: React.Dispatch<React.SetStateAction<T>>) => {
+  const performUpdate = useCallback((fieldName: string, newData: any, stateSetter: any) => {
     if (!user || !db) return;
     
-    stateSetter(prevState => {
-      const updatedData = typeof newData === 'function' ? (newData as (prev: T) => T)(prevState) : newData;
-      const userDocRef = doc(db, 'users', user.uid);
+    stateSetter((prevState: any) => {
+      const updatedData = typeof newData === 'function' ? newData(prevState) : newData;
+      const userDocRef = doc(db!, 'users', user.uid);
       updateDoc(userDocRef, { [fieldName]: updatedData });
       return updatedData;
     });
-  }, [user]);
+  }, [user, db]);
 
   const updatePeriods = useCallback((data: Period[] | ((prev: Period[]) => Period[])) => {
     if (!user || !db) return;
@@ -247,11 +247,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setPeriods(prevPeriods => {
         const newPeriods = typeof data === 'function' ? data(prevPeriods) : data;
         const sortedData = [...newPeriods].sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
-        const userDocRef = doc(db, 'users', user.uid);
+        const userDocRef = doc(db!, 'users', user.uid);
         updateDoc(userDocRef, { periods: sortedData });
         return sortedData;
     });
-  }, [user]);
+  }, [user, db]);
 
 
   const value = {

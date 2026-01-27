@@ -48,4 +48,6 @@ export type UserProfile = {
   academicBackground: string;
   coordinatedCourses: string;
   googleRefreshToken?: string;
+  googleDriveFolderId?: string;
+  googleSpreadsheetId?: string;
 };

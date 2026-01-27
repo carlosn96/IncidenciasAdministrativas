@@ -20,30 +20,41 @@ let auth: Auth | undefined;
 let db: Firestore | undefined;
 let provider: GoogleAuthProvider | undefined;
 
-// Initialize Firebase only on the client side to avoid SSR issues.
-if (isFirebaseConfigured && typeof window !== 'undefined') {
+// Initialize Firebase app and Firestore on both client and server if configured.
+if (isFirebaseConfigured) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    auth = getAuth(app);
     db = getFirestore(app);
-    provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      prompt: 'select_account',
-    });
-
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn("Firestore persistence failed to enable due to multiple tabs.");
-      } else if (err.code === 'unimplemented') {
-        console.warn("Firestore persistence is not supported in this browser.");
-      }
-    });
   } catch (error) {
-    console.error("Error initializing Firebase:", error);
-    // If initialization fails, ensure all exports are undefined.
+    console.error("Error initializing Firebase app or Firestore:", error);
     app = undefined;
-    auth = undefined;
     db = undefined;
+  }
+}
+
+// Initialize client-side only features (auth, provider, persistence) on the client.
+if (isFirebaseConfigured && typeof window !== 'undefined') {
+  try {
+    if (!auth) auth = getAuth(app!);
+    if (!provider) {
+      provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account',
+      });
+    }
+
+    if (db) {
+      enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn("Firestore persistence failed to enable due to multiple tabs.");
+        } else if (err.code === 'unimplemented') {
+          console.warn("Firestore persistence is not supported in this browser.");
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error initializing client-side Firebase features:", error);
+    auth = undefined;
     provider = undefined;
   }
 }
