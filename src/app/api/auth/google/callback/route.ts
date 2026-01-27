@@ -22,11 +22,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard/profile?error=no_refresh_token', url.origin));
     }
     
-    if (!db) {
-        throw new Error("Firestore DB is not initialized.");
-    }
-
-    const userDocRef = doc(db, 'users', userId);
+    // db is now initialized on the server side
+    const userDocRef = doc(db!, 'users', userId);
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
