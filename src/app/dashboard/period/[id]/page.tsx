@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { differenceInMinutes, format, parse, parseISO, getDay, isAfter, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import type { LaborDay, Incident, DaySchedule } from "@/lib/types";
+import type { LaborDay, Incident, DaySchedule, Period, Schedule, Location } from "@/lib/types";
 import { useSettings } from "@/context/settings-context";
 import { cn } from "@/lib/utils";
 import { EditPeriodDialog } from "@/components/edit-period-dialog";
@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { syncPeriodToSheet } from "@/lib/google-sheets-actions";
+import { useSyncPeriod } from '@/hooks/use-sync-period.tsx';
 import { GoogleIcon } from "@/components/icons";
 
 
@@ -84,14 +84,14 @@ const formatTime12h = (timeStr?: string): string => {
 
 export default function PeriodDetailPage() {
   const params = useParams<{ id: string }>();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, userProfile, user } = useSettings();
-  const period = periods.find(p => p.id === params.id);
-  const activeSchedule = schedules.find(s => s.id === activeScheduleId);
+  const { periods, updatePeriods, userLocations, schedules, activeScheduleId, userProfile, user } = useSettings();
+  const period = periods.find((p: Period) => p.id === params.id);
+  const activeSchedule = schedules.find((s: Schedule) => s.id === activeScheduleId);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
   const todayString = format(new Date(), 'yyyy-MM-dd');
-  const [isSyncing, setIsSyncing] = useState(false);
+  const { sync: syncPeriod, isSyncing } = useSyncPeriod();
 
   // State for editing a single day
   const [isEditDayDialogOpen, setIsEditDayDialogOpen] = useState(false);
@@ -114,13 +114,13 @@ export default function PeriodDetailPage() {
       if (dayToEdit.entry) {
         setEntryTime(dayToEdit.entry?.time || "");
         const entryLoc = dayToEdit.entry?.location || "";
-        const isEntryManual = entryLoc && !userLocations.some(l => l.name === entryLoc);
+        const isEntryManual = entryLoc && !userLocations.some((l: Location) => l.name === entryLoc);
         setEntryLocation(isEntryManual ? "manual" : entryLoc);
         setManualEntryLocation(isEntryManual ? entryLoc : "");
 
         setExitTime(dayToEdit.exit?.time || "");
         const exitLoc = dayToEdit.exit?.location || "";
-        const isExitManual = exitLoc && !userLocations.some(l => l.name === exitLoc);
+        const isExitManual = exitLoc && !userLocations.some((l: Location) => l.name === exitLoc);
         setExitLocation(isExitManual ? "manual" : exitLoc);
         setManualExitLocation(isExitManual ? exitLoc : "");
 
@@ -132,7 +132,7 @@ export default function PeriodDetailPage() {
         const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
         const dayName = daysOfWeekSpanish[dayOfWeekIndex] as DaySchedule['day'];
         
-        const defaultDaySchedule = activeSchedule.entries.find(s => s.day === dayName);
+        const defaultDaySchedule = activeSchedule.entries.find((s: DaySchedule) => s.day === dayName);
 
         if (defaultDaySchedule) {
           setEntryTime(defaultDaySchedule.startTime || "");
@@ -178,7 +178,7 @@ export default function PeriodDetailPage() {
     const finalExitLocation = exitLocation === 'manual' ? manualExitLocation.trim() : exitLocation;
 
 
-    const updatedLaborDays = period.laborDays.map(day => {
+    const updatedLaborDays = period.laborDays.map((day: LaborDay) => {
       if (day.date === dayToEdit.date) {
         const newDay = { ...day };
 
@@ -201,8 +201,8 @@ export default function PeriodDetailPage() {
     
     const updatedPeriod = { ...period, laborDays: updatedLaborDays };
 
-    setPeriods(prevPeriods =>
-      prevPeriods.map(p => (p.id === period.id ? updatedPeriod : p))
+    updatePeriods((prevPeriods: Period[]) =>
+      prevPeriods.map((p: Period) => (p.id === period.id ? updatedPeriod : p))
     );
 
     setDaySaveState('saved');
@@ -229,7 +229,7 @@ export default function PeriodDetailPage() {
       "Horas Laboradas",
     ];
 
-    const rows = period.laborDays.map(day => {
+    const rows = period.laborDays.map((day: LaborDay) => {
         const date = parseISO(day.date);
         const dayOfWeek = format(date, "EEEE", { locale: es });
         const formattedDate = format(date, "yyyy-MM-dd");
@@ -273,35 +273,85 @@ export default function PeriodDetailPage() {
     });
   };
 
-  const handleSyncToSheet = async () => {
-    if (!period || !user) return;
-    setIsSyncing(true);
-    try {
-      const result = await syncPeriodToSheet(period.id, user.uid);
-      if (result.success && result.spreadsheetUrl) {
-        toast({
-          title: "Sincronización Exitosa",
-          description: "El periodo se ha sincronizado con Google Sheets.",
-          action: (
-            <Button asChild variant="outline">
-              <a href={result.spreadsheetUrl} target="_blank" rel="noopener noreferrer">
-                Abrir Hoja
-              </a>
-            </Button>
-          ),
-        });
-      } else {
-        throw new Error(result.error || "Ocurrió un error desconocido.");
-      }
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error de Sincronización",
-        description: error.message,
-      });
-    } finally {
-      setIsSyncing(false);
+  const renderEditButton = (day: LaborDay) => {
+    const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+
+    if (isFutureDay) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span tabIndex={0}>
+              <Button variant="outline" size="sm" disabled>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar Día
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-center">
+              <p className="mb-2">Para planificar días futuros, usa la sección de Proyecciones.</p>
+              <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
+                <Link href={`/dashboard/projections?period=${period?.id}`}>
+                  Ir a Proyecciones
+                </Link>
+              </Button>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      );
+    } else {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleOpenEditDayDialog(day)}
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar Día
+        </Button>
+      );
     }
+  };
+
+  const renderEditButtonIcon = (day: LaborDay) => {
+    const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+
+    if (isFutureDay) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span tabIndex={0}>
+              <Button variant="ghost" size="icon" disabled>
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Editar Día</span>
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-center">
+              <p className="mb-2">Para planificar días futuros, usa la sección de Proyecciones.</p>
+              <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
+                <Link href={`/dashboard/projections?period=${period?.id}`}>
+                  Ir a Proyecciones
+                </Link>
+              </Button>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      );
+    } else {
+      return (
+        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDayDialog(day)}>
+          <Pencil className="h-4 w-4" />
+          <span className="sr-only">Editar Día</span>
+        </Button>
+      );
+    }
+  };
+
+  const handleSyncToSheet = () => {
+    if (!period || !user) return;
+    syncPeriod(period.id, user.uid);
   };
 
 
@@ -353,11 +403,6 @@ export default function PeriodDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Editar Periodo</span>
-              <span className="sm:hidden">Editar</span>
-            </Button>
              <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -421,6 +466,12 @@ export default function PeriodDetailPage() {
                         <span>Meta: {formattedExpectedHours}</span>
                     </div>
                 </div>
+                <div className="flex justify-end pt-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Editar Periodo
+                    </Button>
+                </div>
             </div>
           </CardContent>
         </Card>
@@ -438,42 +489,9 @@ export default function PeriodDetailPage() {
               <div className="md:hidden">
                 {laborDays.length > 0 ? (
                     <div className="border rounded-lg">
-                        {laborDays.map((day, index) => {
-                            const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+                        {laborDays.map((day: LaborDay, index: number) => {
                             const isToday = day.date === todayString;
                             
-                            const editButton = isFutureDay ? (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <span tabIndex={0}>
-                                            <Button variant="outline" size="sm" disabled>
-                                                <Pencil className="mr-2 h-4 w-4"/>
-                                                Editar Día
-                                            </Button>
-                                        </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <div className="text-center">
-                                            <p className="mb-2">Para planificar días futuros, usa la sección de Proyecciones.</p>
-                                            <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
-                                              <Link href={`/dashboard/projections?period=${period?.id}`}>
-                                                Ir a Proyecciones
-                                              </Link>
-                                            </Button>
-                                        </div>
-                                    </TooltipContent>
-                                </Tooltip>
-                            ) : (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleOpenEditDayDialog(day)}
-                                >
-                                    <Pencil className="mr-2 h-4 w-4"/>
-                                    Editar Día
-                                </Button>
-                            );
-
                             return (
                                 <div key={day.date} className={cn("p-4", index < laborDays.length - 1 && "border-b")}>
                                     <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-2">
@@ -503,7 +521,7 @@ export default function PeriodDetailPage() {
                                         </div>
                                     </div>
                                     <div className="mt-4 flex justify-end">
-                                        {editButton}
+                                        {renderEditButton(day)}
                                     </div>
                                 </div>
                             )
@@ -532,37 +550,8 @@ export default function PeriodDetailPage() {
                     </TableHeader>
                     <TableBody>
                         {laborDays.length > 0 ? (
-                            laborDays.map((day) => {
-                                const isFutureDay = isAfter(parseISO(day.date), startOfDay(new Date()));
+                            laborDays.map((day: LaborDay) => {
                                 const isToday = day.date === todayString;
-
-                                const editButton = isFutureDay ? (
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <span tabIndex={0}>
-                                                <Button variant="ghost" size="icon" disabled>
-                                                    <Pencil className="h-4 w-4" />
-                                                    <span className="sr-only">Editar Día</span>
-                                                </Button>
-                                            </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                           <div className="text-center">
-                                                <p className="mb-2">Para planificar días futuros, usa la sección de Proyecciones.</p>
-                                                <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
-                                                  <Link href={`/dashboard/projections?period=${period?.id}`}>
-                                                    Ir a Proyecciones
-                                                  </Link>
-                                                </Button>
-                                            </div>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                ) : (
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDayDialog(day)}>
-                                        <Pencil className="h-4 w-4" />
-                                        <span className="sr-only">Editar Día</span>
-                                    </Button>
-                                );
 
                                 return (
                                     <TableRow key={day.date}>
@@ -585,7 +574,7 @@ export default function PeriodDetailPage() {
                                             {calculateWorkedHours(day.entry, day.exit)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {editButton}
+                                            {renderEditButtonIcon(day)}
                                         </TableCell>
                                     </TableRow>
                                 )
@@ -630,7 +619,7 @@ export default function PeriodDetailPage() {
                       <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {userLocations.map(loc => <SelectItem key={`${loc.id}-entry`} value={loc.name}>{loc.name}</SelectItem>)}
+                      {userLocations.map((loc: Location) => <SelectItem key={`${loc.id}-entry`} value={loc.name}>{loc.name}</SelectItem>)}
                       <SelectItem value="manual">Otro (especificar)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -659,7 +648,7 @@ export default function PeriodDetailPage() {
                       <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {userLocations.map(loc => <SelectItem key={`${loc.id}-exit`} value={loc.name}>{loc.name}</SelectItem>)}
+                      {userLocations.map((loc: Location) => <SelectItem key={`${loc.id}-exit`} value={loc.name}>{loc.name}</SelectItem>)}
                       <SelectItem value="manual">Otro (especificar)</SelectItem>
                     </SelectContent>
                   </Select>
