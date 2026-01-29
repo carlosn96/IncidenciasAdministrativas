@@ -24,6 +24,9 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSyncPeriod } from '@/hooks/use-sync-period';
 import { GoogleIcon } from "@/components/icons";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -108,6 +111,8 @@ export default function PeriodDetailPage() {
   const [entryComment, setEntryComment] = useState("");
   const [exitComment, setExitComment] = useState("");
 
+  const isMobile = useIsMobile();
+
   const isGoogleConnected = !!userProfile?.googleRefreshToken;
 
   useEffect(() => {
@@ -190,13 +195,13 @@ export default function PeriodDetailPage() {
         const newDay = { ...day };
 
         if (entryTime && finalEntryLocation) {
-          newDay.entry = { time: entryTime, location: finalEntryLocation, comment: entryComment.trim() || undefined };
+          newDay.entry = { time: entryTime, location: finalEntryLocation, comment: entryComment.trim() || null };
         } else {
           delete newDay.entry;
         }
 
         if (exitTime && finalExitLocation && newDay.entry) {
-          newDay.exit = { time: exitTime, location: finalExitLocation, comment: exitComment.trim() || undefined };
+          newDay.exit = { time: exitTime, location: finalExitLocation, comment: exitComment.trim() || null };
         } else {
           delete newDay.exit;
         }
@@ -612,105 +617,198 @@ export default function PeriodDetailPage() {
       </div>
 
       <Dialog open={isEditDayDialogOpen} onOpenChange={setIsEditDayDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Editar Día</DialogTitle>
-            {dayToEdit && 
-              <DialogDescription>
-                  Editando registros para el {format(parseISO(dayToEdit.date), "EEEE, d 'de' LLLL", { locale: es })}.
-              </DialogDescription>
-            }
-          </DialogHeader>
-          <div className="grid gap-6 py-4">
-            <div className="space-y-4 p-4 rounded-md border bg-muted/30">
-              <h4 className="font-medium">Entrada</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="entryTime">Hora</Label>
-                  <Input id="entryTime" type="time" value={entryTime} onChange={(e) => setEntryTime(e.target.value)} />
+        <DialogContent className="max-w-lg sm:max-w-2xl lg:max-w-4xl max-h-[90vh]">
+          <ScrollArea className="h-full">
+            <DialogHeader>
+              <DialogTitle>Editar Día</DialogTitle>
+              {dayToEdit && 
+                <DialogDescription>
+                    Editando registros para el {format(parseISO(dayToEdit.date), "EEEE, d 'de' LLLL", { locale: es })}.
+                </DialogDescription>
+              }
+            </DialogHeader>
+            <div className="py-4">
+              {isMobile ? (
+                <Tabs defaultValue="entry" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="entry">Entrada</TabsTrigger>
+                    <TabsTrigger value="exit">Salida</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="entry" className="space-y-4 mt-4">
+                    <div className="space-y-4 p-4 rounded-md border bg-muted/30">
+                      <div className="space-y-2">
+                        <Label htmlFor="entryTime">Hora</Label>
+                        <Input id="entryTime" type="time" value={entryTime} onChange={(e) => setEntryTime(e.target.value)} className="text-base" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="entryLocation">Lugar</Label>
+                        <Select value={entryLocation} onValueChange={setEntryLocation}>
+                          <SelectTrigger id="entryLocation">
+                            <SelectValue placeholder="Selecciona..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {userLocations.map((loc: Location) => <SelectItem key={`${loc.id}-entry`} value={loc.name}>{loc.name}</SelectItem>)}
+                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {entryLocation === 'manual' && (
+                          <Input
+                              className="mt-2 text-base"
+                              placeholder="Escribe la ubicación"
+                              value={manualEntryLocation}
+                              onChange={(e) => setManualEntryLocation(e.target.value)}
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="entryComment">Comentario (opcional)</Label>
+                        <Textarea
+                          id="entryComment"
+                          placeholder="Comentario para la entrada..."
+                          value={entryComment}
+                          onChange={(e) => setEntryComment(e.target.value)}
+                          rows={2}
+                          className="text-base"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="exit" className="space-y-4 mt-4">
+                    <div className="space-y-4 p-4 rounded-md border bg-muted/30">
+                      <div className="space-y-2">
+                        <Label htmlFor="exitTime">Hora</Label>
+                        <Input id="exitTime" type="time" value={exitTime} onChange={(e) => setExitTime(e.target.value)} disabled={!entryTime || !entryLocation} className="text-base" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="exitLocation">Lugar</Label>
+                        <Select value={exitLocation} onValueChange={setExitLocation} disabled={!entryTime || !entryLocation}>
+                          <SelectTrigger id="exitLocation">
+                            <SelectValue placeholder="Selecciona..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {userLocations.map((loc: Location) => <SelectItem key={`${loc.id}-exit`} value={loc.name}>{loc.name}</SelectItem>)}
+                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                         {exitLocation === 'manual' && (
+                          <Input
+                              className="mt-2 text-base"
+                              placeholder="Escribe la ubicación"
+                              value={manualExitLocation}
+                              onChange={(e) => setManualExitLocation(e.target.value)}
+                              disabled={!entryTime || !entryLocation}
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="exitComment">Comentario (opcional)</Label>
+                        <Textarea
+                          id="exitComment"
+                          placeholder="Comentario para la salida..."
+                          value={exitComment}
+                          onChange={(e) => setExitComment(e.target.value)}
+                          rows={2}
+                          disabled={!entryTime || !entryLocation}
+                          className="text-base"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-4 p-4 rounded-md border bg-muted/30">
+                    <h4 className="font-medium">Entrada</h4>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="entryTime">Hora</Label>
+                        <Input id="entryTime" type="time" value={entryTime} onChange={(e) => setEntryTime(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="entryLocation">Lugar</Label>
+                        <Select value={entryLocation} onValueChange={setEntryLocation}>
+                          <SelectTrigger id="entryLocation">
+                            <SelectValue placeholder="Selecciona..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {userLocations.map((loc: Location) => <SelectItem key={`${loc.id}-entry`} value={loc.name}>{loc.name}</SelectItem>)}
+                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {entryLocation === 'manual' && (
+                          <Input
+                              className="mt-2 text-base"
+                              placeholder="Escribe la ubicación"
+                              value={manualEntryLocation}
+                              onChange={(e) => setManualEntryLocation(e.target.value)}
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="entryComment">Comentario (opcional)</Label>
+                        <Textarea
+                          id="entryComment"
+                          placeholder="Comentario para la entrada..."
+                          value={entryComment}
+                          onChange={(e) => setEntryComment(e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4 p-4 rounded-md border bg-muted/30">
+                    <h4 className="font-medium">Salida</h4>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="exitTime">Hora</Label>
+                        <Input id="exitTime" type="time" value={exitTime} onChange={(e) => setExitTime(e.target.value)} disabled={!entryTime || !entryLocation} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="exitLocation">Lugar</Label>
+                        <Select value={exitLocation} onValueChange={setExitLocation} disabled={!entryTime || !entryLocation}>
+                          <SelectTrigger id="exitLocation">
+                            <SelectValue placeholder="Selecciona..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {userLocations.map((loc: Location) => <SelectItem key={`${loc.id}-exit`} value={loc.name}>{loc.name}</SelectItem>)}
+                            <SelectItem value="manual">Otro (especificar)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                         {exitLocation === 'manual' && (
+                          <Input
+                              className="mt-2 text-base"
+                              placeholder="Escribe la ubicación"
+                              value={manualExitLocation}
+                              onChange={(e) => setManualExitLocation(e.target.value)}
+                              disabled={!entryTime || !entryLocation}
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="exitComment">Comentario (opcional)</Label>
+                        <Textarea
+                          id="exitComment"
+                          placeholder="Comentario para la salida..."
+                          value={exitComment}
+                          onChange={(e) => setExitComment(e.target.value)}
+                          rows={2}
+                          disabled={!entryTime || !entryLocation}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="entryLocation">Lugar</Label>
-                  <Select value={entryLocation} onValueChange={setEntryLocation}>
-                    <SelectTrigger id="entryLocation">
-                      <SelectValue placeholder="Selecciona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userLocations.map((loc: Location) => <SelectItem key={`${loc.id}-entry`} value={loc.name}>{loc.name}</SelectItem>)}
-                      <SelectItem value="manual">Otro (especificar)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {entryLocation === 'manual' && (
-                    <Input
-                        className="mt-2"
-                        placeholder="Escribe la ubicación"
-                        value={manualEntryLocation}
-                        onChange={(e) => setManualEntryLocation(e.target.value)}
-                    />
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="entryComment">Comentario (opcional)</Label>
-                <Textarea
-                  id="entryComment"
-                  placeholder="Comentario para la entrada..."
-                  value={entryComment}
-                  onChange={(e) => setEntryComment(e.target.value)}
-                  rows={2}
-                />
-              </div>
+              )}
             </div>
-            <div className="space-y-4 p-4 rounded-md border bg-muted/30">
-              <h4 className="font-medium">Salida</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="exitTime">Hora</Label>
-                  <Input id="exitTime" type="time" value={exitTime} onChange={(e) => setExitTime(e.target.value)} disabled={!entryTime || !entryLocation} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="exitLocation">Lugar</Label>
-                  <Select value={exitLocation} onValueChange={setExitLocation} disabled={!entryTime || !entryLocation}>
-                    <SelectTrigger id="exitLocation">
-                      <SelectValue placeholder="Selecciona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userLocations.map((loc: Location) => <SelectItem key={`${loc.id}-exit`} value={loc.name}>{loc.name}</SelectItem>)}
-                      <SelectItem value="manual">Otro (especificar)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                   {exitLocation === 'manual' && (
-                    <Input
-                        className="mt-2"
-                        placeholder="Escribe la ubicación"
-                        value={manualExitLocation}
-                        onChange={(e) => setManualExitLocation(e.target.value)}
-                        disabled={!entryTime || !entryLocation}
-                    />
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="exitComment">Comentario (opcional)</Label>
-                <Textarea
-                  id="exitComment"
-                  placeholder="Comentario para la salida..."
-                  value={exitComment}
-                  onChange={(e) => setExitComment(e.target.value)}
-                  rows={2}
-                  disabled={!entryTime || !entryLocation}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDayDialogOpen(false)} disabled={daySaveState !== 'idle'}>Cancelar</Button>
-            <Button onClick={handleSaveDayChanges} disabled={daySaveState !== 'idle'} className="w-[150px]">
-                {daySaveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
-                : daySaveState === 'saved' ? (<><Check /> Guardado</>)
-                : 'Guardar Cambios'}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDayDialogOpen(false)} disabled={daySaveState !== 'idle'}>Cancelar</Button>
+              <Button onClick={handleSaveDayChanges} disabled={daySaveState !== 'idle'} className="w-[150px]">
+                  {daySaveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
+                  : daySaveState === 'saved' ? (<><Check /> Guardado</>)
+                  : 'Guardar Cambios'}
+              </Button>
+            </DialogFooter>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
       {period && <EditPeriodDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} period={period} />}

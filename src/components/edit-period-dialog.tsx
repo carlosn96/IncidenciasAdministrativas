@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { Period, LaborDay } from "@/lib/types";
 import { useSettings } from "@/context/settings-context";
 import { Checkbox } from "./ui/checkbox";
+import { ScrollArea } from "./ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EditPeriodDialogProps {
     open: boolean;
@@ -27,6 +29,7 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
     const [periodName, setPeriodName] = useState("");
     const [includeSaturdays, setIncludeSaturdays] = useState(false);
     const { toast } = useToast();
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         if (period && open) {
@@ -126,49 +129,57 @@ export function EditPeriodDialog({ open, onOpenChange, period }: EditPeriodDialo
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
+            <DialogContent className="max-w-md sm:max-w-2xl lg:max-w-4xl max-h-[90vh] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                     <DialogTitle>Editar Periodo</DialogTitle>
                     <DialogDescription>
                         Modifica el nombre y el rango de fechas del periodo.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                     <div className="grid gap-2">
-                        <Label htmlFor="period-name">Nombre del Periodo</Label>
-                        <Input
-                            id="period-name"
-                            value={periodName}
-                            onChange={(e) => setPeriodName(e.target.value)}
-                            placeholder="Ej: Segunda Quincena de Julio"
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                         <Label>Rango de Fechas del Periodo</Label>
-                         <div className="rounded-md border flex justify-center">
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={dateRange?.from}
-                                selected={dateRange}
-                                onSelect={setDateRange}
-                                numberOfMonths={1}
-                                locale={es}
+                <ScrollArea className="flex-1">
+                    <div className="flex flex-col lg:flex-row gap-4 py-4">
+                        <div className="flex-1 space-y-4">
+                             <div className="grid gap-2">
+                                <Label htmlFor="period-name">Nombre del Periodo</Label>
+                                <Input
+                                    id="period-name"
+                                    value={periodName}
+                                    onChange={(e) => setPeriodName(e.target.value)}
+                                    placeholder="Ej: Segunda Quincena de Julio"
                                 />
-                         </div>
+                            </div>
+                             <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="edit-include-saturdays"
+                                    checked={includeSaturdays} 
+                                    onCheckedChange={(checked) => setIncludeSaturdays(checked === true)}
+                                />
+                                <Label htmlFor="edit-include-saturdays" className="font-normal text-sm">
+                                    Incluir sábados en el cómputo de horas
+                                </Label>
+                            </div>
+                        </div>
+                        <div className="flex-1">
+                            <div className="grid gap-2">
+                                 <Label>Rango de Fechas del Periodo</Label>
+                                 <div className="rounded-md border flex justify-center">
+                                    <Calendar
+                                        initialFocus
+                                        mode="range"
+                                        defaultMonth={dateRange?.from}
+                                        selected={dateRange}
+                                        onSelect={setDateRange}
+                                        numberOfMonths={isMobile ? 1 : 2}
+                                        locale={es}
+                                        aria-label="Seleccionar rango de fechas del periodo"
+                                        className="w-full"
+                                        />
+                                 </div>
+                            </div>
+                        </div>
                     </div>
-                     <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox 
-                            id="edit-include-saturdays"
-                            checked={includeSaturdays} 
-                            onCheckedChange={(checked) => setIncludeSaturdays(checked === true)}
-                        />
-                        <Label htmlFor="edit-include-saturdays" className="font-normal text-sm">
-                            Incluir sábados en el cómputo de horas
-                        </Label>
-                    </div>
-                </div>
-                <DialogFooter>
+                </ScrollArea>
+                <DialogFooter className="flex-shrink-0">
                     <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                     <Button onClick={handleSaveChanges}>Guardar Cambios</Button>
                 </DialogFooter>

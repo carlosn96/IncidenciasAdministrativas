@@ -45,6 +45,7 @@ import type { Incident, DaySchedule } from "@/lib/types";
 import { Play, Square, MapPin, Pencil, Trash2, ArrowRight, Loader2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isWithinInterval, parse, differenceInMinutes, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { useSettings } from "@/context/settings-context";
@@ -581,56 +582,58 @@ export function DailyLog() {
         </Card>
         
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-            <DialogHeader>
+        <DialogContent className="max-w-md sm:max-w-lg max-h-[90vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
                 <DialogTitle>Editar Registro de {editingIncident?.type}</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                    <Label htmlFor="edit-time">Hora</Label>
-                    <Input 
-                        id="edit-time" 
-                        type="time" 
-                        value={newTime} 
-                        onChange={e => setNewTime(e.target.value)}
-                        className="text-base"
-                    />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="edit-location">Ubicación</Label>
-                    <Select value={newLocation} onValueChange={setNewLocation}>
-                        <SelectTrigger id="edit-location">
-                            <SelectValue placeholder="Selecciona una ubicación..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {userLocations.map(loc => (
-                                <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
-                            ))}
-                            <SelectItem value="manual">Otro (especificar)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {newLocation === 'manual' && (
-                        <Input
-                            id="edit-manual-location"
-                            placeholder="Escribe la ubicación"
-                            value={newManualLocation}
-                            onChange={(e) => setNewManualLocation(e.target.value)}
-                            className="mt-2"
+            <ScrollArea className="flex-1">
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-time">Hora</Label>
+                        <Input 
+                            id="edit-time" 
+                            type="time" 
+                            value={newTime} 
+                            onChange={e => setNewTime(e.target.value)}
+                            className="text-base"
                         />
-                    )}
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="edit-location">Ubicación</Label>
+                        <Select value={newLocation} onValueChange={setNewLocation}>
+                            <SelectTrigger id="edit-location">
+                                <SelectValue placeholder="Selecciona una ubicación..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {userLocations.map(loc => (
+                                    <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                ))}
+                                <SelectItem value="manual">Otro (especificar)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {newLocation === 'manual' && (
+                            <Input
+                                id="edit-manual-location"
+                                placeholder="Escribe la ubicación"
+                                value={newManualLocation}
+                                onChange={(e) => setNewManualLocation(e.target.value)}
+                                className="mt-2"
+                            />
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-comment">Comentario (opcional)</Label>
+                        <Textarea
+                            id="edit-comment"
+                            placeholder="Agrega un comentario..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            rows={2}
+                        />
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="edit-comment">Comentario (opcional)</Label>
-                    <Textarea
-                        id="edit-comment"
-                        placeholder="Agrega un comentario..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        rows={2}
-                    />
-                </div>
-            </div>
-            <DialogFooter>
+            </ScrollArea>
+            <DialogFooter className="flex-shrink-0">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={saveState !== 'idle'}>Cancelar</Button>
                 <Button onClick={handleSaveChanges} disabled={saveState !== 'idle'} className="w-[150px]">
                      {saveState === 'saving' ? (<><Loader2 className="animate-spin" /> Guardando...</>)
