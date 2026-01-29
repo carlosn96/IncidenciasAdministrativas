@@ -173,7 +173,7 @@ export function DailyLog() {
     const newIncident: Incident = {
       time: format(now, "HH:mm"),
       location: locationToRegister,
-      comment: comment.trim() || undefined,
+      comment: comment.trim() || null,
     };
     
     const keyToUpdate = type === 'Entrada' ? 'entry' : 'exit';
