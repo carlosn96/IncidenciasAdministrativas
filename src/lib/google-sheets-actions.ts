@@ -164,8 +164,10 @@ function preparePeriodData(period: Period) {
         "Día de la Semana",
         "Lugar Entrada",
         "Hora Entrada (24h)",
+        "Comentario Entrada",
         "Lugar Salida",
         "Hora Salida (24h)",
+        "Comentario Salida",
         "Horas Laboradas",
     ];
 
@@ -179,8 +181,10 @@ function preparePeriodData(period: Period) {
             dayOfWeek,
             day.entry?.location || '---',
             day.entry?.time || '---',
+            day.entry?.comment || '---',
             day.exit?.location || '---',
             day.exit?.time || '---',
+            day.exit?.comment || '---',
             calculateWorkedHours(day.entry, day.exit)
         ];
     });

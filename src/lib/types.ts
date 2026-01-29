@@ -23,6 +23,7 @@ export type Location = {
 export type Incident = {
   time: string;
   location: string;
+  comment?: string;
 };
 
 export type LaborDay = {

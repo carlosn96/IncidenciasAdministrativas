@@ -40,6 +40,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { Incident, DaySchedule } from "@/lib/types";
 import { Play, Square, MapPin, Pencil, Trash2, ArrowRight, Loader2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +79,7 @@ export function DailyLog() {
   const [currentDay, setCurrentDay] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [manualLocation, setManualLocation] = useState<string>("");
+  const [comment, setComment] = useState<string>("");
   const { toast } = useToast();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -85,6 +87,7 @@ export function DailyLog() {
   const [newTime, setNewTime] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [newManualLocation, setNewManualLocation] = useState("");
+  const [newComment, setNewComment] = useState("");
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   const activeSchedule = useMemo(() => {
@@ -169,6 +172,7 @@ export function DailyLog() {
     const newIncident: Incident = {
       time: format(now, "HH:mm"),
       location: locationToRegister,
+      comment: comment.trim() || undefined,
     };
     
     const keyToUpdate = type === 'Entrada' ? 'entry' : 'exit';
@@ -192,11 +196,15 @@ export function DailyLog() {
       title: `${type} Registrada`,
       description: `Has registrado tu ${type.toLowerCase()} en ${locationToRegister} a las ${format(now, 'p', { locale: es })}.`,
     });
+
+    // Clear comment after registration
+    setComment("");
   };
 
   const handleOpenEditDialog = (incident: { type: 'Entrada' | 'Salida' } & Incident) => {
     setEditingIncident(incident);
     setNewTime(incident.time);
+    setNewComment(incident.comment || "");
     
     const isManual = !userLocations.some(loc => loc.name === incident.location);
     if (isManual) {
@@ -256,7 +264,7 @@ export function DailyLog() {
           if (ld.date === todayLaborDay.date) {
             const updatedDay = { ...ld };
             if (updatedDay[keyToUpdate]) {
-              updatedDay[keyToUpdate] = { ...updatedDay[keyToUpdate]!, time: newTime, location: locationToSave };
+              updatedDay[keyToUpdate] = { ...updatedDay[keyToUpdate]!, time: newTime, location: locationToSave, comment: newComment.trim() || undefined };
             }
             return updatedDay;
           }
@@ -399,6 +407,17 @@ export function DailyLog() {
                                 </div>
                             )}
                         </div>
+                        <div>
+                            <Label htmlFor="comment" className="mb-2 block">Comentario (opcional)</Label>
+                            <Textarea
+                                id="comment"
+                                placeholder="Agrega un comentario sobre este registro..."
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                                disabled={hasEntrada && hasSalida}
+                                rows={2}
+                            />
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                             <Button
                                 size="lg"
@@ -452,6 +471,7 @@ export function DailyLog() {
                                       </Badge>
                                       <p className="font-semibold text-lg mt-1">{formatTime12h(event.time)}</p>
                                       <p className="text-muted-foreground">{event.location}</p>
+                                      {event.comment && <p className="text-sm text-muted-foreground mt-1 italic">{event.comment}</p>}
                                   </div>
                                   <div className="flex items-center -mr-3">
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event)}>
@@ -495,13 +515,14 @@ export function DailyLog() {
                             <TableHead>Tipo</TableHead>
                             <TableHead>Hora</TableHead>
                             <TableHead>Ubicación</TableHead>
+                            <TableHead>Comentario</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
                         {eventsForTable.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                                     No hay eventos registrados hoy.
                                 </TableCell>
                             </TableRow>
@@ -515,6 +536,7 @@ export function DailyLog() {
                                 </TableCell>
                                 <TableCell>{formatTime12h(event.time)}</TableCell>
                                 <TableCell>{event.location}</TableCell>
+                                <TableCell>{event.comment || "---"}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditDialog(event)}>
@@ -596,6 +618,16 @@ export function DailyLog() {
                             className="mt-2"
                         />
                     )}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="edit-comment">Comentario (opcional)</Label>
+                    <Textarea
+                        id="edit-comment"
+                        placeholder="Agrega un comentario..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        rows={2}
+                    />
                 </div>
             </div>
             <DialogFooter>

@@ -17,13 +17,13 @@ import { useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSyncPeriod } from '@/hooks/use-sync-period.tsx';
+import { useSyncPeriod } from '@/hooks/use-sync-period';
 import { GoogleIcon } from "@/components/icons";
-
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -105,6 +105,8 @@ export default function PeriodDetailPage() {
   const [exitLocation, setExitLocation] = useState("");
   const [manualEntryLocation, setManualEntryLocation] = useState("");
   const [manualExitLocation, setManualExitLocation] = useState("");
+  const [entryComment, setEntryComment] = useState("");
+  const [exitComment, setExitComment] = useState("");
 
   const isGoogleConnected = !!userProfile?.googleRefreshToken;
 
@@ -123,6 +125,9 @@ export default function PeriodDetailPage() {
         const isExitManual = exitLoc && !userLocations.some((l: Location) => l.name === exitLoc);
         setExitLocation(isExitManual ? "manual" : exitLoc);
         setManualExitLocation(isExitManual ? exitLoc : "");
+
+        setEntryComment(dayToEdit.entry?.comment || "");
+        setExitComment(dayToEdit.exit?.comment || "");
 
       } else if (activeSchedule) {
         // If the day is empty, load from default schedule.
@@ -149,6 +154,8 @@ export default function PeriodDetailPage() {
         // Reset manual fields for new entries
         setManualEntryLocation("");
         setManualExitLocation("");
+        setEntryComment("");
+        setExitComment("");
       }
     }
   }, [dayToEdit, activeSchedule, userLocations]);
@@ -183,13 +190,13 @@ export default function PeriodDetailPage() {
         const newDay = { ...day };
 
         if (entryTime && finalEntryLocation) {
-          newDay.entry = { time: entryTime, location: finalEntryLocation };
+          newDay.entry = { time: entryTime, location: finalEntryLocation, comment: entryComment.trim() || undefined };
         } else {
           delete newDay.entry;
         }
 
         if (exitTime && finalExitLocation && newDay.entry) {
-          newDay.exit = { time: exitTime, location: finalExitLocation };
+          newDay.exit = { time: exitTime, location: finalExitLocation, comment: exitComment.trim() || undefined };
         } else {
           delete newDay.exit;
         }
@@ -513,11 +520,13 @@ export default function PeriodDetailPage() {
                                             <p className="font-semibold text-muted-foreground">Entrada</p>
                                             <p>{formatTime12h(day.entry?.time)}</p>
                                             <p className="text-muted-foreground">{day.entry?.location || '---'}</p>
+                                            {day.entry?.comment && <p className="text-sm text-muted-foreground italic mt-1">{day.entry.comment}</p>}
                                         </div>
                                         <div>
                                             <p className="font-semibold text-muted-foreground">Salida</p>
                                             <p>{formatTime12h(day.exit?.time)}</p>
                                             <p className="text-muted-foreground">{day.exit?.location || '---'}</p>
+                                            {day.exit?.comment && <p className="text-sm text-muted-foreground italic mt-1">{day.exit.comment}</p>}
                                         </div>
                                     </div>
                                     <div className="mt-4 flex justify-end">
@@ -540,21 +549,19 @@ export default function PeriodDetailPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Fecha</TableHead>
-                            <TableHead>Lugar Entrada</TableHead>
-                            <TableHead>Hora Entrada</TableHead>
-                            <TableHead>Lugar Salida</TableHead>
-                            <TableHead>Hora Salida</TableHead>
+                            <TableHead>Entrada</TableHead>
+                            <TableHead>Salida</TableHead>
                             <TableHead className="text-right">Horas Laboradas</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {laborDays.length > 0 ? (
-                            laborDays.map((day: LaborDay) => {
+                            laborDays.map((day: LaborDay, index: number) => {
                                 const isToday = day.date === todayString;
 
                                 return (
-                                    <TableRow key={day.date}>
+                                    <TableRow key={day.date} className={index % 2 === 1 ? "bg-muted/30" : ""}>
                                         <TableCell className="font-medium capitalize whitespace-nowrap">
                                             <div className="flex items-center gap-2.5">
                                                 {isToday && (
@@ -566,11 +573,21 @@ export default function PeriodDetailPage() {
                                                 <span>{format(parseISO(day.date), "EEEE, d 'de' LLLL", { locale: es })}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell>{day.entry?.location || '---'}</TableCell>
-                                        <TableCell>{formatTime12h(day.entry?.time)}</TableCell>
-                                        <TableCell>{day.exit?.location || '---'}</TableCell>
-                                        <TableCell>{formatTime12h(day.exit?.time)}</TableCell>
-                                        <TableCell className="text-right font-mono">
+                                        <TableCell>
+                                            <div className="space-y-1">
+                                                <div className="font-medium text-foreground">{day.entry?.location || '---'}</div>
+                                                <div className="text-sm text-muted-foreground">{formatTime12h(day.entry?.time)}</div>
+                                                {day.entry?.comment && <div className="text-xs italic text-muted-foreground mt-1">{day.entry.comment}</div>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1">
+                                                <div className="font-medium text-foreground">{day.exit?.location || '---'}</div>
+                                                <div className="text-sm text-muted-foreground">{formatTime12h(day.exit?.time)}</div>
+                                                {day.exit?.comment && <div className="text-xs italic text-muted-foreground mt-1">{day.exit.comment}</div>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-foreground">
                                             {calculateWorkedHours(day.entry, day.exit)}
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -581,7 +598,7 @@ export default function PeriodDetailPage() {
                             })
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center text-muted-foreground py-16">
+                                <TableCell colSpan={5} className="text-center text-muted-foreground py-16">
                                     <p>No hay días laborables configurados para este periodo.</p>
                                 </TableCell>
                             </TableRow>
@@ -633,6 +650,16 @@ export default function PeriodDetailPage() {
                   )}
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="entryComment">Comentario (opcional)</Label>
+                <Textarea
+                  id="entryComment"
+                  placeholder="Comentario para la entrada..."
+                  value={entryComment}
+                  onChange={(e) => setEntryComment(e.target.value)}
+                  rows={2}
+                />
+              </div>
             </div>
             <div className="space-y-4 p-4 rounded-md border bg-muted/30">
               <h4 className="font-medium">Salida</h4>
@@ -662,6 +689,17 @@ export default function PeriodDetailPage() {
                     />
                   )}
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="exitComment">Comentario (opcional)</Label>
+                <Textarea
+                  id="exitComment"
+                  placeholder="Comentario para la salida..."
+                  value={exitComment}
+                  onChange={(e) => setExitComment(e.target.value)}
+                  rows={2}
+                  disabled={!entryTime || !entryLocation}
+                />
               </div>
             </div>
           </div>
