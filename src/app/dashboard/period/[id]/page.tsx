@@ -21,12 +21,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSyncPeriod } from '@/hooks/use-sync-period';
 import { GoogleIcon } from "@/components/icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // Helper function to calculate worked hours
 const calculateWorkedHours = (entry?: Incident, exit?: Incident): string => {
@@ -110,6 +110,9 @@ export default function PeriodDetailPage() {
   const [manualExitLocation, setManualExitLocation] = useState("");
   const [entryComment, setEntryComment] = useState("");
   const [exitComment, setExitComment] = useState("");
+  // State for future day dialog
+  const [isFutureDayDialogOpen, setIsFutureDayDialogOpen] = useState(false);
+  const [futureDayToEdit, setFutureDayToEdit] = useState<LaborDay | null>(null);
 
   const isMobile = useIsMobile();
 
@@ -290,26 +293,17 @@ export default function PeriodDetailPage() {
 
     if (isFutureDay) {
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span tabIndex={0}>
-              <Button variant="outline" size="sm" disabled>
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar Día
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <div className="text-center">
-              <p className="mb-2">Para planificar días futuros, usa la sección de Proyecciones.</p>
-              <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
-                <Link href={`/dashboard/projections?period=${period?.id}`}>
-                  Ir a Proyecciones
-                </Link>
-              </Button>
-            </div>
-          </TooltipContent>
-        </Tooltip>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setFutureDayToEdit(day);
+            setIsFutureDayDialogOpen(true);
+          }}
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar Día
+        </Button>
       );
     } else {
       return (
@@ -330,26 +324,17 @@ export default function PeriodDetailPage() {
 
     if (isFutureDay) {
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span tabIndex={0}>
-              <Button variant="ghost" size="icon" disabled>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Editar Día</span>
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <div className="text-center">
-              <p className="mb-2">Para planificar días futuros, usa la sección de Proyecciones.</p>
-              <Button asChild variant="link" size="sm" className="p-0 h-auto text-sm">
-                <Link href={`/dashboard/projections?period=${period?.id}`}>
-                  Ir a Proyecciones
-                </Link>
-              </Button>
-            </div>
-          </TooltipContent>
-        </Tooltip>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            setFutureDayToEdit(day);
+            setIsFutureDayDialogOpen(true);
+          }}
+        >
+          <Pencil className="h-4 w-4" />
+          <span className="sr-only">Editar Día</span>
+        </Button>
       );
     } else {
       return (
@@ -809,6 +794,29 @@ export default function PeriodDetailPage() {
               </Button>
             </DialogFooter>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isFutureDayDialogOpen} onOpenChange={setIsFutureDayDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Día Futuro</DialogTitle>
+            <DialogDescription>
+              No puedes editar días futuros directamente desde aquí. Usa la sección de Proyecciones para planificar tus horas de trabajo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Para planificar días futuros, ve a la sección de Proyecciones donde podrás proyectar tus entradas y salidas.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFutureDayDialogOpen(false)}>
+              Cerrar
+            </Button>
+            <Button asChild>
+              <Link href={`/dashboard/projections?period=${period?.id}`}>
+                Ir a Proyecciones
+              </Link>
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       {period && <EditPeriodDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} period={period} />}
