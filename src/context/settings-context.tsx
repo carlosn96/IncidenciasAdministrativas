@@ -67,7 +67,7 @@ interface SettingsContextType {
   handleGoogleSignIn: () => Promise<void>;
   // New update functions
   updateUserLocations: (data: Location[]) => void;
-  updateSchedules: (data: Schedule[]) => void;
+  updateSchedules: (data: Schedule[] | ((prev: Schedule[]) => Schedule[])) => void;
   updateActiveScheduleId: (data: string | null) => void;
   updatePeriods: (data: Period[] | ((prev: Period[]) => Period[])) => void;
   updateUserProfile: (data: UserProfile | ((prev: UserProfile) => UserProfile)) => void;
@@ -268,7 +268,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     isSigningIn,
     handleGoogleSignIn,
     updateUserLocations: useCallback((data: Location[]) => performUpdate('userLocations', data, setUserLocations), [performUpdate]),
-    updateSchedules: useCallback((data: Schedule[]) => performUpdate('schedules', data, setSchedules), [performUpdate]),
+    updateSchedules: useCallback((data: Schedule[] | ((prev: Schedule[]) => Schedule[])) => performUpdate('schedules', data, setSchedules), [performUpdate]),
     updateActiveScheduleId: useCallback((data: string | null) => performUpdate('activeScheduleId', data, setActiveScheduleId), [performUpdate]),
     updatePeriods,
     updateUserProfile: useCallback((data: UserProfile | ((prev: UserProfile) => UserProfile)) => performUpdate('userProfile', data, setUserProfile), [performUpdate]),

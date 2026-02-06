@@ -48,7 +48,7 @@ const daysOfWeekSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves",
 
 export default function ProjectionsPage() {
   const searchParams = useSearchParams();
-  const { periods, setPeriods, userLocations, schedules, activeScheduleId, setSchedules } = useSettings();
+  const { periods, updatePeriods, userLocations, schedules, activeScheduleId, updateSchedules } = useSettings();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
   const [projections, setProjections] = useState<LaborDay[]>([]);
   const [originalProjectionsForCompare, setOriginalProjectionsForCompare] = useState<LaborDay[]>([]);
@@ -206,7 +206,7 @@ export default function ProjectionsPage() {
 
     const newPeriodState = { ...selectedPeriod, laborDays: cleanedProjections };
 
-    setPeriods(prevPeriods =>
+    updatePeriods(prevPeriods =>
       prevPeriods.map(p => (p.id === selectedPeriodId ? newPeriodState : p))
     );
     
@@ -251,7 +251,7 @@ export default function ProjectionsPage() {
         entries: newEntries
     };
 
-    setSchedules(prev => {
+    updateSchedules(prev => {
         const updatedSchedules = [...prev, newSchedule];
         return updatedSchedules;
     });
